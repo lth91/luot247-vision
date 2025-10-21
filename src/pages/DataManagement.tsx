@@ -1,13 +1,20 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
-import { Download, LogOut, KeyRound } from "lucide-react";
+import { Download, LogOut, KeyRound, Upload } from "lucide-react";
+
+interface NewsPreview {
+  title: string;
+  description?: string;
+  category?: string;
+  url?: string;
+}
 
 const DataManagement = () => {
   const navigate = useNavigate();
@@ -15,6 +22,9 @@ const DataManagement = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [sheetUrl, setSheetUrl] = useState("");
+  const [previewData, setPreviewData] = useState<NewsPreview[]>([]);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -64,7 +74,58 @@ const DataManagement = () => {
       return;
     }
 
-    toast.info("Chức năng đang được phát triển");
+    setIsPreviewLoading(true);
+    setPreviewData([]);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('import-google-sheet', {
+        body: { sheetUrl, action: 'preview' }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        setPreviewData(data.data);
+        toast.success(`Tìm thấy ${data.count} tin tức`);
+      } else {
+        toast.error(data.error || "Không thể xem trước dữ liệu");
+      }
+    } catch (error) {
+      console.error('Preview error:', error);
+      toast.error("Lỗi khi xem trước dữ liệu. Đảm bảo sheet được chia sẻ công khai.");
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  };
+
+  const handleImportData = async () => {
+    if (!sheetUrl.trim()) {
+      toast.error("Vui lòng nhập URL Google Sheet");
+      return;
+    }
+
+    setIsImporting(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('import-google-sheet', {
+        body: { sheetUrl, action: 'import' }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success(data.message);
+        setPreviewData([]);
+        setSheetUrl("");
+      } else {
+        toast.error(data.error || "Không thể import dữ liệu");
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      toast.error("Lỗi khi import dữ liệu");
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   const handleSignOut = async () => {
@@ -138,12 +199,72 @@ const DataManagement = () => {
               onClick={handlePreviewData}
               className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
               size="lg"
+              disabled={isPreviewLoading || !sheetUrl.trim()}
             >
               <Download className="mr-2 h-4 w-4" />
-              Xem trước dữ liệu
+              {isPreviewLoading ? "Đang tải..." : "Xem trước dữ liệu"}
             </Button>
           </div>
         </Card>
+
+        {/* Preview Table */}
+        {previewData.length > 0 && (
+          <Card className="p-6 mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold">
+                Xem trước ({previewData.length} tin tức)
+              </h3>
+              <Button 
+                onClick={handleImportData}
+                disabled={isImporting}
+                className="bg-primary hover:bg-primary/90"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                {isImporting ? "Đang import..." : "Import vào database"}
+              </Button>
+            </div>
+            
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[40%]">Tiêu đề</TableHead>
+                    <TableHead className="w-[30%]">Mô tả</TableHead>
+                    <TableHead>Danh mục</TableHead>
+                    <TableHead className="w-[15%]">URL</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {previewData.map((item, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">{item.title}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {item.description || '-'}
+                      </TableCell>
+                      <TableCell>
+                        <span className="px-2 py-1 bg-secondary rounded text-xs">
+                          {item.category || 'khac'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {item.url ? (
+                          <a 
+                            href={item.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline"
+                          >
+                            Link
+                          </a>
+                        ) : '-'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        )}
       </main>
     </div>
   );
