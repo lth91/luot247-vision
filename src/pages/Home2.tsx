@@ -47,14 +47,10 @@ const Home2 = () => {
 
   useEffect(() => {
     fetchNews();
-    // Load read news IDs and current index from localStorage
-    const savedReadNews = localStorage.getItem("readNewsIds_home2");
+    // Load read news IDs from localStorage (same key as Index page)
+    const savedReadNews = localStorage.getItem("readNewsIds");
     if (savedReadNews) {
       setReadNewsIds(new Set(JSON.parse(savedReadNews)));
-    }
-    const savedIndex = localStorage.getItem("currentIndex_home2");
-    if (savedIndex) {
-      setCurrentIndex(parseInt(savedIndex, 10));
     }
   }, []);
 
@@ -87,23 +83,28 @@ const Home2 = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentIndex, news.length]);
 
-  const currentNews = news[currentIndex];
+  // Filter news based on read status (same logic as Index page)
+  const filteredNews = showHiddenNews 
+    ? news 
+    : news.filter((item) => !readNewsIds.has(item.id));
 
-  // Save current index whenever it changes
+  const currentNews = filteredNews[currentIndex];
+
+  // Reset index if it's out of bounds
   useEffect(() => {
-    if (news.length > 0) {
-      localStorage.setItem("currentIndex_home2", currentIndex.toString());
+    if (filteredNews.length > 0 && currentIndex >= filteredNews.length) {
+      setCurrentIndex(0);
     }
-  }, [currentIndex, news.length]);
+  }, [filteredNews.length, currentIndex]);
 
   const handleNext = () => {
-    if (currentIndex < news.length - 1) {
+    if (currentIndex < filteredNews.length - 1) {
       // Mark current news as read before moving to next
       if (currentNews) {
         setReadNewsIds((prev) => {
           const updated = new Set(prev);
           updated.add(currentNews.id);
-          localStorage.setItem("readNewsIds_home2", JSON.stringify(Array.from(updated)));
+          localStorage.setItem("readNewsIds", JSON.stringify(Array.from(updated)));
           return updated;
         });
       }
@@ -120,7 +121,7 @@ const Home2 = () => {
         setReadNewsIds((prev) => {
           const updated = new Set(prev);
           updated.add(currentNews.id);
-          localStorage.setItem("readNewsIds_home2", JSON.stringify(Array.from(updated)));
+          localStorage.setItem("readNewsIds", JSON.stringify(Array.from(updated)));
           return updated;
         });
       }
@@ -166,8 +167,7 @@ const Home2 = () => {
   const handleClearReadNews = () => {
     setReadNewsIds(new Set());
     setCurrentIndex(0);
-    localStorage.removeItem("readNewsIds_home2");
-    localStorage.removeItem("currentIndex_home2");
+    localStorage.removeItem("readNewsIds");
     setShowHiddenNews(false);
     toast.success("Đã xóa danh sách tin đã đọc");
   };
@@ -184,11 +184,6 @@ const Home2 = () => {
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays} ngày trước`;
   };
-
-  // Filter news based on read status
-  const filteredNews = showHiddenNews 
-    ? news 
-    : news.filter((item) => !readNewsIds.has(item.id));
 
   // Get current news based on filtered list
   const displayNews = filteredNews;
