@@ -79,7 +79,7 @@ export const NewsItem = ({
 
   return (
     <div
-      className="p-4 mb-3 border rounded-lg cursor-pointer hover:bg-muted/30 transition-colors bg-card"
+      className="p-4 border-b last:border-b-0 cursor-pointer hover:bg-muted/30 transition-colors"
       onClick={handleClick}
     >
       <div>

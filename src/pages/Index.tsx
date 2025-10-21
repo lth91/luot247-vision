@@ -89,7 +89,7 @@ const Index = () => {
             <p className="text-muted-foreground">Không có tin tức nào</p>
           </div>
         ) : (
-          <div>
+          <div className="border rounded-lg overflow-hidden bg-card">
             {news.map((item) => (
               <NewsItem
                 key={item.id}
