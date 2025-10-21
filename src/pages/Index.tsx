@@ -4,18 +4,13 @@ import { NewsItem } from "@/components/NewsItem";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { useNavigate } from "react-router-dom";
 
 const Index = () => {
-  const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [news, setNews] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
-  const [readingMode, setReadingMode] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -80,29 +75,11 @@ const Index = () => {
     }
   };
 
-  const handleReadingModeToggle = (checked: boolean) => {
-    setReadingMode(checked);
-    if (checked) {
-      navigate("/home2");
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <Header user={session?.user} userRole={userRole} />
 
       <main className="w-full max-w-2xl mx-auto px-4 py-4">
-        {/* Reading mode toggle */}
-        <div className="flex items-center justify-between mb-4 p-4 bg-card border rounded-lg">
-          <Label htmlFor="reading-mode" className="text-sm font-medium">
-            Bật chế độ đọc lật trang
-          </Label>
-          <Switch
-            id="reading-mode"
-            checked={readingMode}
-            onCheckedChange={handleReadingModeToggle}
-          />
-        </div>
         {isLoading ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Đang tải tin tức...</p>

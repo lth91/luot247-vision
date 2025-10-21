@@ -10,6 +10,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import logo from "@/assets/logo247.png";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface HeaderProps {
   user: any;
@@ -19,6 +21,18 @@ interface HeaderProps {
 export const Header = ({ user, userRole }: HeaderProps) => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [readingMode, setReadingMode] = useState(false);
+
+  const handleReadingModeToggle = (checked: boolean) => {
+    setReadingMode(checked);
+    if (checked) {
+      setOpen(false);
+      navigate("/home2");
+    } else {
+      setOpen(false);
+      navigate("/");
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -103,24 +117,16 @@ export const Header = ({ user, userRole }: HeaderProps) => {
                   </Button>
 
                   <div className="border-t pt-4">
-                    <Button
-                      variant="ghost"
-                      className="justify-start w-full"
-                      onClick={() => {
-                        toast.info("Tính năng đang phát triển");
-                      }}
-                    >
-                      📖 Chế độ đọc
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="justify-start w-full"
-                      onClick={() => {
-                        toast.info("Tính năng đang phát triển");
-                      }}
-                    >
-                      📄 Bật chế độ đọc lật trang
-                    </Button>
+                    <div className="flex items-center justify-between px-2 py-2">
+                      <Label htmlFor="reading-mode" className="text-sm">
+                        📄 Bật chế độ đọc lật trang
+                      </Label>
+                      <Switch
+                        id="reading-mode"
+                        checked={readingMode}
+                        onCheckedChange={handleReadingModeToggle}
+                      />
+                    </div>
                   </div>
 
                   <Button
@@ -143,24 +149,19 @@ export const Header = ({ user, userRole }: HeaderProps) => {
                   >
                     🔐 Đăng nhập
                   </Button>
-                  <Button
-                    variant="ghost"
-                    className="justify-start"
-                    onClick={() => {
-                      toast.info("Tính năng đang phát triển");
-                    }}
-                  >
-                    📖 Chế độ đọc
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="justify-start"
-                    onClick={() => {
-                      toast.info("Tính năng đang phát triển");
-                    }}
-                  >
-                    📄 Bật chế độ đọc lật trang
-                  </Button>
+                  
+                  <div className="border-t pt-4 mt-4">
+                    <div className="flex items-center justify-between px-2 py-2">
+                      <Label htmlFor="reading-mode-guest" className="text-sm">
+                        📄 Bật chế độ đọc lật trang
+                      </Label>
+                      <Switch
+                        id="reading-mode-guest"
+                        checked={readingMode}
+                        onCheckedChange={handleReadingModeToggle}
+                      />
+                    </div>
+                  </div>
                 </>
               )}
             </div>
