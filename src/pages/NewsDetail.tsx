@@ -3,20 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Eye, Heart, Share2, Copy } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Share2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
-
-const categoryLabels: Record<string, string> = {
-  "chinh-tri": "Chính trị",
-  "kinh-te": "Kinh tế",
-  "xa-hoi": "Xã hội",
-  "the-thao": "Thể thao",
-  "giai-tri": "Giải trí",
-  "cong-nghe": "Công nghệ",
-  "khac": "Khác",
-};
 
 const NewsDetail = () => {
   const { id } = useParams();
@@ -24,7 +13,8 @@ const NewsDetail = () => {
   const [news, setNews] = useState<any>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [disliked, setDisliked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -72,62 +62,51 @@ const NewsDetail = () => {
       }
 
       setNews(data);
-
-      // Increment view count
       await supabase.rpc("increment_view_count", { news_id_param: id });
-
-      // Check if favorited
-      if (session?.user) {
-        const { data: favData } = await supabase
-          .from("favorites")
-          .select("id")
-          .eq("news_id", id)
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-        setIsFavorite(!!favData);
-      }
-
       setIsLoading(false);
     };
 
     fetchNews();
-  }, [id, navigate, session]);
+  }, [id, navigate]);
 
-  const handleFavorite = async () => {
-    if (!session?.user) {
+  const handleLike = () => {
+    if (!session) {
       toast.error("Vui lòng đăng nhập");
       return;
     }
+    setLiked(!liked);
+    setDisliked(false);
+  };
 
-    try {
-      if (isFavorite) {
-        await supabase.from("favorites").delete().eq("news_id", id);
-        toast.success("Đã xóa khỏi yêu thích");
-      } else {
-        await supabase.from("favorites").insert({ news_id: id, user_id: session.user.id });
-        toast.success("Đã thêm vào yêu thích");
-      }
-      setIsFavorite(!isFavorite);
-    } catch (error) {
-      toast.error("Có lỗi xảy ra");
+  const handleDislike = () => {
+    if (!session) {
+      toast.error("Vui lòng đăng nhập");
+      return;
     }
+    setDisliked(!disliked);
+    setLiked(false);
   };
 
   const handleShare = async () => {
-    try {
-      await navigator.share({
-        title: news?.title,
-        text: news?.description,
-        url: window.location.href,
-      });
-    } catch (error) {
-      handleCopy();
-    }
-  };
-
-  const handleCopy = async () => {
     await navigator.clipboard.writeText(window.location.href);
     toast.success("Đã sao chép liên kết");
+  };
+
+  const handleSearch = () => {
+    toast.info("Tính năng tìm kiếm đang phát triển");
+  };
+
+  const timeAgo = () => {
+    if (!news) return "";
+    const now = new Date();
+    const created = new Date(news.created_at);
+    const diffMs = now.getTime() - created.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    
+    if (diffHours < 1) return "Vừa xong";
+    if (diffHours < 24) return `${diffHours} giờ trước`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} ngày trước`;
   };
 
   if (isLoading) {
@@ -146,53 +125,25 @@ const NewsDetail = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header user={session?.user} userRole={userRole} />
-      <main className="container py-8">
-        <Button variant="ghost" onClick={() => navigate("/")} className="mb-6">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Quay lại
-        </Button>
-
-        <article className="max-w-4xl mx-auto">
-          <div className="mb-6">
-            <Badge variant="secondary" className="mb-3">
-              {categoryLabels[news.category] || news.category}
-            </Badge>
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">{news.title}</h1>
+      
+      <main className="w-full">
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <article className="bg-card rounded-lg p-8 shadow-sm">
+            <h1 className="text-2xl md:text-3xl font-normal leading-relaxed mb-8">
+              {news.title}
+            </h1>
             
-            <div className="flex items-center gap-6 text-sm text-muted-foreground mb-6">
-              <div className="flex items-center gap-2">
-                <Eye className="h-4 w-4" />
-                <span>{news.view_count.toLocaleString("vi-VN")} lượt xem</span>
+            {news.description && (
+              <div className="prose prose-lg max-w-none mb-8">
+                <p className="text-base leading-relaxed whitespace-pre-wrap">
+                  {news.description}
+                </p>
               </div>
-              <span>{new Date(news.created_at).toLocaleDateString("vi-VN", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}</span>
-            </div>
+            )}
 
-            <div className="flex gap-2 mb-8">
-              <Button onClick={handleFavorite} variant="outline">
-                <Heart className={`mr-2 h-4 w-4 ${isFavorite ? "fill-destructive text-destructive" : ""}`} />
-                {isFavorite ? "Đã lưu" : "Lưu tin"}
-              </Button>
-              <Button onClick={handleShare} variant="outline">
-                <Share2 className="mr-2 h-4 w-4" />
-                Chia sẻ
-              </Button>
-              <Button onClick={handleCopy} variant="outline">
-                <Copy className="mr-2 h-4 w-4" />
-                Sao chép
-              </Button>
-            </div>
-          </div>
-
-          <div className="prose prose-slate max-w-none">
-            <p className="text-lg leading-relaxed">{news.description}</p>
-            
             {news.url && (
-              <div className="mt-8 p-4 bg-muted rounded-lg">
-                <p className="font-medium mb-2">Nguồn gốc:</p>
+              <div className="mt-8 p-4 bg-muted/50 rounded text-sm">
+                <p className="font-medium mb-1">Nguồn:</p>
                 <a 
                   href={news.url} 
                   target="_blank" 
@@ -203,8 +154,49 @@ const NewsDetail = () => {
                 </a>
               </div>
             )}
+          </article>
+
+          <div className="flex items-center justify-between mt-8 px-8">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2"
+                onClick={handleLike}
+              >
+                <ThumbsUp className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2"
+                onClick={handleDislike}
+              >
+                <ThumbsDown className={`h-4 w-4 ${disliked ? "fill-current" : ""}`} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2"
+                onClick={handleShare}
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2"
+                onClick={handleSearch}
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <span className="text-sm text-muted-foreground">
+              {timeAgo()}
+            </span>
           </div>
-        </article>
+        </div>
       </main>
     </div>
   );
