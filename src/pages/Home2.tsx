@@ -47,8 +47,8 @@ const Home2 = () => {
 
   useEffect(() => {
     fetchNews();
-    // Load read news IDs from localStorage
-    const savedReadNews = localStorage.getItem("readNewsIds_home2");
+    // Load read news IDs from localStorage (same key as Index page)
+    const savedReadNews = localStorage.getItem("readNewsIds");
     if (savedReadNews) {
       setReadNewsIds(new Set(JSON.parse(savedReadNews)));
     }
@@ -83,42 +83,31 @@ const Home2 = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentIndex, news.length]);
 
-  const currentNews = news[currentIndex];
+  // Filter news based on read status (same logic as Index page)
+  const filteredNews = showHiddenNews 
+    ? news 
+    : news.filter((item) => !readNewsIds.has(item.id));
 
+  const currentNews = filteredNews[currentIndex];
+
+  // Reset index if it's out of bounds
   useEffect(() => {
-    // Track when news item scrolls past the header (56px)
-    if (!currentNews) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting && entry.boundingClientRect.top < 56) {
-            // News item has scrolled past the header
-            setReadNewsIds((prev) => {
-              const updated = new Set(prev);
-              updated.add(currentNews.id);
-              // Save to localStorage
-              localStorage.setItem("readNewsIds_home2", JSON.stringify(Array.from(updated)));
-              return updated;
-            });
-          }
-        });
-      },
-      {
-        threshold: 0,
-        rootMargin: "-56px 0px 0px 0px", // Header height offset
-      }
-    );
-
-    if (newsRef.current) {
-      observer.observe(newsRef.current);
+    if (filteredNews.length > 0 && currentIndex >= filteredNews.length) {
+      setCurrentIndex(0);
     }
-
-    return () => observer.disconnect();
-  }, [currentNews]);
+  }, [filteredNews.length, currentIndex]);
 
   const handleNext = () => {
-    if (currentIndex < news.length - 1) {
+    if (currentIndex < filteredNews.length - 1) {
+      // Mark current news as read before moving to next
+      if (currentNews) {
+        setReadNewsIds((prev) => {
+          const updated = new Set(prev);
+          updated.add(currentNews.id);
+          localStorage.setItem("readNewsIds", JSON.stringify(Array.from(updated)));
+          return updated;
+        });
+      }
       setCurrentIndex(currentIndex + 1);
       setLiked(false);
       setDisliked(false);
@@ -127,6 +116,15 @@ const Home2 = () => {
 
   const handlePrevious = () => {
     if (currentIndex > 0) {
+      // Mark current news as read before moving to previous
+      if (currentNews) {
+        setReadNewsIds((prev) => {
+          const updated = new Set(prev);
+          updated.add(currentNews.id);
+          localStorage.setItem("readNewsIds", JSON.stringify(Array.from(updated)));
+          return updated;
+        });
+      }
       setCurrentIndex(currentIndex - 1);
       setLiked(false);
       setDisliked(false);
@@ -168,7 +166,8 @@ const Home2 = () => {
 
   const handleClearReadNews = () => {
     setReadNewsIds(new Set());
-    localStorage.removeItem("readNewsIds_home2");
+    setCurrentIndex(0);
+    localStorage.removeItem("readNewsIds");
     setShowHiddenNews(false);
     toast.success("Đã xóa danh sách tin đã đọc");
   };
@@ -185,11 +184,6 @@ const Home2 = () => {
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays} ngày trước`;
   };
-
-  // Filter news based on read status
-  const filteredNews = showHiddenNews 
-    ? news 
-    : news.filter((item) => !readNewsIds.has(item.id));
 
   // Get current news based on filtered list
   const displayNews = filteredNews;
