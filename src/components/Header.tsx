@@ -9,6 +9,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import logo from "@/assets/logo247.png";
 
 interface HeaderProps {
   user: any;
@@ -28,20 +29,15 @@ export const Header = ({ user, userRole }: HeaderProps) => {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
-      <div className="container flex h-16 items-center justify-between">
-        <div 
-          className="flex items-center cursor-pointer" 
-          onClick={() => navigate("/")}
-        >
-          <h1 className="text-2xl font-bold text-primary italic tracking-wide">
-            LUỐT 247
-          </h1>
-        </div>
+      <div className="container flex h-14 items-center justify-center relative">
+        <a href="/" className="absolute left-1/2 -translate-x-1/2">
+          <img src={logo} alt="LUỐT 247" className="h-6" />
+        </a>
 
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Menu className="h-6 w-6" />
+            <Button variant="ghost" size="icon" className="absolute right-0">
+              <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
           <SheetContent side="right" className="w-[280px]">

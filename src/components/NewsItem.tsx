@@ -79,26 +79,20 @@ export const NewsItem = ({
 
   return (
     <div
-      className="py-6 px-4 border-b cursor-pointer hover:bg-muted/30 transition-colors"
+      className="py-3 px-4 border-b cursor-pointer hover:bg-muted/30 transition-colors"
       onClick={handleClick}
     >
       <div className="max-w-4xl mx-auto">
-        <h2 className="text-lg font-normal leading-relaxed mb-3">
+        <p className="text-sm leading-relaxed mb-2">
           {title}
-        </h2>
-        
-        {description && (
-          <p className="text-base text-foreground/90 leading-relaxed mb-4">
-            {description}
-          </p>
-        )}
+        </p>
 
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2"
+              className="h-7 px-1.5 hover:bg-transparent"
               onClick={handleLike}
             >
               <ThumbsUp className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
@@ -106,7 +100,7 @@ export const NewsItem = ({
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2"
+              className="h-7 px-1.5 hover:bg-transparent"
               onClick={handleDislike}
             >
               <ThumbsDown className={`h-4 w-4 ${disliked ? "fill-current" : ""}`} />
@@ -114,7 +108,7 @@ export const NewsItem = ({
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2"
+              className="h-7 px-1.5 hover:bg-transparent"
               onClick={handleShare}
             >
               <Share2 className="h-4 w-4" />
@@ -122,14 +116,14 @@ export const NewsItem = ({
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 px-2"
+              className="h-7 px-1.5 hover:bg-transparent"
               onClick={handleSearch}
             >
               <Search className="h-4 w-4" />
             </Button>
           </div>
 
-          <span className="text-sm text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {timeAgo()}
           </span>
         </div>

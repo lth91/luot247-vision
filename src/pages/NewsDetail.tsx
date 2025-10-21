@@ -127,41 +127,40 @@ const NewsDetail = () => {
       <Header user={session?.user} userRole={userRole} />
       
       <main className="w-full">
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <article className="bg-card rounded-lg p-8 shadow-sm">
-            <h1 className="text-2xl md:text-3xl font-normal leading-relaxed mb-8">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <article>
+            <p className="text-sm leading-relaxed mb-3">
               {news.title}
-            </h1>
+            </p>
             
             {news.description && (
-              <div className="prose prose-lg max-w-none mb-8">
-                <p className="text-base leading-relaxed whitespace-pre-wrap">
+              <div className="mb-3">
+                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
                   {news.description}
                 </p>
               </div>
             )}
 
             {news.url && (
-              <div className="mt-8 p-4 bg-muted/50 rounded text-sm">
-                <p className="font-medium mb-1">Nguồn:</p>
+              <div className="mb-3 text-xs">
                 <a 
                   href={news.url} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-primary hover:underline break-all"
                 >
-                  {news.url}
+                  Nguồn: {news.url}
                 </a>
               </div>
             )}
           </article>
 
-          <div className="flex items-center justify-between mt-8 px-8">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between border-t border-b border-border py-2">
+            <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 px-2"
+                className="h-7 px-1.5 hover:bg-transparent"
                 onClick={handleLike}
               >
                 <ThumbsUp className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
@@ -169,7 +168,7 @@ const NewsDetail = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 px-2"
+                className="h-7 px-1.5 hover:bg-transparent"
                 onClick={handleDislike}
               >
                 <ThumbsDown className={`h-4 w-4 ${disliked ? "fill-current" : ""}`} />
@@ -177,7 +176,7 @@ const NewsDetail = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 px-2"
+                className="h-7 px-1.5 hover:bg-transparent"
                 onClick={handleShare}
               >
                 <Share2 className="h-4 w-4" />
@@ -185,14 +184,14 @@ const NewsDetail = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 px-2"
+                className="h-7 px-1.5 hover:bg-transparent"
                 onClick={handleSearch}
               >
                 <Search className="h-4 w-4" />
               </Button>
             </div>
 
-            <span className="text-sm text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               {timeAgo()}
             </span>
           </div>
