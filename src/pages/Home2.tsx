@@ -47,10 +47,14 @@ const Home2 = () => {
 
   useEffect(() => {
     fetchNews();
-    // Load read news IDs from localStorage
+    // Load read news IDs and current index from localStorage
     const savedReadNews = localStorage.getItem("readNewsIds_home2");
     if (savedReadNews) {
       setReadNewsIds(new Set(JSON.parse(savedReadNews)));
+    }
+    const savedIndex = localStorage.getItem("currentIndex_home2");
+    if (savedIndex) {
+      setCurrentIndex(parseInt(savedIndex, 10));
     }
   }, []);
 
@@ -85,40 +89,24 @@ const Home2 = () => {
 
   const currentNews = news[currentIndex];
 
+  // Save current index whenever it changes
   useEffect(() => {
-    // Track when news item scrolls past the header (56px)
-    if (!currentNews) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting && entry.boundingClientRect.top < 56) {
-            // News item has scrolled past the header
-            setReadNewsIds((prev) => {
-              const updated = new Set(prev);
-              updated.add(currentNews.id);
-              // Save to localStorage
-              localStorage.setItem("readNewsIds_home2", JSON.stringify(Array.from(updated)));
-              return updated;
-            });
-          }
-        });
-      },
-      {
-        threshold: 0,
-        rootMargin: "-56px 0px 0px 0px", // Header height offset
-      }
-    );
-
-    if (newsRef.current) {
-      observer.observe(newsRef.current);
+    if (news.length > 0) {
+      localStorage.setItem("currentIndex_home2", currentIndex.toString());
     }
-
-    return () => observer.disconnect();
-  }, [currentNews]);
+  }, [currentIndex, news.length]);
 
   const handleNext = () => {
     if (currentIndex < news.length - 1) {
+      // Mark current news as read before moving to next
+      if (currentNews) {
+        setReadNewsIds((prev) => {
+          const updated = new Set(prev);
+          updated.add(currentNews.id);
+          localStorage.setItem("readNewsIds_home2", JSON.stringify(Array.from(updated)));
+          return updated;
+        });
+      }
       setCurrentIndex(currentIndex + 1);
       setLiked(false);
       setDisliked(false);
@@ -127,6 +115,15 @@ const Home2 = () => {
 
   const handlePrevious = () => {
     if (currentIndex > 0) {
+      // Mark current news as read before moving to previous
+      if (currentNews) {
+        setReadNewsIds((prev) => {
+          const updated = new Set(prev);
+          updated.add(currentNews.id);
+          localStorage.setItem("readNewsIds_home2", JSON.stringify(Array.from(updated)));
+          return updated;
+        });
+      }
       setCurrentIndex(currentIndex - 1);
       setLiked(false);
       setDisliked(false);
@@ -168,7 +165,9 @@ const Home2 = () => {
 
   const handleClearReadNews = () => {
     setReadNewsIds(new Set());
+    setCurrentIndex(0);
     localStorage.removeItem("readNewsIds_home2");
+    localStorage.removeItem("currentIndex_home2");
     setShowHiddenNews(false);
     toast.success("Đã xóa danh sách tin đã đọc");
   };
