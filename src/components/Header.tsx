@@ -31,7 +31,7 @@ export const Header = ({ user, userRole }: HeaderProps) => {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
       <div className="container flex h-14 items-center justify-center relative">
         <a href="/" className="absolute left-1/2 -translate-x-1/2">
-          <img src={logo} alt="LUỐT 247" className="h-6" />
+          <img src={logo} alt="LUỐT 247" className="h-12" />
         </a>
 
         <Sheet open={open} onOpenChange={setOpen}>
