@@ -9,6 +9,7 @@ import NewsDetail from "./pages/NewsDetail";
 import Classification from "./pages/Classification";
 import DataManagement from "./pages/DataManagement";
 import ViewCount from "./pages/ViewCount";
+import Home2 from "./pages/Home2";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/duyet-tin" element={<Classification />} />
           <Route path="/tai-du-lieu" element={<DataManagement />} />
           <Route path="/viewcount" element={<ViewCount />} />
+          <Route path="/home2" element={<Home2 />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
