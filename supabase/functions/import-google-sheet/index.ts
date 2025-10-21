@@ -49,29 +49,74 @@ Deno.serve(async (req) => {
     const csvText = await csvResponse.text()
     console.log('CSV data fetched, length:', csvText.length)
 
-    // Parse CSV to JSON
+    // Parse CSV to JSON with proper CSV parsing
     const lines = csvText.split('\n').filter(line => line.trim())
     if (lines.length < 2) {
       throw new Error('Sheet must have at least a header row and one data row')
     }
 
-    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''))
+    // Parse CSV properly handling quoted fields
+    function parseCSVLine(line: string): string[] {
+      const result: string[] = []
+      let current = ''
+      let inQuotes = false
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i]
+        
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            current += '"'
+            i++
+          } else {
+            inQuotes = !inQuotes
+          }
+        } else if (char === ',' && !inQuotes) {
+          result.push(current.trim())
+          current = ''
+        } else {
+          current += char
+        }
+      }
+      result.push(current.trim())
+      return result
+    }
+
+    const headers = parseCSVLine(lines[0])
     console.log('Headers:', headers)
 
     const newsItems: NewsItem[] = []
     
+    // Valid category values
+    const validCategories = ['chinh-tri', 'kinh-te', 'xa-hoi', 'the-thao', 'giai-tri', 'cong-nghe', 'khac']
+    
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''))
+      const values = parseCSVLine(lines[i])
       
-      const item: NewsItem = {
-        title: values[0] || '',
-        description: values[1] || '',
-        category: values[2] || 'khac',
-        url: values[3] || '',
-      }
+      // If only one column (likely just content), use it as title
+      if (headers.length === 1 || values.length === 1) {
+        const content = values[0] || ''
+        if (content) {
+          newsItems.push({
+            title: content,
+            description: '',
+            category: 'khac',
+            url: '',
+          })
+        }
+      } else {
+        // Multiple columns - map them
+        const category = values[2] || 'khac'
+        const item: NewsItem = {
+          title: values[0] || '',
+          description: values[1] || '',
+          category: validCategories.includes(category) ? category : 'khac',
+          url: values[3] || '',
+        }
 
-      if (item.title) {
-        newsItems.push(item)
+        if (item.title) {
+          newsItems.push(item)
+        }
       }
     }
 
