@@ -123,10 +123,10 @@ const Home2 = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header user={session?.user} userRole={userRole} />
 
-      <main className="w-full max-w-4xl mx-auto px-4 py-8">
+      <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-2.5">
         {isLoading ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Đang tải tin tức...</p>
@@ -136,84 +136,88 @@ const Home2 = () => {
             <p className="text-muted-foreground">Không có tin tức nào</p>
           </div>
         ) : currentNews ? (
-          <div className="space-y-8">
-            {/* Main content area */}
-            <div className="bg-card rounded-lg border p-8 min-h-[500px]">
-              <h1 className="text-3xl font-bold leading-relaxed mb-6">
-                {currentNews.title}
-              </h1>
-              {currentNews.description && (
-                <p className="text-muted-foreground text-lg leading-relaxed">
-                  {currentNews.description}
-                </p>
-              )}
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2"
-                  onClick={handleLike}
-                >
-                  <ThumbsUp className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2"
-                  onClick={handleDislike}
-                >
-                  <ThumbsDown className={`h-4 w-4 ${disliked ? "fill-current" : ""}`} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2"
-                  onClick={handleShare}
-                >
-                  <Share2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2"
-                  onClick={handleSearch}
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
+          <div className="h-full flex flex-col gap-4">
+            {/* Main content area - fixed height */}
+            <div className="bg-card rounded-lg border flex-1 flex flex-col" style={{ height: 'calc(100vh - 76px)' }}>
+              <div className="flex-1 overflow-y-auto p-12">
+                <h1 className="text-4xl font-bold leading-relaxed mb-8">
+                  {currentNews.title}
+                </h1>
+                {currentNews.description && (
+                  <p className="text-muted-foreground text-xl leading-relaxed">
+                    {currentNews.description}
+                  </p>
+                )}
               </div>
 
-              <span className="text-sm text-muted-foreground">
-                {timeAgo()}
-              </span>
-            </div>
+              {/* Action buttons and timestamp - pinned to bottom */}
+              <div className="p-6 border-t bg-card">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2"
+                      onClick={handleLike}
+                    >
+                      <ThumbsUp className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2"
+                      onClick={handleDislike}
+                    >
+                      <ThumbsDown className={`h-4 w-4 ${disliked ? "fill-current" : ""}`} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2"
+                      onClick={handleShare}
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2"
+                      onClick={handleSearch}
+                    >
+                      <Search className="h-4 w-4" />
+                    </Button>
+                  </div>
 
-            {/* Navigation */}
-            <div className="flex items-center justify-center gap-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePrevious}
-                disabled={currentIndex === 0}
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Trước
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                {currentIndex + 1} / {news.length}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleNext}
-                disabled={currentIndex === news.length - 1}
-              >
-                Sau
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
+                  <span className="text-sm text-muted-foreground">
+                    {timeAgo()}
+                  </span>
+                </div>
+
+                {/* Navigation */}
+                <div className="flex items-center justify-center gap-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePrevious}
+                    disabled={currentIndex === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Trước
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    {currentIndex + 1} / {news.length}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNext}
+                    disabled={currentIndex === news.length - 1}
+                  >
+                    Sau
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         ) : null}
