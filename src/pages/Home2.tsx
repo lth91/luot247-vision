@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Header } from "@/components/Header";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
@@ -14,9 +14,6 @@ const Home2 = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [liked, setLiked] = useState(false);
   const [disliked, setDisliked] = useState(false);
-  const [readNewsIds, setReadNewsIds] = useState<Set<string>>(new Set());
-  const [showHiddenNews, setShowHiddenNews] = useState(false);
-  const newsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -47,11 +44,6 @@ const Home2 = () => {
 
   useEffect(() => {
     fetchNews();
-    // Load read news IDs from localStorage (same key as Index page)
-    const savedReadNews = localStorage.getItem("readNewsIds");
-    if (savedReadNews) {
-      setReadNewsIds(new Set(JSON.parse(savedReadNews)));
-    }
   }, []);
 
   const fetchNews = async () => {
@@ -83,31 +75,10 @@ const Home2 = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentIndex, news.length]);
 
-  // Filter news based on read status (same logic as Index page)
-  const filteredNews = showHiddenNews 
-    ? news 
-    : news.filter((item) => !readNewsIds.has(item.id));
-
-  const currentNews = filteredNews[currentIndex];
-
-  // Reset index if it's out of bounds
-  useEffect(() => {
-    if (filteredNews.length > 0 && currentIndex >= filteredNews.length) {
-      setCurrentIndex(0);
-    }
-  }, [filteredNews.length, currentIndex]);
+  const currentNews = news[currentIndex];
 
   const handleNext = () => {
-    if (currentIndex < filteredNews.length - 1) {
-      // Mark current news as read before moving to next
-      if (currentNews) {
-        setReadNewsIds((prev) => {
-          const updated = new Set(prev);
-          updated.add(currentNews.id);
-          localStorage.setItem("readNewsIds", JSON.stringify(Array.from(updated)));
-          return updated;
-        });
-      }
+    if (currentIndex < news.length - 1) {
       setCurrentIndex(currentIndex + 1);
       setLiked(false);
       setDisliked(false);
@@ -116,15 +87,6 @@ const Home2 = () => {
 
   const handlePrevious = () => {
     if (currentIndex > 0) {
-      // Mark current news as read before moving to previous
-      if (currentNews) {
-        setReadNewsIds((prev) => {
-          const updated = new Set(prev);
-          updated.add(currentNews.id);
-          localStorage.setItem("readNewsIds", JSON.stringify(Array.from(updated)));
-          return updated;
-        });
-      }
       setCurrentIndex(currentIndex - 1);
       setLiked(false);
       setDisliked(false);
@@ -160,18 +122,6 @@ const Home2 = () => {
     toast.info("Tính năng tìm kiếm đang phát triển");
   };
 
-  const handleShowAllNews = () => {
-    setShowHiddenNews(true);
-  };
-
-  const handleClearReadNews = () => {
-    setReadNewsIds(new Set());
-    setCurrentIndex(0);
-    localStorage.removeItem("readNewsIds");
-    setShowHiddenNews(false);
-    toast.success("Đã xóa danh sách tin đã đọc");
-  };
-
   const timeAgo = () => {
     if (!currentNews) return "";
     const now = new Date();
@@ -185,45 +135,30 @@ const Home2 = () => {
     return `${diffDays} ngày trước`;
   };
 
-  // Get current news based on filtered list
-  const displayNews = filteredNews;
-  const displayCurrentNews = displayNews[currentIndex];
-
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Header 
-        user={session?.user} 
-        userRole={userRole}
-        onShowAllNews={handleShowAllNews}
-        onClearReadNews={handleClearReadNews}
-      />
+      <Header user={session?.user} userRole={userRole} />
 
       <main className="flex-1 w-full max-w-4xl mx-auto px-4" style={{ paddingTop: '10px', paddingBottom: '10px' }}>
         {isLoading ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Đang tải tin tức...</p>
           </div>
-        ) : displayNews.length === 0 ? (
+        ) : news.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">
-              {showHiddenNews ? "Không có tin tức nào" : "Không có tin mới. Tất cả tin đã được đọc."}
-            </p>
+            <p className="text-muted-foreground">Không có tin tức nào</p>
           </div>
-        ) : displayCurrentNews ? (
+        ) : currentNews ? (
           <div className="h-full">
             {/* Main content area - fixed height */}
-            <div 
-              ref={newsRef}
-              className="bg-card rounded-lg border flex flex-col" 
-              style={{ height: 'calc(100vh - 76px)' }}
-            >
+            <div className="bg-card rounded-lg border flex flex-col" style={{ height: 'calc(100vh - 76px)' }}>
               <div className="flex-1 overflow-y-auto p-12">
                 <h1 className="text-4xl font-bold leading-relaxed mb-8">
-                  {displayCurrentNews.title}
+                  {currentNews.title}
                 </h1>
-                {displayCurrentNews.description && (
+                {currentNews.description && (
                   <p className="text-muted-foreground text-xl leading-relaxed">
-                    {displayCurrentNews.description}
+                    {currentNews.description}
                   </p>
                 )}
               </div>

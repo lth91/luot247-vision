@@ -56,23 +56,17 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    // Track which news items have been seen (visible in viewport)
-    const seenNewsIds = new Set<string>();
-    
+    // Track when news items scroll past the header (56px)
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           const newsId = entry.target.getAttribute("data-news-id");
-          if (!newsId) return;
-          
-          if (entry.isIntersecting) {
-            // Mark as seen when it becomes visible
-            seenNewsIds.add(newsId);
-          } else if (seenNewsIds.has(newsId) && entry.boundingClientRect.top < 56) {
-            // Only mark as read if it was previously seen AND has scrolled past header
+          if (newsId && !entry.isIntersecting && entry.boundingClientRect.top < 56) {
+            // News item has scrolled past the header
             setReadNewsIds((prev) => {
               const updated = new Set(prev);
               updated.add(newsId);
+              // Save to localStorage
               localStorage.setItem("readNewsIds", JSON.stringify(Array.from(updated)));
               return updated;
             });
@@ -80,7 +74,7 @@ const Index = () => {
         });
       },
       {
-        threshold: 0.1, // Require at least 10% visible to count as "seen"
+        threshold: 0,
         rootMargin: "-56px 0px 0px 0px", // Header height offset
       }
     );
