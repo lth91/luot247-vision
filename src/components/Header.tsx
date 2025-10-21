@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import {
@@ -6,7 +6,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import logo from "@/assets/logo247.png";
@@ -20,8 +20,13 @@ interface HeaderProps {
 
 export const Header = ({ user, userRole }: HeaderProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [readingMode, setReadingMode] = useState(false);
+
+  useEffect(() => {
+    setReadingMode(location.pathname === "/home2");
+  }, [location.pathname]);
 
   const handleReadingModeToggle = (checked: boolean) => {
     setReadingMode(checked);
