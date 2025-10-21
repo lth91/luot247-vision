@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -50,7 +46,7 @@ export const Header = ({ user, userRole }: HeaderProps) => {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
       <div className="container flex h-14 items-center justify-center relative">
         <button onClick={() => navigate("/")} className="absolute left-1/2 -translate-x-1/2 cursor-pointer">
-          <img src={logo} alt="LUỐT 247" className="h-12" />
+          <img src={logo} alt="LƯỚT 247" className="h-12" />
         </button>
 
         <Sheet open={open} onOpenChange={setOpen}>
@@ -64,16 +60,10 @@ export const Header = ({ user, userRole }: HeaderProps) => {
               {user ? (
                 <>
                   <div className="pb-4 border-b">
-                    <p className="text-sm text-muted-foreground">
-                      {user.email}
-                    </p>
-                    {userRole && (
-                      <p className="text-xs text-muted-foreground capitalize mt-1">
-                        {userRole}
-                      </p>
-                    )}
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    {userRole && <p className="text-xs text-muted-foreground capitalize mt-1">{userRole}</p>}
                   </div>
-                  
+
                   <Button
                     variant="ghost"
                     className="justify-start"
@@ -126,19 +116,11 @@ export const Header = ({ user, userRole }: HeaderProps) => {
                       <Label htmlFor="reading-mode" className="text-sm">
                         📄 Bật chế độ đọc lật trang
                       </Label>
-                      <Switch
-                        id="reading-mode"
-                        checked={readingMode}
-                        onCheckedChange={handleReadingModeToggle}
-                      />
+                      <Switch id="reading-mode" checked={readingMode} onCheckedChange={handleReadingModeToggle} />
                     </div>
                   </div>
 
-                  <Button
-                    variant="ghost"
-                    className="justify-start mt-4"
-                    onClick={handleLogout}
-                  >
+                  <Button variant="ghost" className="justify-start mt-4" onClick={handleLogout}>
                     🚪 Đăng xuất
                   </Button>
                 </>
@@ -154,17 +136,13 @@ export const Header = ({ user, userRole }: HeaderProps) => {
                   >
                     🔐 Đăng nhập
                   </Button>
-                  
+
                   <div className="border-t pt-4 mt-4">
                     <div className="flex items-center justify-between px-2 py-2">
                       <Label htmlFor="reading-mode-guest" className="text-sm">
                         📄 Bật chế độ đọc lật trang
                       </Label>
-                      <Switch
-                        id="reading-mode-guest"
-                        checked={readingMode}
-                        onCheckedChange={handleReadingModeToggle}
-                      />
+                      <Switch id="reading-mode-guest" checked={readingMode} onCheckedChange={handleReadingModeToggle} />
                     </div>
                   </div>
                 </>
