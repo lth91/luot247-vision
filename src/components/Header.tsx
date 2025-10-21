@@ -12,10 +12,9 @@ import { Label } from "@/components/ui/label";
 interface HeaderProps {
   user: any;
   userRole: string | null;
-  onShowAllNews?: () => void;
 }
 
-export const Header = ({ user, userRole, onShowAllNews }: HeaderProps) => {
+export const Header = ({ user, userRole }: HeaderProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
@@ -120,19 +119,6 @@ export const Header = ({ user, userRole, onShowAllNews }: HeaderProps) => {
                       <Switch id="reading-mode" checked={readingMode} onCheckedChange={handleReadingModeToggle} />
                     </div>
                   </div>
-
-                  {onShowAllNews && (
-                    <Button
-                      variant="ghost"
-                      className="justify-start"
-                      onClick={() => {
-                        setOpen(false);
-                        onShowAllNews();
-                      }}
-                    >
-                      🔄 Hiển thị tất cả tin đã ẩn
-                    </Button>
-                  )}
 
                   <Button variant="ghost" className="justify-start mt-4" onClick={handleLogout}>
                     🚪 Đăng xuất
