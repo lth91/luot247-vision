@@ -79,10 +79,10 @@ export const NewsItem = ({
 
   return (
     <div
-      className="py-3 px-4 border-b cursor-pointer hover:bg-muted/30 transition-colors"
+      className="py-3 px-6 border-b cursor-pointer hover:bg-muted/30 transition-colors"
       onClick={handleClick}
     >
-      <div className="max-w-4xl mx-auto">
+      <div>
         <p className="text-sm leading-relaxed mb-2">
           {title}
         </p>

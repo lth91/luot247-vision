@@ -79,7 +79,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Header user={session?.user} userRole={userRole} />
 
-      <main className="w-full">
+      <main className="w-full max-w-2xl mx-auto">
         {isLoading ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Đang tải tin tức...</p>
