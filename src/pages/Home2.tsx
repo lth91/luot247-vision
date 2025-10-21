@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ThumbsUp, ThumbsDown, Share2, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Share2, Search } from "lucide-react";
 
 const Home2 = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -61,6 +61,19 @@ const Home2 = () => {
     }
     setIsLoading(false);
   };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowRight") {
+        handleNext();
+      } else if (event.key === "ArrowLeft") {
+        handlePrevious();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentIndex, news.length]);
 
   const currentNews = news[currentIndex];
 
@@ -151,8 +164,8 @@ const Home2 = () => {
               </div>
 
               {/* Action buttons and timestamp - pinned to bottom */}
-              <div className="p-6 border-t bg-card">
-                <div className="flex items-center justify-between mb-4">
+              <div className="p-6 bg-card">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Button
                       variant="ghost"
@@ -191,31 +204,6 @@ const Home2 = () => {
                   <span className="text-sm text-muted-foreground">
                     {timeAgo()}
                   </span>
-                </div>
-
-                {/* Navigation */}
-                <div className="flex items-center justify-center gap-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handlePrevious}
-                    disabled={currentIndex === 0}
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-1" />
-                    Trước
-                  </Button>
-                  <span className="text-sm text-muted-foreground">
-                    {currentIndex + 1} / {news.length}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleNext}
-                    disabled={currentIndex === news.length - 1}
-                  >
-                    Sau
-                    <ChevronRight className="h-4 w-4 ml-1" />
-                  </Button>
                 </div>
               </div>
             </div>
