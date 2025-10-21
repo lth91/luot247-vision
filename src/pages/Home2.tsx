@@ -139,7 +139,7 @@ const Home2 = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <Header user={session?.user} userRole={userRole} />
 
-      <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-2.5">
+      <main className="flex-1 w-full max-w-4xl mx-auto px-4" style={{ paddingTop: '10px', paddingBottom: '10px' }}>
         {isLoading ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Đang tải tin tức...</p>
@@ -149,9 +149,9 @@ const Home2 = () => {
             <p className="text-muted-foreground">Không có tin tức nào</p>
           </div>
         ) : currentNews ? (
-          <div className="h-full flex flex-col gap-4">
+          <div className="h-full">
             {/* Main content area - fixed height */}
-            <div className="bg-card rounded-lg border flex-1 flex flex-col" style={{ height: 'calc(100vh - 76px)' }}>
+            <div className="bg-card rounded-lg border flex flex-col" style={{ height: 'calc(100vh - 76px)' }}>
               <div className="flex-1 overflow-y-auto p-12">
                 <h1 className="text-4xl font-bold leading-relaxed mb-8">
                   {currentNews.title}
