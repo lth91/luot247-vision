@@ -12,11 +12,9 @@ import { Label } from "@/components/ui/label";
 interface HeaderProps {
   user: any;
   userRole: string | null;
-  onShowAllNews?: () => void;
-  onClearReadNews?: () => void;
 }
 
-export const Header = ({ user, userRole, onShowAllNews, onClearReadNews }: HeaderProps) => {
+export const Header = ({ user, userRole }: HeaderProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
@@ -112,29 +110,6 @@ export const Header = ({ user, userRole, onShowAllNews, onClearReadNews }: Heade
                   >
                     📈 Thống kê
                   </Button>
-
-                  <div className="border-t pt-4">
-                    <Button
-                      variant="ghost"
-                      className="justify-start w-full"
-                      onClick={() => {
-                        onShowAllNews?.();
-                        setOpen(false);
-                      }}
-                    >
-                      👁️ Xem tin đã ẩn
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="justify-start w-full"
-                      onClick={() => {
-                        onClearReadNews?.();
-                        setOpen(false);
-                      }}
-                    >
-                      🗑️ Xóa danh sách đã đọc
-                    </Button>
-                  </div>
 
                   <div className="border-t pt-4">
                     <div className="flex items-center justify-between px-2 py-2">
