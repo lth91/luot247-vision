@@ -49,9 +49,9 @@ export const Header = ({ user, userRole }: HeaderProps) => {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
       <div className="container flex h-14 items-center justify-center relative">
-        <a href="/" className="absolute left-1/2 -translate-x-1/2">
+        <button onClick={() => navigate("/")} className="absolute left-1/2 -translate-x-1/2 cursor-pointer">
           <img src={logo} alt="LUỐT 247" className="h-12" />
-        </a>
+        </button>
 
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
