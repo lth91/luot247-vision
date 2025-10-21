@@ -79,47 +79,47 @@ export const NewsItem = ({
 
   return (
     <div
-      className="py-3 px-6 border-b cursor-pointer hover:bg-muted/30 transition-colors"
+      className="p-4 mb-3 border rounded-lg cursor-pointer hover:bg-muted/30 transition-colors bg-card"
       onClick={handleClick}
     >
       <div>
-        <p className="text-sm leading-relaxed mb-2">
+        <p className="text-base font-semibold leading-relaxed mb-3">
           {title}
         </p>
 
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-1.5 hover:bg-transparent"
+              className="h-6 px-1 hover:bg-transparent"
               onClick={handleLike}
             >
-              <ThumbsUp className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
+              <ThumbsUp className={`h-3.5 w-3.5 ${liked ? "fill-current" : ""}`} />
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-1.5 hover:bg-transparent"
+              className="h-6 px-1 hover:bg-transparent"
               onClick={handleDislike}
             >
-              <ThumbsDown className={`h-4 w-4 ${disliked ? "fill-current" : ""}`} />
+              <ThumbsDown className={`h-3.5 w-3.5 ${disliked ? "fill-current" : ""}`} />
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-1.5 hover:bg-transparent"
+              className="h-6 px-1 hover:bg-transparent"
               onClick={handleShare}
             >
-              <Share2 className="h-4 w-4" />
+              <Share2 className="h-3.5 w-3.5" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-1.5 hover:bg-transparent"
+              className="h-6 px-1 hover:bg-transparent"
               onClick={handleSearch}
             >
-              <Search className="h-4 w-4" />
+              <Search className="h-3.5 w-3.5" />
             </Button>
           </div>
 

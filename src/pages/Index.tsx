@@ -79,7 +79,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Header user={session?.user} userRole={userRole} />
 
-      <main className="w-full max-w-2xl mx-auto">
+      <main className="w-full max-w-2xl mx-auto px-4 py-4">
         {isLoading ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Đang tải tin tức...</p>
@@ -89,7 +89,7 @@ const Index = () => {
             <p className="text-muted-foreground">Không có tin tức nào</p>
           </div>
         ) : (
-          <div className="divide-y">
+          <div>
             {news.map((item) => (
               <NewsItem
                 key={item.id}
