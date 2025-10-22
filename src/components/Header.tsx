@@ -12,9 +12,11 @@ import { Label } from "@/components/ui/label";
 interface HeaderProps {
   user: any;
   userRole: string | null;
+  showReadNews?: boolean;
+  onToggleReadNews?: () => void;
 }
 
-export const Header = ({ user, userRole }: HeaderProps) => {
+export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews }: HeaderProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
@@ -120,6 +122,19 @@ export const Header = ({ user, userRole }: HeaderProps) => {
                     </div>
                   </div>
 
+                  <div className="border-t pt-4">
+                    <Button
+                      variant="ghost"
+                      className="justify-start w-full"
+                      onClick={() => {
+                        setOpen(false);
+                        onToggleReadNews?.();
+                      }}
+                    >
+                      🔄 Reset tin đã đọc
+                    </Button>
+                  </div>
+
                   <Button variant="ghost" className="justify-start mt-4" onClick={handleLogout}>
                     🚪 Đăng xuất
                   </Button>
@@ -144,6 +159,19 @@ export const Header = ({ user, userRole }: HeaderProps) => {
                       </Label>
                       <Switch id="reading-mode-guest" checked={readingMode} onCheckedChange={handleReadingModeToggle} />
                     </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <Button
+                      variant="ghost"
+                      className="justify-start w-full"
+                      onClick={() => {
+                        setOpen(false);
+                        onToggleReadNews?.();
+                      }}
+                    >
+                      🔄 Reset tin đã đọc
+                    </Button>
                   </div>
                 </>
               )}

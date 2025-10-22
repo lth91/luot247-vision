@@ -16,6 +16,7 @@ interface NewsItemProps {
   isFavorite?: boolean;
   onFavoriteToggle?: () => void;
   isAuthenticated: boolean;
+  isLast?: boolean;
 }
 
 export const NewsItem = ({
@@ -24,6 +25,7 @@ export const NewsItem = ({
   description,
   createdAt,
   isAuthenticated,
+  isLast = false,
 }: NewsItemProps) => {
   const navigate = useNavigate();
   const [liked, setLiked] = useState(false);
@@ -79,7 +81,8 @@ export const NewsItem = ({
 
   return (
     <div
-      className="p-4 border-b last:border-b-0 cursor-pointer hover:bg-muted/30 transition-colors"
+      className="p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+      style={{ borderBottom: isLast ? 'none' : '1px solid #e5e7eb' }}
       onClick={handleClick}
     >
       <div>
