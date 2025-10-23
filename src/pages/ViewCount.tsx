@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 const categoryLabels = {
   "chinh-tri": "Chính trị",
@@ -21,6 +21,7 @@ const ViewCount = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [news, setNews] = useState<any[]>([]);
   const [stats, setStats] = useState({
+    yesterday: 0,
     today: 0,
     thisWeek: 0,
     thisMonth: 0,
@@ -85,6 +86,10 @@ const ViewCount = () => {
     // Hôm nay 7h sáng
     const today7AM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
 
+    // Hôm qua 7h sáng
+    const yesterday7AM = new Date(today7AM);
+    yesterday7AM.setDate(yesterday7AM.getDate() - 1);
+
     // Thứ 2 tuần này 7h sáng
     const dayOfWeek = now.getDay();
     const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -93,31 +98,34 @@ const ViewCount = () => {
 
     // Ngày 1 tháng này 7h sáng
     const firstOfMonth7AM = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-    
-    const [todayRes, weekRes, monthRes, totalRes] = await Promise.all([
-      // Hôm nay
-      supabase.from("view_logs").select("id", {
-        count: "exact",
-        head: true
-      }).gte("viewed_at", today7AM.toISOString()),
-      // Tuần này
-      supabase.from("view_logs").select("id", {
-        count: "exact",
-        head: true
-      }).gte("viewed_at", thisMonday7AM.toISOString()),
-      // Tháng này
-      supabase.from("view_logs").select("id", {
-        count: "exact",
-        head: true
-      }).gte("viewed_at", firstOfMonth7AM.toISOString()),
-      // Cộng dồn
-      supabase.from("view_logs").select("id", {
-        count: "exact",
-        head: true
-      })
-    ]);
-    
+    const [yesterdayRes, todayRes, weekRes, monthRes, totalRes] = await Promise.all([
+    // Hôm qua
+    supabase.from("view_logs").select("id", {
+      count: "exact",
+      head: true
+    }).gte("viewed_at", yesterday7AM.toISOString()).lt("viewed_at", today7AM.toISOString()),
+    // Hôm nay
+    supabase.from("view_logs").select("id", {
+      count: "exact",
+      head: true
+    }).gte("viewed_at", today7AM.toISOString()),
+    // Tuần này
+    supabase.from("view_logs").select("id", {
+      count: "exact",
+      head: true
+    }).gte("viewed_at", thisMonday7AM.toISOString()),
+    // Tháng này
+    supabase.from("view_logs").select("id", {
+      count: "exact",
+      head: true
+    }).gte("viewed_at", firstOfMonth7AM.toISOString()),
+    // Cộng dồn
+    supabase.from("view_logs").select("id", {
+      count: "exact",
+      head: true
+    })]);
     setStats({
+      yesterday: yesterdayRes.count || 0,
       today: todayRes.count || 0,
       thisWeek: weekRes.count || 0,
       thisMonth: monthRes.count || 0,
@@ -191,102 +199,81 @@ const ViewCount = () => {
         <h1 className="text-3xl font-bold">Thống kê lượt xem</h1>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="p-6 text-center bg-card hover:shadow-lg transition-shadow">
-            <p className="text-sm text-muted-foreground mb-2">Hôm nay</p>
-            <p className="text-4xl font-bold text-blue-500">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <Card className="p-4 text-center">
+            <p className="text-sm text-muted-foreground mb-1">Hôm qua</p>
+            <p className="text-3xl font-bold text-blue-600">
+              {stats.yesterday.toLocaleString("vi-VN")}
+            </p>
+          </Card>
+          
+          <Card className="p-4 text-center">
+            <p className="text-sm text-muted-foreground mb-1">Hôm nay</p>
+            <p className="text-3xl font-bold text-blue-600">
               {stats.today.toLocaleString("vi-VN")}
             </p>
           </Card>
           
-          <Card className="p-6 text-center bg-card hover:shadow-lg transition-shadow">
-            <p className="text-sm text-muted-foreground mb-2">Tuần này</p>
-            <p className="text-4xl font-bold text-green-500">
+          <Card className="p-4 text-center">
+            <p className="text-sm text-muted-foreground mb-1">Tuần này</p>
+            <p className="text-3xl font-bold text-green-600">
               {stats.thisWeek.toLocaleString("vi-VN")}
             </p>
           </Card>
           
-          <Card className="p-6 text-center bg-card hover:shadow-lg transition-shadow">
-            <p className="text-sm text-muted-foreground mb-2">Tháng này</p>
-            <p className="text-4xl font-bold text-orange-500">
+          <Card className="p-4 text-center">
+            <p className="text-sm text-muted-foreground mb-1">Tháng này</p>
+            <p className="text-3xl font-bold text-orange-600">
               {stats.thisMonth.toLocaleString("vi-VN")}
             </p>
           </Card>
           
-          <Card className="p-6 text-center bg-card hover:shadow-lg transition-shadow">
-            <p className="text-sm text-muted-foreground mb-2">Cộng dồn</p>
-            <p className="text-4xl font-bold text-purple-500">
+          <Card className="p-4 text-center">
+            <p className="text-sm text-muted-foreground mb-1">Cộng dồn</p>
+            <p className="text-3xl font-bold text-purple-600">
               {stats.total.toLocaleString("vi-VN")}
             </p>
           </Card>
         </div>
 
         {/* Weekly Chart */}
-        <Card className="p-6 shadow-md">
-          <h2 className="text-xl font-bold mb-6">Biểu đồ view tuần này</h2>
+        <Card className="p-6">
+          <h2 className="text-xl font-bold mb-4">Biểu đồ view tuần này</h2>
           <ChartContainer config={{
-            views: {
-              label: "Lượt xem",
-              color: "hsl(217, 91%, 60%)"
-            }
-          }} className="h-[350px]">
+          views: {
+            label: "Lượt xem",
+            color: "hsl(var(--primary))"
+          }
+        }} className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={weeklyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis 
-                  dataKey="name" 
-                  stroke="#666"
-                  style={{ fontSize: '14px' }}
-                />
-                <YAxis 
-                  stroke="#666"
-                  style={{ fontSize: '14px' }}
-                />
+              <BarChart data={weeklyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Line 
-                  type="monotone" 
-                  dataKey="views" 
-                  stroke="hsl(217, 91%, 60%)" 
-                  strokeWidth={3}
-                  dot={{ fill: 'hsl(217, 91%, 60%)', r: 5 }}
-                  activeDot={{ r: 7 }}
-                />
-              </LineChart>
+                <Bar dataKey="views" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           </ChartContainer>
         </Card>
 
         {/* Monthly Chart */}
-        <Card className="p-6 shadow-md">
-          <h2 className="text-xl font-bold mb-6">Biểu đồ view tháng này</h2>
+        <Card className="p-6">
+          <h2 className="text-xl font-bold mb-4">Biểu đồ view tháng này</h2>
           <ChartContainer config={{
-            views: {
-              label: "Lượt xem",
-              color: "hsl(142, 71%, 45%)"
-            }
-          }} className="h-[350px]">
+          views: {
+            label: "Lượt xem",
+            color: "hsl(var(--primary))"
+          }
+        }} className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis 
-                  dataKey="name" 
-                  stroke="#666"
-                  style={{ fontSize: '14px' }}
-                />
-                <YAxis 
-                  stroke="#666"
-                  style={{ fontSize: '14px' }}
-                />
+              <BarChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Line 
-                  type="monotone" 
-                  dataKey="views" 
-                  stroke="hsl(142, 71%, 45%)" 
-                  strokeWidth={3}
-                  dot={{ fill: 'hsl(142, 71%, 45%)', r: 5 }}
-                  activeDot={{ r: 7 }}
-                />
-              </LineChart>
+                <Bar dataKey="views" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           </ChartContainer>
         </Card>
