@@ -44,24 +44,10 @@ const About = () => {
       
       <main className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto space-y-8">
-          {/* Hero Section */}
-          <div className="text-center space-y-4 pb-8 border-b">
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              Về Chúng Tôi
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Nền tảng tin tức nhanh, chính xác và đáng tin cậy
-            </p>
-          </div>
-
-          {/* Mission Card */}
+          {/* Mission Content */}
           <Card className="p-8 shadow-lg border-2">
-            <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
-              <span className="text-3xl">🎯</span>
-              Sứ Mệnh
-            </h2>
             <p className="text-muted-foreground leading-relaxed text-lg">
-              <span className="font-semibold text-foreground">LƯỚT 247</span> là bản tin vắn được biên soạn từ các nguồn tin chính thống tại Việt Nam, chọn lọc và tóm lược những thông tin quan trọng nhất trong ngày. Nền tảng hướng đến phục vụ cộng đồng với nội dung nhanh gọn, chính xác, đáng tin cậy, giúp người đọc cập nhật kịp thời các sự kiện, chính sách và vấn đề nổi bật trong nước.
+              <span className="font-semibold text-red-600">LƯỚT 247</span> là bản tin vắn được biên soạn từ các nguồn tin chính thống tại Việt Nam, chọn lọc và tóm lược những thông tin quan trọng nhất trong ngày. Nền tảng hướng đến phục vụ cộng đồng với nội dung nhanh gọn, chính xác, đáng tin cậy, giúp người đọc cập nhật kịp thời các sự kiện, chính sách và vấn đề nổi bật trong nước.
             </p>
           </Card>
 
@@ -106,32 +92,6 @@ const About = () => {
             </div>
           </Card>
 
-          {/* Values Section */}
-          <div className="grid md:grid-cols-3 gap-6 pt-4">
-            <Card className="p-6 text-center shadow-md hover:shadow-lg transition-shadow">
-              <div className="text-4xl mb-3">⚡</div>
-              <h3 className="font-semibold text-lg mb-2">Nhanh Gọn</h3>
-              <p className="text-sm text-muted-foreground">
-                Cập nhật tin tức nhanh chóng, tiết kiệm thời gian
-              </p>
-            </Card>
-
-            <Card className="p-6 text-center shadow-md hover:shadow-lg transition-shadow">
-              <div className="text-4xl mb-3">✓</div>
-              <h3 className="font-semibold text-lg mb-2">Chính Xác</h3>
-              <p className="text-sm text-muted-foreground">
-                Nguồn tin chính thống, đáng tin cậy
-              </p>
-            </Card>
-
-            <Card className="p-6 text-center shadow-md hover:shadow-lg transition-shadow">
-              <div className="text-4xl mb-3">🎯</div>
-              <h3 className="font-semibold text-lg mb-2">Trọng Tâm</h3>
-              <p className="text-sm text-muted-foreground">
-                Chọn lọc những thông tin quan trọng nhất
-              </p>
-            </Card>
-          </div>
         </div>
       </main>
     </div>
