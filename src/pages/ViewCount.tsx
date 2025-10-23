@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 const categoryLabels = {
   "chinh-tri": "Chính trị",
@@ -81,55 +81,13 @@ const ViewCount = () => {
     setIsLoading(false);
   };
   const fetchStats = async () => {
-    const now = new Date();
-
-    // Hôm nay 7h sáng
-    const today7AM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-
-    // Hôm qua 7h sáng
-    const yesterday7AM = new Date(today7AM);
-    yesterday7AM.setDate(yesterday7AM.getDate() - 1);
-
-    // Thứ 2 tuần này 7h sáng
-    const dayOfWeek = now.getDay();
-    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    const thisMonday7AM = new Date(today7AM);
-    thisMonday7AM.setDate(thisMonday7AM.getDate() - daysFromMonday);
-
-    // Ngày 1 tháng này 7h sáng
-    const firstOfMonth7AM = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-    const [yesterdayRes, todayRes, weekRes, monthRes, totalRes] = await Promise.all([
-    // Hôm qua
-    supabase.from("view_logs").select("id", {
-      count: "exact",
-      head: true
-    }).gte("viewed_at", yesterday7AM.toISOString()).lt("viewed_at", today7AM.toISOString()),
-    // Hôm nay
-    supabase.from("view_logs").select("id", {
-      count: "exact",
-      head: true
-    }).gte("viewed_at", today7AM.toISOString()),
-    // Tuần này
-    supabase.from("view_logs").select("id", {
-      count: "exact",
-      head: true
-    }).gte("viewed_at", thisMonday7AM.toISOString()),
-    // Tháng này
-    supabase.from("view_logs").select("id", {
-      count: "exact",
-      head: true
-    }).gte("viewed_at", firstOfMonth7AM.toISOString()),
-    // Cộng dồn
-    supabase.from("view_logs").select("id", {
-      count: "exact",
-      head: true
-    })]);
+    // Set static values from old website
     setStats({
-      yesterday: yesterdayRes.count || 0,
-      today: todayRes.count || 0,
-      thisWeek: weekRes.count || 0,
-      thisMonth: monthRes.count || 0,
-      total: totalRes.count || 0
+      yesterday: 0,
+      today: 176,
+      thisWeek: 2035,
+      thisMonth: 13448,
+      total: 13785
     });
   };
   const fetchWeeklyData = async () => {
@@ -244,15 +202,22 @@ const ViewCount = () => {
             label: "Lượt xem",
             color: "hsl(var(--primary))"
           }
-        }} className="h-[300px]">
+        }} className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
+              <LineChart data={weeklyData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
+                <YAxis stroke="hsl(var(--muted-foreground))" />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="views" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
-              </BarChart>
+                <Line 
+                  type="monotone" 
+                  dataKey="views" 
+                  stroke="hsl(var(--primary))" 
+                  strokeWidth={3}
+                  dot={{ fill: "hsl(var(--primary))", r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
             </ResponsiveContainer>
           </ChartContainer>
         </Card>
@@ -265,15 +230,22 @@ const ViewCount = () => {
             label: "Lượt xem",
             color: "hsl(var(--primary))"
           }
-        }} className="h-[300px]">
+        }} className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
+              <LineChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
+                <YAxis stroke="hsl(var(--muted-foreground))" />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="views" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
-              </BarChart>
+                <Line 
+                  type="monotone" 
+                  dataKey="views" 
+                  stroke="hsl(var(--primary))" 
+                  strokeWidth={3}
+                  dot={{ fill: "hsl(var(--primary))", r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
             </ResponsiveContainer>
           </ChartContainer>
         </Card>
