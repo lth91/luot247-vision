@@ -64,7 +64,8 @@ export const NewsItem = ({
   };
 
   const handleClick = () => {
-    navigate(`/tin/${id}`);
+    // Disabled - do not navigate to detail page
+    // navigate(`/tin/${id}`);
   };
 
   const timeAgo = () => {
@@ -81,9 +82,8 @@ export const NewsItem = ({
 
   return (
     <div
-      className="p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+      className="p-4"
       style={{ borderBottom: isLast ? 'none' : '1px solid #e5e7eb' }}
-      onClick={handleClick}
     >
       <div>
         <p className="text-base font-semibold leading-relaxed mb-3">

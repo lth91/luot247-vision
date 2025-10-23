@@ -51,6 +51,9 @@ const Index = () => {
     fetchNews();
     loadReadNewsFromStorage();
     
+    // Record a view when user visits the website
+    recordPageView();
+    
     // Only hide read news on initial page load if there are read news in localStorage
     const stored = localStorage.getItem('luot247_read_news');
     console.log('🚀 Initial page load - checking localStorage:', stored);
@@ -75,6 +78,18 @@ const Index = () => {
     // Expose clear function to window for debugging
     (window as any).clearReadNews = clearReadNews;
   }, []);
+
+  const recordPageView = async () => {
+    try {
+      // Insert a view log record for website visit (no specific news_id)
+      await supabase.from("view_logs").insert({
+        viewed_at: new Date().toISOString()
+      });
+      console.log('✅ Page view recorded');
+    } catch (error) {
+      console.error('❌ Error recording page view:', error);
+    }
+  };
 
   // Load read news from localStorage
   const loadReadNewsFromStorage = () => {

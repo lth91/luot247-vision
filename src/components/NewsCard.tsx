@@ -104,12 +104,13 @@ export const NewsCard = ({
   };
 
   const handleCardClick = () => {
-    navigate(`/tin/${id}`);
+    // Disabled - do not navigate to detail page
+    // navigate(`/tin/${id}`);
   };
 
   return (
     <Card 
-      className="p-4 hover:shadow-card-hover transition-shadow cursor-pointer group"
+      className="p-4"
       onClick={handleCardClick}
     >
       <div className="flex flex-col gap-3">
