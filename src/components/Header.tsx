@@ -47,22 +47,48 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
 
   const handleReadingModeToggle = (checked: boolean) => {
     setReadingMode(checked);
+    
+    // Detect if user is on mobile for appropriate timing
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+    
     if (checked) {
       // Switching to Flip mode - sync to show first unread news
       setOpen(false);
       navigate("/home2");
-      // Use setTimeout to ensure navigation completes before sync
+      // Use longer timeout for mobile to ensure navigation completes
+      const flipDelay = isMobile ? 400 : 200;
       setTimeout(() => {
+        console.log('🔄 Executing Flip mode sync after navigation');
         syncToFlipMode();
-      }, 200);
+      }, flipDelay);
     } else {
       // Switching to Scroll mode - sync to scroll to current news
       setOpen(false);
       navigate("/");
-      // Use longer timeout to ensure DOM is fully rendered with many news items
-      setTimeout(() => {
-        syncToScrollMode();
-      }, 500);
+      
+      // Detect if user is on mobile for appropriate timing
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+      
+      // Use longer timeout for desktop to ensure DOM is fully rendered
+      const scrollDelay = isMobile ? 1000 : 800;
+      
+      // Additional retry logic for desktop to ensure sync works
+      const attemptSync = (attempt = 1) => {
+        setTimeout(() => {
+          console.log(`🔄 Executing Scroll mode sync attempt ${attempt}`);
+          syncToScrollMode();
+          
+          // If this is desktop and first attempt, try again after a longer delay
+          if (!isMobile && attempt === 1) {
+            setTimeout(() => {
+              console.log('🔄 Desktop: Retrying sync after longer delay');
+              syncToScrollMode();
+            }, 500);
+          }
+        }, scrollDelay);
+      };
+      
+      attemptSync();
     }
   };
 

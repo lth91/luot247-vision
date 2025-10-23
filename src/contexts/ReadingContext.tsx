@@ -173,6 +173,24 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
       return;
     }
 
+    // Detect if user is on mobile
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+    
+    if (isMobile) {
+      console.log('📱 Mobile detected for Flip mode sync');
+      
+      // On mobile, try to find the news that was last visible in scroll mode
+      const lastVisibleNewsId = localStorage.getItem('luot247_last_visible_news');
+      if (lastVisibleNewsId) {
+        const newsIndex = filteredNews.findIndex(item => item.id === lastVisibleNewsId);
+        if (newsIndex !== -1) {
+          console.log(`📱 Mobile: Found last visible news at index ${newsIndex}`);
+          updateCurrentNewsIndex(newsIndex);
+          return;
+        }
+      }
+    }
+
     // If we're hiding read news, start from the first unread news
     if (shouldHideReadNews) {
       const firstUnreadIndex = filteredNews.findIndex(item => !readNewsIds.has(item.id));
@@ -197,11 +215,20 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
   // Sync to Scroll mode: Scroll to the current news being viewed in Flip mode
   const syncToScrollMode = () => {
     console.log('🔄 Syncing to Scroll mode...');
+    console.log('📊 Sync debug info:', {
+      currentNewsIndex: currentNewsIndex,
+      filteredNewsLength: filteredNews.length,
+      currentNews: currentNews,
+      currentNewsId: currentNews?.id
+    });
     
     if (currentNews && typeof window !== 'undefined') {
       // Set highlight for the current news
       setHighlightedNewsId(currentNews.id);
       console.log(`✨ Highlighting news ${currentNews.id}`);
+      
+      // Detect if user is on mobile
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
       
       // More robust scroll function with multiple retries
       const scrollToElement = (attempt = 1) => {
@@ -219,6 +246,13 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
           window.scrollTo(0, Math.max(0, targetScrollTop));
           
           console.log(`📰 Scrolled to position: ${targetScrollTop}`);
+          
+          // On mobile, also save this as the last visible news
+          if (isMobile) {
+            localStorage.setItem('luot247_last_visible_news', currentNews.id);
+            console.log(`📱 Mobile: Saved ${currentNews.id} as last visible news`);
+          }
+          
           return true; // Success
         } else {
           console.log(`📰 News element not found for ${currentNews.id} (attempt ${attempt})`);
@@ -226,7 +260,8 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
         }
       };
       
-      // Try multiple times with increasing delays
+      // Try multiple times with increasing delays - longer delays for mobile
+      const baseDelay = isMobile ? 200 : 100;
       const tryScroll = () => {
         if (!scrollToElement()) {
           // Retry with exponential backoff
@@ -237,9 +272,9 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
                   console.log(`📰 Final attempt failed for ${currentNews.id}, scrolling to top`);
                   window.scrollTo(0, 0);
                 }
-              }, 200);
+              }, baseDelay * 2);
             }
-          }, 100);
+          }, baseDelay);
         }
       };
       
@@ -253,6 +288,12 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
       }, 3000);
     } else {
       console.log('📰 No current news or not in browser, scrolling to top');
+      console.log('📊 Fallback debug info:', {
+        currentNews: currentNews,
+        currentNewsIndex: currentNewsIndex,
+        filteredNewsLength: filteredNews.length,
+        windowAvailable: typeof window !== 'undefined'
+      });
       if (typeof window !== 'undefined') {
         window.scrollTo(0, 0);
       }
