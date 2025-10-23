@@ -11,6 +11,7 @@ import Classification from "./pages/Classification";
 import DataManagement from "./pages/DataManagement";
 import ViewCount from "./pages/ViewCount";
 import Home2 from "./pages/Home2";
+import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/tai-du-lieu" element={<DataManagement />} />
             <Route path="/viewcount" element={<ViewCount />} />
             <Route path="/home2" element={<Home2 />} />
+            <Route path="/about" element={<About />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

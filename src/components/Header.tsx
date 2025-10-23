@@ -53,9 +53,15 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
 
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="absolute right-0">
-              <Menu className="h-5 w-5" />
-            </Button>
+            <div className="absolute right-0 flex items-center gap-2">
+              <div className="flex items-center gap-1 text-sm text-muted-foreground animate-pulse">
+                <span className="font-medium">Menu</span>
+                <span className="text-xl">→</span>
+              </div>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </div>
           </SheetTrigger>
           <SheetContent side="right" className="w-[280px]">
             <div className="flex flex-col gap-4 mt-8">
@@ -75,6 +81,17 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                     }}
                   >
                     📰 Trang chủ
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => {
+                      setOpen(false);
+                      navigate("/about");
+                    }}
+                  >
+                    ℹ️ Về chúng tôi
                   </Button>
 
                   {userRole === "admin" && (
@@ -150,6 +167,17 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                     }}
                   >
                     🔐 Đăng nhập
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => {
+                      setOpen(false);
+                      navigate("/about");
+                    }}
+                  >
+                    ℹ️ Về chúng tôi
                   </Button>
 
                   <div className="border-t pt-4 mt-4">
