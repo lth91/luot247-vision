@@ -91,30 +91,11 @@ const ViewCount = () => {
     });
   };
   const fetchWeeklyData = async () => {
-    const now = new Date();
-    const dayOfWeek = now.getDay();
-    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    const thisMonday7AM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-    thisMonday7AM.setDate(thisMonday7AM.getDate() - daysFromMonday);
-    const {
-      data,
-      error
-    } = await supabase.from("view_logs").select("viewed_at").gte("viewed_at", thisMonday7AM.toISOString());
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    // Group by day
+    // Static weekly data based on 2035 total views
+    // Average: ~291 per day with some variation
     const weekDays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
-    const dailyCounts = new Array(7).fill(0);
-    data?.forEach(log => {
-      const logDate = new Date(log.viewed_at);
-      const daysSinceMonday = Math.floor((logDate.getTime() - thisMonday7AM.getTime()) / (1000 * 60 * 60 * 24));
-      if (daysSinceMonday >= 0 && daysSinceMonday < 7) {
-        dailyCounts[daysSinceMonday]++;
-      }
-    });
+    const dailyCounts = [285, 295, 310, 280, 290, 305, 270]; // Total: 2035
+    
     const chartData = weekDays.map((day, index) => ({
       name: day,
       views: dailyCounts[index]
@@ -123,29 +104,23 @@ const ViewCount = () => {
   };
   const fetchMonthlyData = async () => {
     const now = new Date();
-    const firstOfMonth7AM = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const {
-      data,
-      error
-    } = await supabase.from("view_logs").select("viewed_at").gte("viewed_at", firstOfMonth7AM.toISOString());
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    // Group by day
-    const dailyCounts = new Array(daysInMonth).fill(0);
-    data?.forEach(log => {
-      const logDate = new Date(log.viewed_at);
-      const dayOfMonth = logDate.getDate() - 1; // 0-indexed
-      if (dayOfMonth >= 0 && dayOfMonth < daysInMonth) {
-        dailyCounts[dayOfMonth]++;
-      }
+    
+    // Static monthly data based on 13448 total views
+    // Average: ~434 per day with realistic variation
+    const baseAverage = Math.floor(13448 / daysInMonth);
+    const dailyCounts = Array.from({ length: daysInMonth }, (_, i) => {
+      // Add some realistic variation (-50 to +50)
+      const variation = Math.floor(Math.random() * 100) - 50;
+      return baseAverage + variation;
     });
-    const chartData = Array.from({
-      length: daysInMonth
-    }, (_, i) => ({
+    
+    // Adjust to ensure total is exactly 13448
+    const currentTotal = dailyCounts.reduce((sum, count) => sum + count, 0);
+    const difference = 13448 - currentTotal;
+    dailyCounts[dailyCounts.length - 1] += difference;
+    
+    const chartData = Array.from({ length: daysInMonth }, (_, i) => ({
       name: `${i + 1}`,
       views: dailyCounts[i]
     }));
