@@ -5,15 +5,26 @@ import { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ThumbsUp, ThumbsDown, Share2, Search } from "lucide-react";
+import { useReadingContext } from "@/contexts/ReadingContext";
 
 const Home2 = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [news, setNews] = useState<any[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [liked, setLiked] = useState(false);
   const [disliked, setDisliked] = useState(false);
+
+  // Use ReadingContext
+  const {
+    news,
+    setNews,
+    filteredNews,
+    currentNewsIndex,
+    setCurrentNewsIndex,
+    markNewsAsRead,
+    clearReadNews,
+    currentNews
+  } = useReadingContext();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -73,21 +84,23 @@ const Home2 = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentIndex, news.length]);
-
-  const currentNews = news[currentIndex];
+  }, [currentNewsIndex, filteredNews.length]);
 
   const handleNext = () => {
-    if (currentIndex < news.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+    if (currentNewsIndex < filteredNews.length - 1) {
+      // Mark current news as read before moving to next
+      if (currentNews) {
+        markNewsAsRead(currentNews.id);
+      }
+      setCurrentNewsIndex(currentNewsIndex + 1);
       setLiked(false);
       setDisliked(false);
     }
   };
 
   const handlePrevious = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
+    if (currentNewsIndex > 0) {
+      setCurrentNewsIndex(currentNewsIndex - 1);
       setLiked(false);
       setDisliked(false);
     }
@@ -137,14 +150,20 @@ const Home2 = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Header user={session?.user} userRole={userRole} />
+      <Header 
+        user={session?.user} 
+        userRole={userRole}
+        onToggleReadNews={() => {
+          clearReadNews();
+        }}
+      />
 
       <main className="flex-1 w-full max-w-4xl mx-auto px-4" style={{ paddingTop: '10px', paddingBottom: '10px' }}>
         {isLoading ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Đang tải tin tức...</p>
           </div>
-        ) : news.length === 0 ? (
+        ) : filteredNews.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Không có tin tức nào</p>
           </div>

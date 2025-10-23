@@ -4,18 +4,29 @@ import { NewsItem } from "@/components/NewsItem";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
+import { useReadingContext } from "@/contexts/ReadingContext";
 
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [news, setNews] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
-  const [readNewsIds, setReadNewsIds] = useState<Set<string>>(new Set());
   const [showReadNews, setShowReadNews] = useState(false);
-  const [shouldHideReadNews, setShouldHideReadNews] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const newsItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
+  
+  // Use ReadingContext
+  const {
+    news,
+    setNews,
+    filteredNews,
+    readNewsIds,
+    markNewsAsRead,
+    clearReadNews,
+    shouldHideReadNews,
+    setShouldHideReadNews,
+    setCurrentNewsIndex
+  } = useReadingContext();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -109,57 +120,13 @@ const Index = () => {
     }
   };
 
-  // Save read news to localStorage
-  const saveReadNewsToStorage = (readIds: Set<string>) => {
-    try {
-      const idsArray = [...readIds];
-      localStorage.setItem('luot247_read_news', JSON.stringify(idsArray));
-      console.log('💾 Saved to localStorage:', idsArray);
-      console.log('💾 Saved count:', idsArray.length);
-    } catch (error) {
-      console.error('❌ Error saving read news to storage:', error);
+  // Sync current index when scrolling in scroll mode
+  const syncCurrentIndex = (newsId: string) => {
+    const index = filteredNews.findIndex(item => item.id === newsId);
+    if (index !== -1) {
+      setCurrentNewsIndex(index);
+      console.log(`🔄 Synced current index to ${index} for news ${newsId}`);
     }
-  };
-
-  // Mark news as read
-  const markNewsAsRead = (newsId: string) => {
-    console.log('📖 Marking news as read:', newsId);
-    setReadNewsIds(prev => {
-      const newSet = new Set(prev);
-      newSet.add(newsId);
-      console.log('📖 Updated read news set:', [...newSet]);
-      saveReadNewsToStorage(newSet);
-      return newSet;
-    });
-  };
-
-  // Effect to prevent hiding news during scroll
-  useEffect(() => {
-    // Once shouldHideReadNews is set, never change it during scroll
-    // This ensures news don't disappear while scrolling
-  }, [shouldHideReadNews]);
-
-  // Debug effect to log state changes
-  useEffect(() => {
-    console.log('🔄 State changed - showReadNews:', showReadNews, 'shouldHideReadNews:', shouldHideReadNews, 'readNewsIds count:', readNewsIds.size);
-    
-    // Log which news items are being hidden
-    if (shouldHideReadNews && !showReadNews) {
-      const hiddenCount = news.filter(item => readNewsIds.has(item.id)).length;
-      console.log(`👁️ Hiding ${hiddenCount} read news items`);
-    } else {
-      console.log('👁️ Showing all news items');
-    }
-  }, [showReadNews, shouldHideReadNews, readNewsIds, news]);
-
-  // Clear all read news (for debugging)
-  const clearReadNews = () => {
-    console.log('🔄 Clearing all read news');
-    localStorage.removeItem('luot247_read_news');
-    setReadNewsIds(new Set());
-    setShouldHideReadNews(false);
-    console.log('🔄 Cleared all read news');
-    toast.success('Đã reset toàn bộ tin đã đọc');
   };
 
   // Scroll detection effect - only run when user actually scrolls
@@ -194,6 +161,7 @@ const Index = () => {
               if (!isAlreadyRead) {
                 console.log(`📖 Marking news ${newsId} as read - element bottom: ${elementBottom}, header bottom: ${headerBottom}`);
                 markNewsAsRead(newsId);
+                syncCurrentIndex(newsId); // Sync index when marking as read
               }
             }
           });
@@ -261,7 +229,7 @@ const Index = () => {
           </div>
         ) : (
           <div className="border rounded-lg overflow-hidden bg-card">
-            {news.map((item, index) => (
+            {filteredNews.map((item, index) => (
               <div
                 key={item.id}
                 ref={(el) => {
@@ -269,10 +237,7 @@ const Index = () => {
                     newsItemsRef.current.set(item.id, el);
                   }
                 }}
-                style={{
-                  display: (!showReadNews && readNewsIds.has(item.id) && shouldHideReadNews) ? 'none' : 'block'
-                }}
-                data-debug={`showReadNews: ${showReadNews}, isRead: ${readNewsIds.has(item.id)}, shouldHide: ${shouldHideReadNews}, display: ${(!showReadNews && readNewsIds.has(item.id) && shouldHideReadNews) ? 'none' : 'block'}`}
+                style={{ display: 'block' }}
               >
                 <NewsItem
                   id={item.id}
@@ -285,7 +250,7 @@ const Index = () => {
                   isFavorite={favorites.has(item.id)}
                   onFavoriteToggle={fetchFavorites}
                   isAuthenticated={!!session}
-                  isLast={index === news.length - 1}
+                  isLast={index === filteredNews.length - 1}
                 />
               </div>
             ))}
