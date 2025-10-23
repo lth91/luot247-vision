@@ -216,7 +216,7 @@ const Classification = () => {
             <Card className="p-8">
               <div className="prose max-w-none">
                 <p className="text-lg leading-relaxed whitespace-pre-wrap">
-                  {currentNews.description}
+                  {currentNews.title}
                 </p>
               </div>
             </Card>
