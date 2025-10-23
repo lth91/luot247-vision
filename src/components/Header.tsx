@@ -30,6 +30,21 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
     setReadingMode(location.pathname === "/home2");
   }, [location.pathname]);
 
+  // Keyboard shortcut for mode switching
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ctrl/Cmd + M to toggle between modes
+      if ((event.ctrlKey || event.metaKey) && event.key === 'm') {
+        event.preventDefault();
+        handleReadingModeToggle(!readingMode);
+        console.log('⌨️ Keyboard shortcut: Toggling reading mode');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [readingMode, syncToFlipMode, syncToScrollMode]);
+
   const handleReadingModeToggle = (checked: boolean) => {
     setReadingMode(checked);
     if (checked) {
@@ -151,6 +166,11 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                       </Label>
                       <Switch id="reading-mode" checked={readingMode} onCheckedChange={handleReadingModeToggle} />
                     </div>
+                    <div className="px-2 py-1">
+                      <p className="text-xs text-muted-foreground">
+                        ⌨️ Phím tắt: <kbd className="px-1 py-0.5 text-xs bg-muted rounded">Ctrl</kbd> + <kbd className="px-1 py-0.5 text-xs bg-muted rounded">M</kbd>
+                      </p>
+                    </div>
                   </div>
 
                   <div className="border-t pt-4">
@@ -200,6 +220,11 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                         📄 Bật chế độ đọc lật trang
                       </Label>
                       <Switch id="reading-mode-guest" checked={readingMode} onCheckedChange={handleReadingModeToggle} />
+                    </div>
+                    <div className="px-2 py-1">
+                      <p className="text-xs text-muted-foreground">
+                        ⌨️ Phím tắt: <kbd className="px-1 py-0.5 text-xs bg-muted rounded">Ctrl</kbd> + <kbd className="px-1 py-0.5 text-xs bg-muted rounded">M</kbd>
+                      </p>
                     </div>
                   </div>
 
