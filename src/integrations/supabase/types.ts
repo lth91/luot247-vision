@@ -173,11 +173,42 @@ export type Database = {
           },
         ]
       }
+      view_stats_base: {
+        Row: {
+          id: string
+          stat_key: string
+          stat_value: number
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          stat_key: string
+          stat_value?: number
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          stat_key?: string
+          stat_value?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      get_current_stats: {
+        Args: never
+        Returns: {
+          this_month: number
+          this_week: number
+          today: number
+          total: number
+          yesterday: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
