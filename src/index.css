@@ -111,3 +111,55 @@ All colors MUST be HSL.
     display: none; /* WebKit browsers (Chrome, Safari, Edge) */
   }
 }
+
+/* Highlight animation for news sync - Subtle version */
+@keyframes highlight-pulse {
+  0% {
+    background-color: hsl(var(--primary) / 0.05);
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.1);
+  }
+  50% {
+    background-color: hsl(var(--primary) / 0.08);
+    box-shadow: 0 0 0 4px hsl(var(--primary) / 0.05);
+  }
+  100% {
+    background-color: hsl(var(--primary) / 0.05);
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.1);
+  }
+}
+
+@keyframes highlight-fade-in {
+  0% {
+    background-color: transparent;
+    transform: scale(1);
+  }
+  50% {
+    background-color: hsl(var(--primary) / 0.06);
+    transform: scale(1.005);
+  }
+  100% {
+    background-color: hsl(var(--primary) / 0.05);
+    transform: scale(1);
+  }
+}
+
+.news-highlight {
+  animation: highlight-fade-in 0.4s ease-out, highlight-pulse 1.5s ease-in-out 0.4s infinite;
+  border-left: 2px solid hsl(var(--primary) / 0.3);
+  transition: all 0.3s ease-out;
+}
+
+.news-highlight-fade-out {
+  animation: highlight-fade-out 0.4s ease-out forwards;
+}
+
+@keyframes highlight-fade-out {
+  0% {
+    background-color: hsl(var(--primary) / 0.05);
+    border-left-color: hsl(var(--primary) / 0.3);
+  }
+  100% {
+    background-color: transparent;
+    border-left-color: transparent;
+  }
+}

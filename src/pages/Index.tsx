@@ -65,23 +65,6 @@ const Index = () => {
     // Record a view when user visits the website
     recordPageView();
     
-    // Only hide read news on initial page load if there are read news in localStorage
-    const stored = localStorage.getItem('luot247_read_news');
-    console.log('🚀 Initial page load - checking localStorage:', stored);
-    if (stored) {
-      const readIds = JSON.parse(stored);
-      if (readIds.length > 0) {
-        console.log('🚀 Setting shouldHideReadNews = true (found', readIds.length, 'read news)');
-        setShouldHideReadNews(true);
-      } else {
-        console.log('🚀 Setting shouldHideReadNews = false (no read news)');
-        setShouldHideReadNews(false);
-      }
-    } else {
-      console.log('🚀 Setting shouldHideReadNews = false (no localStorage)');
-      setShouldHideReadNews(false);
-    }
-    
     // Mark as no longer initial load
     setIsInitialLoad(false);
     console.log('🚀 Page load complete - isInitialLoad = false');

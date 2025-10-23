@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import logo from "@/assets/logo247.png";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useReadingContext } from "@/contexts/ReadingContext";
 
 interface HeaderProps {
   user: any;
@@ -21,6 +22,9 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const [readingMode, setReadingMode] = useState(false);
+  
+  // Use ReadingContext for synchronization
+  const { syncToFlipMode, syncToScrollMode } = useReadingContext();
 
   useEffect(() => {
     setReadingMode(location.pathname === "/home2");
@@ -29,11 +33,21 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
   const handleReadingModeToggle = (checked: boolean) => {
     setReadingMode(checked);
     if (checked) {
+      // Switching to Flip mode - sync to show first unread news
       setOpen(false);
       navigate("/home2");
+      // Use setTimeout to ensure navigation completes before sync
+      setTimeout(() => {
+        syncToFlipMode();
+      }, 200);
     } else {
+      // Switching to Scroll mode - sync to scroll to current news
       setOpen(false);
       navigate("/");
+      // Use longer timeout to ensure DOM is fully rendered with many news items
+      setTimeout(() => {
+        syncToScrollMode();
+      }, 500);
     }
   };
 

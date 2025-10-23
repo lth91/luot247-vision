@@ -23,6 +23,14 @@ interface ReadingContextType {
   
   // Current news based on index
   currentNews: any | null;
+  
+  // Highlight effect for sync
+  highlightedNewsId: string | null;
+  setHighlightedNewsId: (newsId: string | null) => void;
+  
+  // Mode synchronization
+  syncToFlipMode: () => void;
+  syncToScrollMode: () => void;
 }
 
 const ReadingContext = createContext<ReadingContextType | undefined>(undefined);
@@ -44,6 +52,7 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
   const [readNewsIds, setReadNewsIds] = useState<Set<string>>(new Set());
   const [shouldHideReadNews, setShouldHideReadNews] = useState(false);
   const [news, setNews] = useState<any[]>([]);
+  const [highlightedNewsId, setHighlightedNewsId] = useState<string | null>(null);
 
   // Load read news and current index from localStorage on mount
   useEffect(() => {
@@ -111,6 +120,13 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
       newSet.add(newsId);
       console.log('📖 ReadingContext - Updated read news set:', [...newSet]);
       saveReadNewsToStorage(newSet);
+      
+      // Automatically enable hide read news when marking news as read
+      if (!shouldHideReadNews) {
+        console.log('🚀 ReadingContext - Auto-enabling shouldHideReadNews');
+        setShouldHideReadNews(true);
+      }
+      
       return newSet;
     });
   };
@@ -148,6 +164,101 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
     }
   }, [filteredNews.length, currentNewsIndex]);
 
+  // Sync to Flip mode: Find the first unread news or current position
+  const syncToFlipMode = () => {
+    console.log('🔄 Syncing to Flip mode...');
+    
+    if (filteredNews.length === 0) {
+      console.log('📰 No filtered news available');
+      return;
+    }
+
+    // If we're hiding read news, start from the first unread news
+    if (shouldHideReadNews) {
+      const firstUnreadIndex = filteredNews.findIndex(item => !readNewsIds.has(item.id));
+      if (firstUnreadIndex !== -1) {
+        console.log(`📰 Setting Flip mode to first unread news at index ${firstUnreadIndex}`);
+        updateCurrentNewsIndex(firstUnreadIndex);
+      } else {
+        console.log('📰 All news are read, staying at current position');
+      }
+    } else {
+      // If showing all news, try to find the current visible news in scroll mode
+      // For now, we'll use a simple approach: if current index is valid, keep it
+      if (currentNewsIndex < filteredNews.length) {
+        console.log(`📰 Keeping current Flip mode position at index ${currentNewsIndex}`);
+      } else {
+        console.log('📰 Current index out of bounds, resetting to 0');
+        updateCurrentNewsIndex(0);
+      }
+    }
+  };
+
+  // Sync to Scroll mode: Scroll to the current news being viewed in Flip mode
+  const syncToScrollMode = () => {
+    console.log('🔄 Syncing to Scroll mode...');
+    
+    if (currentNews && typeof window !== 'undefined') {
+      // Set highlight for the current news
+      setHighlightedNewsId(currentNews.id);
+      console.log(`✨ Highlighting news ${currentNews.id}`);
+      
+      // More robust scroll function with multiple retries
+      const scrollToElement = (attempt = 1) => {
+        const newsElement = document.querySelector(`[data-news-id="${currentNews.id}"]`);
+        if (newsElement) {
+          console.log(`📰 Found news element ${currentNews.id} (attempt ${attempt})`);
+          
+          // Calculate position to place element at top of viewport
+          const elementRect = newsElement.getBoundingClientRect();
+          const headerHeight = 60; // Approximate header height
+          const currentScrollTop = window.pageYOffset;
+          const targetScrollTop = currentScrollTop + elementRect.top - headerHeight;
+          
+          // Immediate scroll to position (no smooth behavior for reliability)
+          window.scrollTo(0, Math.max(0, targetScrollTop));
+          
+          console.log(`📰 Scrolled to position: ${targetScrollTop}`);
+          return true; // Success
+        } else {
+          console.log(`📰 News element not found for ${currentNews.id} (attempt ${attempt})`);
+          return false; // Failed
+        }
+      };
+      
+      // Try multiple times with increasing delays
+      const tryScroll = () => {
+        if (!scrollToElement()) {
+          // Retry with exponential backoff
+          setTimeout(() => {
+            if (!scrollToElement()) {
+              setTimeout(() => {
+                if (!scrollToElement()) {
+                  console.log(`📰 Final attempt failed for ${currentNews.id}, scrolling to top`);
+                  window.scrollTo(0, 0);
+                }
+              }, 200);
+            }
+          }, 100);
+        }
+      };
+      
+      // Start trying immediately
+      tryScroll();
+      
+      // Remove highlight after 3 seconds
+      setTimeout(() => {
+        setHighlightedNewsId(null);
+        console.log(`✨ Removed highlight from news ${currentNews.id}`);
+      }, 3000);
+    } else {
+      console.log('📰 No current news or not in browser, scrolling to top');
+      if (typeof window !== 'undefined') {
+        window.scrollTo(0, 0);
+      }
+    }
+  };
+
   const value: ReadingContextType = {
     currentNewsIndex,
     setCurrentNewsIndex: updateCurrentNewsIndex,
@@ -160,6 +271,10 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
     setNews,
     filteredNews,
     currentNews,
+    highlightedNewsId,
+    setHighlightedNewsId,
+    syncToFlipMode,
+    syncToScrollMode,
   };
 
   return (

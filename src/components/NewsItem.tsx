@@ -4,6 +4,7 @@ import { ThumbsUp, ThumbsDown, Share2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useReadingContext } from "@/contexts/ReadingContext";
 
 interface NewsItemProps {
   id: string;
@@ -30,6 +31,10 @@ export const NewsItem = ({
   const navigate = useNavigate();
   const [liked, setLiked] = useState(false);
   const [disliked, setDisliked] = useState(false);
+  
+  // Get highlight state from ReadingContext
+  const { highlightedNewsId } = useReadingContext();
+  const isHighlighted = highlightedNewsId === id;
 
   const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -82,8 +87,9 @@ export const NewsItem = ({
 
   return (
     <div
-      className="p-4"
+      className={`p-4 ${isHighlighted ? 'news-highlight' : ''}`}
       style={{ borderBottom: isLast ? 'none' : '1px solid #e5e7eb' }}
+      data-news-id={id}
     >
       <div>
         <p className="text-base font-semibold leading-relaxed mb-3">
