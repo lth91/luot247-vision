@@ -103,15 +103,15 @@ const ViewCount = () => {
     setWeeklyData(chartData);
   };
   const fetchMonthlyData = async () => {
-    const now = new Date();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    // Only show data up to day 23 (today)
+    const daysToShow = 23;
     
-    // Static monthly data based on 13448 total views
-    // Average: ~434 per day with realistic variation
-    const baseAverage = Math.floor(13448 / daysInMonth);
-    const dailyCounts = Array.from({ length: daysInMonth }, (_, i) => {
-      // Add some realistic variation (-50 to +50)
-      const variation = Math.floor(Math.random() * 100) - 50;
+    // Static monthly data based on 13448 total views distributed across 23 days
+    // Average: ~585 per day with realistic variation
+    const baseAverage = Math.floor(13448 / daysToShow);
+    const dailyCounts = Array.from({ length: daysToShow }, (_, i) => {
+      // Add some realistic variation (-80 to +80)
+      const variation = Math.floor(Math.random() * 160) - 80;
       return baseAverage + variation;
     });
     
@@ -120,7 +120,7 @@ const ViewCount = () => {
     const difference = 13448 - currentTotal;
     dailyCounts[dailyCounts.length - 1] += difference;
     
-    const chartData = Array.from({ length: daysInMonth }, (_, i) => ({
+    const chartData = Array.from({ length: daysToShow }, (_, i) => ({
       name: `${i + 1}`,
       views: dailyCounts[i]
     }));
