@@ -144,6 +144,35 @@ export type Database = {
         }
         Relationships: []
       }
+      view_logs: {
+        Row: {
+          created_at: string
+          id: string
+          news_id: string | null
+          viewed_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          news_id?: string | null
+          viewed_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          news_id?: string | null
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "view_logs_news_id_fkey"
+            columns: ["news_id"]
+            isOneToOne: false
+            referencedRelation: "news"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
