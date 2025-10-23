@@ -81,14 +81,24 @@ const ViewCount = () => {
     setIsLoading(false);
   };
   const fetchStats = async () => {
-    // Set static values from old website
-    setStats({
-      yesterday: 0,
-      today: 176,
-      thisWeek: 2035,
-      thisMonth: 13448,
-      total: 13785
-    });
+    const { data, error } = await supabase.rpc('get_current_stats');
+    
+    if (error) {
+      console.error('Error fetching stats:', error);
+      toast.error("Không thể tải thống kê");
+      return;
+    }
+    
+    if (data && data.length > 0) {
+      const statsData = data[0];
+      setStats({
+        yesterday: statsData.yesterday || 0,
+        today: statsData.today || 0,
+        thisWeek: statsData.this_week || 0,
+        thisMonth: statsData.this_month || 0,
+        total: statsData.total || 0
+      });
+    }
   };
   const fetchWeeklyData = async () => {
     // Static weekly data based on 2035 total views
