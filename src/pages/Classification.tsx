@@ -25,9 +25,10 @@ const Classification = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [stats, setStats] = useState({
+    sinceLogin: 0,
     today: 0,
     month: 0,
-    total: 0,
+    lifetime: 0,
     pending: 0
   });
 
@@ -36,6 +37,11 @@ const Classification = () => {
       setSession(session);
       if (!session) {
         navigate("/auth");
+      } else {
+        // Lưu timestamp đăng nhập nếu chưa có
+        if (!localStorage.getItem("classificationLoginTime")) {
+          localStorage.setItem("classificationLoginTime", new Date().toISOString());
+        }
       }
     });
 
@@ -43,6 +49,11 @@ const Classification = () => {
       setSession(session);
       if (!session) {
         navigate("/auth");
+      } else {
+        // Lưu timestamp đăng nhập nếu chưa có
+        if (!localStorage.getItem("classificationLoginTime")) {
+          localStorage.setItem("classificationLoginTime", new Date().toISOString());
+        }
       }
     });
 
@@ -92,27 +103,66 @@ const Classification = () => {
   };
 
   const fetchStats = async () => {
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    if (!session?.user) return;
 
-    const [todayRes, monthRes, totalRes, pendingRes] = await Promise.all([
-      supabase.from("news").select("id", { count: "exact", head: true }).gte("created_at", startOfDay.toISOString()),
-      supabase.from("news").select("id", { count: "exact", head: true }).gte("created_at", startOfMonth.toISOString()),
-      supabase.from("news").select("id", { count: "exact", head: true }),
-      supabase.from("news").select("id", { count: "exact", head: true }).eq("category", "khac")
+    const now = new Date();
+    
+    // Tính thời điểm 7h sáng hôm nay (UTC+7)
+    const today7AM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    
+    // Tính thời điểm 7h sáng ngày 1 tháng này (UTC+7)
+    const firstOfMonth7AM = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+
+    // Lấy timestamp đăng nhập từ localStorage
+    const loginTimestamp = localStorage.getItem("classificationLoginTime");
+    const loginTime = loginTimestamp ? new Date(loginTimestamp) : now;
+
+    const [sinceLoginRes, todayRes, monthRes, lifetimeRes, pendingRes] = await Promise.all([
+      // Từ khi đăng nhập
+      supabase
+        .from("classification_history")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", session.user.id)
+        .gte("classified_at", loginTime.toISOString()),
+      
+      // Trong ngày (từ 7h sáng)
+      supabase
+        .from("classification_history")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", session.user.id)
+        .gte("classified_at", today7AM.toISOString()),
+      
+      // Trong tháng (từ 7h sáng ngày 1)
+      supabase
+        .from("classification_history")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", session.user.id)
+        .gte("classified_at", firstOfMonth7AM.toISOString()),
+      
+      // Lifetime
+      supabase
+        .from("classification_history")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", session.user.id),
+      
+      // Chưa duyệt
+      supabase
+        .from("news")
+        .select("id", { count: "exact", head: true })
+        .eq("category", "khac")
     ]);
 
     setStats({
+      sinceLogin: sinceLoginRes.count || 0,
       today: todayRes.count || 0,
       month: monthRes.count || 0,
-      total: totalRes.count || 0,
+      lifetime: lifetimeRes.count || 0,
       pending: pendingRes.count || 0
     });
   };
 
   const handleCategoryChange = async (category: string) => {
-    if (!news[currentIndex]) return;
+    if (!news[currentIndex] || !session?.user) return;
     
     const { error } = await supabase
       .from("news")
@@ -123,13 +173,20 @@ const Classification = () => {
       toast.error("Không thể cập nhật danh mục");
       console.error(error);
     } else {
+      // Lưu lịch sử phân loại
+      await supabase.from("classification_history").insert({
+        user_id: session.user.id,
+        news_id: news[currentIndex].id
+      });
+      
       toast.success("Đã phân loại tin tức");
+      await fetchStats(); // Cập nhật bộ đếm
       handleNext();
     }
   };
 
   const handleReject = async () => {
-    if (!news[currentIndex]) return;
+    if (!news[currentIndex] || !session?.user) return;
     
     const { error } = await supabase
       .from("news")
@@ -140,7 +197,14 @@ const Classification = () => {
       toast.error("Không thể xóa tin tức");
       console.error(error);
     } else {
+      // Lưu lịch sử phân loại (đánh dấu là đã xử lý)
+      await supabase.from("classification_history").insert({
+        user_id: session.user.id,
+        news_id: news[currentIndex].id
+      });
+      
       toast.success("Đã xóa tin tức");
+      await fetchStats(); // Cập nhật bộ đếm
       handleNext();
     }
   };
@@ -185,8 +249,8 @@ const Classification = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <Card className="p-4 text-center">
-            <p className="text-sm text-muted-foreground mb-1">Đang nhập</p>
-            <p className="text-2xl font-bold">0</p>
+            <p className="text-sm text-muted-foreground mb-1">Đăng nhập</p>
+            <p className="text-2xl font-bold">{stats.sinceLogin}</p>
           </Card>
           <Card className="p-4 text-center">
             <p className="text-sm text-muted-foreground mb-1">Trong ngày</p>
@@ -198,7 +262,7 @@ const Classification = () => {
           </Card>
           <Card className="p-4 text-center">
             <p className="text-sm text-muted-foreground mb-1">Từ đầu</p>
-            <p className="text-2xl font-bold text-amber-600">{stats.total}</p>
+            <p className="text-2xl font-bold text-amber-600">{stats.lifetime}</p>
           </Card>
           <Card className="p-4 text-center">
             <p className="text-sm text-muted-foreground mb-1">Chưa duyệt</p>

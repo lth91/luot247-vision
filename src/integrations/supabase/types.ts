@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      classification_history: {
+        Row: {
+          classified_at: string
+          id: string
+          news_id: string
+          user_id: string
+        }
+        Insert: {
+          classified_at?: string
+          id?: string
+          news_id: string
+          user_id: string
+        }
+        Update: {
+          classified_at?: string
+          id?: string
+          news_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_news"
+            columns: ["news_id"]
+            isOneToOne: false
+            referencedRelation: "news"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorites: {
         Row: {
           created_at: string | null
