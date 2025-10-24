@@ -180,7 +180,7 @@ const Favorites = () => {
                 url={news.url}
                 createdAt={news.created_at}
                 isFavorite={favoriteIds.has(news.id)}
-                onFavoriteToggle={handleFavoriteToggle}
+                onFavoriteToggle={() => handleFavoriteToggle(news.id, true)}
                 isAuthenticated={!!session}
                 isLast={index === favorites.length - 1}
               />
