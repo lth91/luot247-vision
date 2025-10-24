@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,6 +18,7 @@ const categoryLabels = {
   "khac": "Khác"
 };
 const ViewCount = () => {
+  const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [news, setNews] = useState<any[]>([]);
@@ -31,41 +33,50 @@ const ViewCount = () => {
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
-    const {
-      data: {
-        subscription
-      }
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-    });
-    supabase.auth.getSession().then(({
-      data: {
-        session
+      if (!session) {
+        navigate("/auth");
       }
-    }) => {
-      setSession(session);
     });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (!session) {
+        navigate("/auth");
+      }
+    });
+
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
+
   useEffect(() => {
     if (session?.user) {
-      supabase.from("user_roles").select("role").eq("user_id", session.user.id).maybeSingle().then(({
-        data
-      }) => {
-        setUserRole(data?.role || null);
-      });
-    } else {
-      setUserRole(null);
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          const role = data?.role || null;
+          setUserRole(role);
+          if (role !== "admin") {
+            toast.error("Bạn không có quyền truy cập trang này");
+            navigate("/");
+          }
+        });
     }
-  }, [session]);
+  }, [session, navigate]);
   useEffect(() => {
-    fetchNews();
-    fetchStats();
-    fetchWeeklyData();
-    fetchMonthlyData();
-  }, []);
+    if (session && userRole === "admin") {
+      fetchNews();
+      fetchStats();
+      fetchWeeklyData();
+      fetchMonthlyData();
+      setIsLoading(false);
+    }
+  }, [session, userRole]);
   const fetchNews = async () => {
-    setIsLoading(true);
     const {
       data,
       error
@@ -78,7 +89,6 @@ const ViewCount = () => {
     } else {
       setNews(data || []);
     }
-    setIsLoading(false);
   };
   const fetchStats = async () => {
     const { data, error } = await supabase.rpc('get_current_stats');
@@ -141,6 +151,17 @@ const ViewCount = () => {
     }));
     setMonthlyData(chartData);
   };
+  if (isLoading || userRole !== "admin") {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header user={session?.user} userRole={userRole} />
+        <div className="container py-8">
+          <p className="text-center">Đang tải...</p>
+        </div>
+      </div>
+    );
+  }
+
   return <div className="min-h-screen bg-background">
       <Header user={session?.user} userRole={userRole} />
       <main className="container py-8 space-y-8">
