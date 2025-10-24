@@ -30,6 +30,7 @@ interface NewsData {
 }
 
 const Favorites = () => {
+  console.log("🔍 Favorites component loaded");
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
