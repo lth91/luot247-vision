@@ -28,7 +28,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/tin/:id" element={<NewsDetail />} />
+            <Route path="/tin/:id" element={<Index />} />
             <Route path="/duyet-tin" element={<Classification />} />
             <Route path="/tai-du-lieu" element={<DataManagement />} />
             <Route path="/viewcount" element={<ViewCount />} />

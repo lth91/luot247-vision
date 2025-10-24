@@ -5,6 +5,19 @@ import { NewsItem } from "@/components/NewsItem";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface NewsData {
   id: string;
@@ -124,6 +137,26 @@ const Favorites = () => {
     }
   };
 
+  const handleClearAll = async () => {
+    if (!session?.user) return;
+
+    try {
+      const { error } = await supabase
+        .from("favorites")
+        .delete()
+        .eq("user_id", session.user.id);
+
+      if (error) throw error;
+
+      setFavorites([]);
+      setFavoriteIds(new Set());
+      toast.success("Đã xóa toàn bộ danh sách yêu thích");
+    } catch (error) {
+      console.error("Error clearing all favorites:", error);
+      toast.error("Có lỗi xảy ra");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -144,13 +177,41 @@ const Favorites = () => {
     <div className="min-h-screen bg-background">
       <Header user={session?.user} userRole={userRole} />
       <div className="container py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Danh sách yêu thích</h1>
-          <p className="text-muted-foreground">
-            {favorites.length > 0
-              ? `Bạn có ${favorites.length} tin yêu thích`
-              : "Chưa có tin nào trong danh sách yêu thích"}
-          </p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Danh sách yêu thích</h1>
+            <p className="text-muted-foreground">
+              {favorites.length > 0
+                ? `Bạn có ${favorites.length} tin yêu thích`
+                : "Chưa có tin nào trong danh sách yêu thích"}
+            </p>
+          </div>
+          
+          {favorites.length > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Xóa tất cả
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Bạn có chắc chắn muốn xóa toàn bộ danh sách yêu thích? 
+                    Hành động này không thể hoàn tác.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Hủy</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleClearAll}>
+                    Xóa tất cả
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
 
         {favorites.length === 0 ? (

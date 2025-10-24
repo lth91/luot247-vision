@@ -26,7 +26,9 @@ const Index = () => {
     clearReadNews,
     shouldHideReadNews,
     setShouldHideReadNews,
-    setCurrentNewsIndex
+    setCurrentNewsIndex,
+    setHighlightedNewsId,
+    setIsFromSharedLink
   } = useReadingContext();
 
   useEffect(() => {
@@ -577,11 +579,15 @@ const Index = () => {
   };
 
   const handleDeepLink = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const newsId = urlParams.get('news');
+    // Check for /tin/:id path
+    const pathMatch = window.location.pathname.match(/^\/tin\/([a-f0-9-]+)$/);
+    const newsId = pathMatch ? pathMatch[1] : null;
     
     if (newsId) {
       console.log('🔗 Deep link detected for news:', newsId);
+      
+      // Mark as coming from shared link to disable auto-hide
+      setIsFromSharedLink(true);
       
       // Wait for news to load
       setTimeout(() => {
@@ -595,15 +601,12 @@ const Index = () => {
             behavior: 'smooth'
           });
           
-          // Highlight the news item temporarily
+          // Highlight the news item
+          setHighlightedNewsId(newsId);
+          
           setTimeout(() => {
-            const { setHighlightedNewsId } = useReadingContext();
-            setHighlightedNewsId(newsId);
-            
-            setTimeout(() => {
-              setHighlightedNewsId(null);
-            }, 3000);
-          }, 500);
+            setHighlightedNewsId(null);
+          }, 3000);
           
           console.log('✅ Scrolled to news:', newsId);
         } else {

@@ -17,7 +17,7 @@ interface ShareDialogProps {
 }
 
 export const ShareDialog = ({ isOpen, onClose, newsId, newsTitle }: ShareDialogProps) => {
-  const shareUrl = `${window.location.origin}/?news=${newsId}`;
+  const shareUrl = `${window.location.origin}/tin/${newsId}`;
   const encodedUrl = encodeURIComponent(shareUrl);
   const encodedTitle = encodeURIComponent(newsTitle);
 

@@ -31,6 +31,10 @@ interface ReadingContextType {
   // Mode synchronization
   syncToFlipMode: () => void;
   syncToScrollMode: () => void;
+  
+  // Deep link handling
+  isFromSharedLink: boolean;
+  setIsFromSharedLink: (value: boolean) => void;
 }
 
 const ReadingContext = createContext<ReadingContextType | undefined>(undefined);
@@ -53,6 +57,7 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
   const [shouldHideReadNews, setShouldHideReadNews] = useState(false);
   const [news, setNews] = useState<any[]>([]);
   const [highlightedNewsId, setHighlightedNewsId] = useState<string | null>(null);
+  const [isFromSharedLink, setIsFromSharedLink] = useState(false);
 
   // Load read news and current index from localStorage on mount
   useEffect(() => {
@@ -114,6 +119,12 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
 
   // Mark news as read
   const markNewsAsRead = (newsId: string) => {
+    // Don't mark as read if user came from shared link
+    if (isFromSharedLink) {
+      console.log('🔗 ReadingContext - Skipping mark as read (from shared link)');
+      return;
+    }
+    
     console.log('📖 ReadingContext - Marking news as read:', newsId);
     setReadNewsIds(prev => {
       const newSet = new Set(prev);
@@ -148,8 +159,8 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
     saveCurrentIndexToStorage(index);
   };
 
-  // Filter news based on read status
-  const filteredNews = shouldHideReadNews
+  // Filter news based on read status (don't filter if from shared link)
+  const filteredNews = (shouldHideReadNews && !isFromSharedLink)
     ? news.filter(item => !readNewsIds.has(item.id))
     : news;
 
@@ -316,6 +327,8 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
     setHighlightedNewsId,
     syncToFlipMode,
     syncToScrollMode,
+    isFromSharedLink,
+    setIsFromSharedLink,
   };
 
   return (
