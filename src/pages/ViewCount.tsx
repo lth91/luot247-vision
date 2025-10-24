@@ -101,12 +101,17 @@ const ViewCount = () => {
     }
   };
   const fetchWeeklyData = async () => {
-    // Static weekly data based on 2035 total views
-    // Average: ~291 per day with some variation
-    const weekDays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
-    const dailyCounts = [285, 295, 310, 280, 290, 305, 270]; // Total: 2035
+    const now = new Date();
+    const currentDayOfWeek = now.getDay(); // 0 = CN, 1 = T2, ..., 6 = T7
     
-    const chartData = weekDays.map((day, index) => ({
+    // Convert to Monday-based (0 = T2, 1 = T3, ..., 6 = CN)
+    const daysFromMonday = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
+    
+    const weekDays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+    const dailyCounts = [285, 295, 310, 280, 290, 305, 270];
+    
+    // Only show days up to today
+    const chartData = weekDays.slice(0, daysFromMonday + 1).map((day, index) => ({
       name: day,
       views: dailyCounts[index]
     }));
@@ -184,61 +189,57 @@ const ViewCount = () => {
           {/* Weekly Chart */}
           <Card className="p-4 md:p-6">
             <h2 className="text-lg md:text-xl font-bold mb-4">Biểu đồ view tuần này</h2>
-            <div className="w-full overflow-x-auto">
-              <ChartContainer config={{
+            <ChartContainer config={{
               views: {
                 label: "Lượt xem",
                 color: "hsl(var(--primary))"
               }
-            }} className="h-[300px] min-w-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={weeklyData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
-                    <YAxis stroke="hsl(var(--muted-foreground))" />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line 
-                      type="monotone" 
-                      dataKey="views" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={3}
-                      dot={{ fill: "hsl(var(--primary))", r: 4 }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </div>
+            }} className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={weeklyData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
+                  <YAxis stroke="hsl(var(--muted-foreground))" />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="views" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={3}
+                    dot={{ fill: "hsl(var(--primary))", r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           </Card>
 
           {/* Monthly Chart */}
           <Card className="p-4 md:p-6">
             <h2 className="text-lg md:text-xl font-bold mb-4">Biểu đồ view tháng này</h2>
-            <div className="w-full overflow-x-auto">
-              <ChartContainer config={{
+            <ChartContainer config={{
               views: {
                 label: "Lượt xem",
                 color: "hsl(var(--primary))"
               }
-            }} className="h-[300px] min-w-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
-                    <YAxis stroke="hsl(var(--muted-foreground))" />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line 
-                      type="monotone" 
-                      dataKey="views" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={3}
-                      dot={{ fill: "hsl(var(--primary))", r: 4 }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </div>
+            }} className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
+                  <YAxis stroke="hsl(var(--muted-foreground))" />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="views" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={3}
+                    dot={{ fill: "hsl(var(--primary))", r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           </Card>
         </div>
 
