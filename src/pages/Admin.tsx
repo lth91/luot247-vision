@@ -51,9 +51,7 @@ const Admin = () => {
       return;
     }
 
-    if (session?.user) {
-      checkAdminRole();
-    }
+    checkAdminRole();
   }, [session, navigate]);
 
   const checkAdminRole = async () => {
