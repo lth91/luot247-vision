@@ -167,7 +167,7 @@ const Admin = () => {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: "admin" | "user") => {
+  const handleRoleChange = async (userId: string, newRole: "admin" | "user" | "moderator") => {
     try {
       // Check if user already has this role
       const { data: existingRole } = await supabase
@@ -205,6 +205,8 @@ const Admin = () => {
     switch (role) {
       case "admin":
         return "destructive";
+      case "moderator":
+        return "default";
       default:
         return "secondary";
     }
@@ -293,6 +295,7 @@ const Admin = () => {
                     <TableCell>
                       <Badge variant={getRoleBadgeVariant(user.role)}>
                         {user.role === "admin" && "Quản trị viên"}
+                        {user.role === "moderator" && "Điều hành viên"}
                         {user.role === "user" && "Người dùng"}
                       </Badge>
                     </TableCell>
@@ -302,7 +305,7 @@ const Admin = () => {
                     <TableCell>
                       <Select
                         value={user.role}
-                        onValueChange={(value) => handleRoleChange(user.id, value as "admin" | "user")}
+                        onValueChange={(value) => handleRoleChange(user.id, value as "admin" | "user" | "moderator")}
                         disabled={user.id === session?.user?.id}
                       >
                         <SelectTrigger className="w-[180px]">
@@ -310,6 +313,7 @@ const Admin = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="user">Người dùng</SelectItem>
+                          <SelectItem value="moderator">Điều hành viên</SelectItem>
                           <SelectItem value="admin">Quản trị viên</SelectItem>
                         </SelectContent>
                       </Select>

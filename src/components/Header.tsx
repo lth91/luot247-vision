@@ -93,10 +93,24 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success("Đã đăng xuất");
-    setOpen(false);
-    navigate("/");
+    try {
+      console.log('🚪 Attempting to sign out...');
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('❌ Sign out error:', error);
+        toast.error("Lỗi khi đăng xuất: " + error.message);
+        return;
+      }
+      
+      console.log('✅ Successfully signed out');
+      toast.success("Đã đăng xuất");
+      setOpen(false);
+      navigate("/");
+    } catch (error) {
+      console.error('❌ Unexpected error during sign out:', error);
+      toast.error("Có lỗi xảy ra khi đăng xuất");
+    }
   };
 
   return (
