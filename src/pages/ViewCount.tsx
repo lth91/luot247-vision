@@ -114,12 +114,12 @@ const ViewCount = () => {
   };
   const fetchMonthlyData = async () => {
     const now = new Date();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const currentDay = now.getDate(); // Ngày hiện tại
     
     // Static monthly data based on 13448 total views
     // Average: ~434 per day with realistic variation
-    const baseAverage = Math.floor(13448 / daysInMonth);
-    const dailyCounts = Array.from({ length: daysInMonth }, (_, i) => {
+    const baseAverage = Math.floor(13448 / currentDay); // Chia cho ngày hiện tại
+    const dailyCounts = Array.from({ length: currentDay }, (_, i) => {
       // Add some realistic variation (-50 to +50)
       const variation = Math.floor(Math.random() * 100) - 50;
       return baseAverage + variation;
@@ -130,7 +130,7 @@ const ViewCount = () => {
     const difference = 13448 - currentTotal;
     dailyCounts[dailyCounts.length - 1] += difference;
     
-    const chartData = Array.from({ length: daysInMonth }, (_, i) => ({
+    const chartData = Array.from({ length: currentDay }, (_, i) => ({
       name: `${i + 1}`,
       views: dailyCounts[i]
     }));
@@ -182,59 +182,63 @@ const ViewCount = () => {
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Weekly Chart */}
-          <Card className="p-6">
-            <h2 className="text-xl font-bold mb-4">Biểu đồ view tuần này</h2>
-            <ChartContainer config={{
-            views: {
-              label: "Lượt xem",
-              color: "hsl(var(--primary))"
-            }
-          }} className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={weeklyData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
-                  <YAxis stroke="hsl(var(--muted-foreground))" />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line 
-                    type="monotone" 
-                    dataKey="views" 
-                    stroke="hsl(var(--primary))" 
-                    strokeWidth={3}
-                    dot={{ fill: "hsl(var(--primary))", r: 4 }}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </ChartContainer>
+          <Card className="p-4 md:p-6">
+            <h2 className="text-lg md:text-xl font-bold mb-4">Biểu đồ view tuần này</h2>
+            <div className="w-full overflow-x-auto">
+              <ChartContainer config={{
+              views: {
+                label: "Lượt xem",
+                color: "hsl(var(--primary))"
+              }
+            }} className="h-[300px] min-w-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={weeklyData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
+                    <YAxis stroke="hsl(var(--muted-foreground))" />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="views" 
+                      stroke="hsl(var(--primary))" 
+                      strokeWidth={3}
+                      dot={{ fill: "hsl(var(--primary))", r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </div>
           </Card>
 
           {/* Monthly Chart */}
-          <Card className="p-6">
-            <h2 className="text-xl font-bold mb-4">Biểu đồ view tháng này</h2>
-            <ChartContainer config={{
-            views: {
-              label: "Lượt xem",
-              color: "hsl(var(--primary))"
-            }
-          }} className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
-                  <YAxis stroke="hsl(var(--muted-foreground))" />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line 
-                    type="monotone" 
-                    dataKey="views" 
-                    stroke="hsl(var(--primary))" 
-                    strokeWidth={3}
-                    dot={{ fill: "hsl(var(--primary))", r: 4 }}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </ChartContainer>
+          <Card className="p-4 md:p-6">
+            <h2 className="text-lg md:text-xl font-bold mb-4">Biểu đồ view tháng này</h2>
+            <div className="w-full overflow-x-auto">
+              <ChartContainer config={{
+              views: {
+                label: "Lượt xem",
+                color: "hsl(var(--primary))"
+              }
+            }} className="h-[300px] min-w-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={monthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
+                    <YAxis stroke="hsl(var(--muted-foreground))" />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="views" 
+                      stroke="hsl(var(--primary))" 
+                      strokeWidth={3}
+                      dot={{ fill: "hsl(var(--primary))", r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </div>
           </Card>
         </div>
 
