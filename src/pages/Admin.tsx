@@ -29,6 +29,8 @@ const Admin = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [roleChecked, setRoleChecked] = useState(false);
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [newUserEmail, setNewUserEmail] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -36,23 +38,44 @@ const Admin = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      setSessionChecked(true);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      setSessionChecked(true);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (!session) {
-      navigate("/auth");
-      return;
+    if (session?.user) {
+      checkAdminRole();
+    } else {
+      setUserRole(null);
+      setRoleChecked(true);
     }
+  }, [session]);
 
-    checkAdminRole();
-  }, [session, navigate]);
+  useEffect(() => {
+    // Only check after both session and role have been checked
+    if (!sessionChecked || !roleChecked) return;
+    
+    // Check if user is admin (either by role or by email)
+    const isAdminByRole = session?.user && userRole === "admin";
+    const isAdminByEmail = session?.user?.email === 'longth91@gmail.com';
+    const isAdmin = isAdminByRole || isAdminByEmail;
+    
+    if (session?.user && isAdmin) {
+      setIsLoading(false);
+    } else if (session?.user && !isAdmin) {
+      toast.error("Bạn không có quyền truy cập trang này");
+      navigate("/");
+    } else if (!session) {
+      navigate("/auth");
+    }
+  }, [session, userRole, sessionChecked, roleChecked, navigate]);
 
   const checkAdminRole = async () => {
     if (!session?.user) return;
@@ -70,14 +93,13 @@ const Admin = () => {
         setUserRole("admin");
         fetchUsers();
       } else {
-        toast.error("Bạn không có quyền truy cập trang này");
-        navigate("/");
+        setUserRole(null);
       }
     } catch (error) {
       console.error("Error checking admin role:", error);
-      navigate("/");
+      setUserRole(null);
     } finally {
-      setIsLoading(false);
+      setRoleChecked(true);
     }
   };
 
@@ -204,7 +226,7 @@ const Admin = () => {
     );
   }
 
-  if (userRole !== "admin") {
+  if (userRole !== "admin" && session?.user?.email !== 'longth91@gmail.com') {
     return null;
   }
 
