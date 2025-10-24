@@ -176,43 +176,49 @@ const Favorites = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header user={session?.user} userRole={userRole} />
-      <div className="container py-8">
-        <div className="mb-8 flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Danh sách yêu thích</h1>
-            <p className="text-muted-foreground">
-              {favorites.length > 0
-                ? `Bạn có ${favorites.length} tin yêu thích`
-                : "Chưa có tin nào trong danh sách yêu thích"}
-            </p>
+      
+      {/* Title and Clear All Button */}
+      <div className="w-full border-b bg-background sticky top-[60px] z-10">
+        <div className="container py-4">
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-2xl font-bold text-primary">Danh sách yêu thích</h1>
+            
+            {favorites.length > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" className="shrink-0">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Xóa tất cả
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Bạn có chắc chắn muốn xóa toàn bộ danh sách yêu thích? 
+                      Hành động này không thể hoàn tác.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Hủy</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleClearAll}>
+                      Xóa tất cả
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
           
-          {favorites.length > 0 && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Xóa tất cả
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Bạn có chắc chắn muốn xóa toàn bộ danh sách yêu thích? 
-                    Hành động này không thể hoàn tác.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Hủy</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleClearAll}>
-                    Xóa tất cả
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
+          <p className="text-sm text-muted-foreground mt-2">
+            {favorites.length > 0
+              ? `Bạn có ${favorites.length} tin yêu thích`
+              : "Chưa có tin nào trong danh sách yêu thích"}
+          </p>
         </div>
+      </div>
+
+      <div className="container py-8">
 
         {favorites.length === 0 ? (
           <div className="text-center py-12">
@@ -229,7 +235,7 @@ const Favorites = () => {
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="border rounded-lg overflow-hidden bg-card">
             {favorites.map((news, index) => (
               <NewsItem
                 key={news.id}
