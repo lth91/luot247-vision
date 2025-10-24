@@ -43,38 +43,44 @@ const Auth = () => {
       const autoPassword = `auto_${trimmedEmail}_pass`;
       
       // Try to sign in first
-      let { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      let { error: signInError } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
         password: autoPassword,
       });
       
       // If user doesn't exist, create account automatically
       if (signInError?.message.includes("Invalid login credentials")) {
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        const { error: signUpError } = await supabase.auth.signUp({
           email: trimmedEmail,
           password: autoPassword,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              email: trimmedEmail,
+            }
           }
         });
         
         if (signUpError) {
           toast.error("Không thể tạo tài khoản: " + signUpError.message);
+          setIsLoading(false);
           return;
         }
         
-        // Sign in after signup
+        // Try to sign in immediately after signup
         const { error: finalSignInError } = await supabase.auth.signInWithPassword({
           email: trimmedEmail,
           password: autoPassword,
         });
         
         if (finalSignInError) {
-          toast.error("Không thể đăng nhập: " + finalSignInError.message);
+          toast.error("Tài khoản đã được tạo. Vui lòng kiểm tra email để xác nhận, sau đó đăng nhập lại.");
+          setIsLoading(false);
           return;
         }
       } else if (signInError) {
         toast.error("Không thể đăng nhập: " + signInError.message);
+        setIsLoading(false);
         return;
       }
       
