@@ -15,7 +15,10 @@ const Auth = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
+  
+  const isAdminEmail = email.trim() === "longth91@gmail.com";
   useEffect(() => {
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -39,20 +42,35 @@ const Auth = () => {
       emailSchema.parse({ email });
       const trimmedEmail = email.trim();
       
+      // Check if this is admin email - require real password
+      const isAdmin = trimmedEmail === "longth91@gmail.com";
+      
+      if (isAdmin && !password) {
+        toast.error("Vui lòng nhập mật khẩu");
+        setIsLoading(false);
+        return;
+      }
+      
       // Generate a consistent password based on email (for auto-login)
-      const autoPassword = `auto_${trimmedEmail}_pass`;
+      const loginPassword = isAdmin ? password : `auto_${trimmedEmail}_pass`;
       
       // Try to sign in first
       let { error: signInError } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
-        password: autoPassword,
+        password: loginPassword,
       });
       
-      // If user doesn't exist, create account automatically
+      // If user doesn't exist, create account automatically (but not for admin)
       if (signInError?.message.includes("Invalid login credentials")) {
+        if (isAdmin) {
+          toast.error("Email hoặc mật khẩu không đúng");
+          setIsLoading(false);
+          return;
+        }
+        
         const { error: signUpError } = await supabase.auth.signUp({
           email: trimmedEmail,
-          password: autoPassword,
+          password: loginPassword,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
             data: {
@@ -70,7 +88,7 @@ const Auth = () => {
         // Try to sign in immediately after signup
         const { error: finalSignInError } = await supabase.auth.signInWithPassword({
           email: trimmedEmail,
-          password: autoPassword,
+          password: loginPassword,
         });
         
         if (finalSignInError) {
@@ -79,7 +97,7 @@ const Auth = () => {
           return;
         }
       } else if (signInError) {
-        toast.error("Không thể đăng nhập: " + signInError.message);
+        toast.error(isAdmin ? "Email hoặc mật khẩu không đúng" : "Không thể đăng nhập: " + signInError.message);
         setIsLoading(false);
         return;
       }
@@ -131,6 +149,21 @@ const Auth = () => {
                 disabled={isLoading} 
               />
             </div>
+            
+            {isAdminEmail && (
+              <div className="space-y-2">
+                <Label htmlFor="password">Mật khẩu</Label>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  placeholder="Nhập mật khẩu" 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  required 
+                  disabled={isLoading} 
+                />
+              </div>
+            )}
             
             <div className="flex items-center space-x-2">
               <Checkbox 
