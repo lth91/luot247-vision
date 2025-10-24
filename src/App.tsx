@@ -11,6 +11,7 @@ import NewsDetail from "./pages/NewsDetail";
 import Classification from "./pages/Classification";
 import DataManagement from "./pages/DataManagement";
 import ViewCount from "./pages/ViewCount";
+import ViewManagement from "./pages/ViewManagement";
 import Home2 from "./pages/Home2";
 import About from "./pages/About";
 import Favorites from "./pages/Favorites";
@@ -51,7 +52,9 @@ const App = () => {
                 <Route path="/tin/:id" element={<Index />} />
                 <Route path="/duyet-tin" element={<Classification />} />
                 <Route path="/tai-du-lieu" element={<DataManagement />} />
+                <Route path="/data-management" element={<DataManagement />} />
                 <Route path="/viewcount" element={<ViewCount />} />
+                <Route path="/quan-ly-view" element={<ViewManagement />} />
                 <Route path="/home2" element={<Home2 />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/favorites" element={<Favorites />} />

@@ -400,11 +400,11 @@ const Home2 = () => {
             {/* Main content area - fixed height */}
             <div className="bg-card rounded-lg border flex flex-col relative" style={{ height: 'calc(100vh - 76px)' }}>
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 lg:p-12">
-                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold leading-relaxed mb-4 sm:mb-6 md:mb-8">
+                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold leading-relaxed mb-4 sm:mb-6 md:mb-8 text-gray-700">
                   {currentNews.title}
                 </h1>
                 {currentNews.description && (
-                  <p className="text-muted-foreground text-sm sm:text-base md:text-lg lg:text-xl leading-relaxed">
+                  <p className="text-gray-600 text-sm sm:text-base md:text-lg lg:text-xl leading-relaxed">
                     {currentNews.description}
                   </p>
                 )}

@@ -35,20 +35,14 @@ const ViewCount = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (!session) {
-        navigate("/auth");
-      }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (!session) {
-        navigate("/auth");
-      }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, []);
 
   useEffect(() => {
     if (session?.user) {
@@ -68,14 +62,28 @@ const ViewCount = () => {
     }
   }, [session, navigate]);
   useEffect(() => {
-    if (session && userRole === "admin") {
-      fetchNews();
-      fetchStats();
+    // Fetch data for public access - no login required
+    fetchNews();
+    fetchStats();
+    setIsLoading(false);
+  }, []);
+
+  // Fetch chart data after stats are loaded
+  useEffect(() => {
+    if (stats.today > 0) {
       fetchWeeklyData();
       fetchMonthlyData();
-      setIsLoading(false);
     }
-  }, [session, userRole]);
+  }, [stats]);
+
+  // Auto-refresh data every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchStats();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
   const fetchNews = async () => {
     const {
       data,
@@ -111,47 +119,139 @@ const ViewCount = () => {
     }
   };
   const fetchWeeklyData = async () => {
-    const now = new Date();
-    const currentDayOfWeek = now.getDay(); // 0 = CN, 1 = T2, ..., 6 = T7
-    
-    // Convert to Monday-based (0 = T2, 1 = T3, ..., 6 = CN)
-    const daysFromMonday = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
-    
-    const weekDays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
-    const dailyCounts = [285, 295, 310, 280, 290, 305, 270];
-    
-    // Only show days up to today
-    const chartData = weekDays.slice(0, daysFromMonday + 1).map((day, index) => ({
-      name: day,
-      views: dailyCounts[index]
-    }));
-    setWeeklyData(chartData);
+    try {
+      // Get base stats first
+      const { data: baseStats, error: baseError } = await supabase
+        .from('view_stats_base')
+        .select('stat_key, stat_value');
+
+      if (baseError) {
+        console.error('Error fetching base stats:', baseError);
+        return;
+      }
+
+      // Get view logs for the current week
+      const now = new Date();
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - now.getDay() + 1); // Monday
+      startOfWeek.setHours(0, 0, 0, 0);
+      
+      const { data: logsData, error: logsError } = await supabase
+        .from('view_logs')
+        .select('viewed_at')
+        .gte('viewed_at', startOfWeek.toISOString())
+        .order('viewed_at', { ascending: true });
+
+      if (logsError) {
+        console.error('Error fetching weekly logs:', logsError);
+        return;
+      }
+
+      // Calculate base daily average
+      const baseToday = baseStats?.find(s => s.stat_key === 'base_today')?.stat_value || 0;
+      const baseWeek = baseStats?.find(s => s.stat_key === 'base_week')?.stat_value || 0;
+      const baseDaily = Math.floor(baseWeek / 7); // Average daily base views
+
+      // Group logs by day
+      const dailyLogCounts: { [key: string]: number } = {};
+      const weekDays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+      
+      // Initialize all days with base daily average
+      weekDays.forEach(day => {
+        dailyLogCounts[day] = baseDaily;
+      });
+
+      // Add logs to each day
+      logsData?.forEach(log => {
+        const date = new Date(log.viewed_at);
+        const dayOfWeek = date.getDay();
+        const dayName = weekDays[dayOfWeek === 0 ? 6 : dayOfWeek - 1];
+        dailyLogCounts[dayName]++;
+      });
+
+      // Special handling for today - use actual today value
+      const todayName = weekDays[now.getDay() === 0 ? 6 : now.getDay() - 1];
+      dailyLogCounts[todayName] = stats.today; // Use the actual today value from stats
+
+      // Convert to chart data format
+      const currentDayOfWeek = now.getDay();
+      const daysFromMonday = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
+      
+      const chartData = weekDays.slice(0, daysFromMonday + 1).map(day => ({
+        name: day,
+        views: dailyLogCounts[day] || 0
+      }));
+      
+      setWeeklyData(chartData);
+    } catch (error) {
+      console.error('Error in fetchWeeklyData:', error);
+    }
   };
   const fetchMonthlyData = async () => {
-    const now = new Date();
-    const currentDay = now.getDate(); // Ngày hiện tại
-    
-    // Static monthly data based on 13448 total views
-    // Average: ~434 per day with realistic variation
-    const baseAverage = Math.floor(13448 / currentDay); // Chia cho ngày hiện tại
-    const dailyCounts = Array.from({ length: currentDay }, (_, i) => {
-      // Add some realistic variation (-50 to +50)
-      const variation = Math.floor(Math.random() * 100) - 50;
-      return baseAverage + variation;
-    });
-    
-    // Adjust to ensure total is exactly 13448
-    const currentTotal = dailyCounts.reduce((sum, count) => sum + count, 0);
-    const difference = 13448 - currentTotal;
-    dailyCounts[dailyCounts.length - 1] += difference;
-    
-    const chartData = Array.from({ length: currentDay }, (_, i) => ({
-      name: `${i + 1}`,
-      views: dailyCounts[i]
-    }));
-    setMonthlyData(chartData);
+    try {
+      // Get base stats first
+      const { data: baseStats, error: baseError } = await supabase
+        .from('view_stats_base')
+        .select('stat_key, stat_value');
+
+      if (baseError) {
+        console.error('Error fetching base stats:', baseError);
+        return;
+      }
+
+      // Get view logs for the current month
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      
+      const { data: logsData, error: logsError } = await supabase
+        .from('view_logs')
+        .select('viewed_at')
+        .gte('viewed_at', startOfMonth.toISOString())
+        .order('viewed_at', { ascending: true });
+
+      if (logsError) {
+        console.error('Error fetching monthly logs:', logsError);
+        return;
+      }
+
+      // Calculate base daily average for the month
+      const baseMonth = baseStats?.find(s => s.stat_key === 'base_month')?.stat_value || 0;
+      const currentDay = now.getDate();
+      const baseDaily = Math.floor(baseMonth / currentDay); // Average daily base views
+
+      // Group logs by day
+      const dailyLogCounts: { [key: number]: number } = {};
+      
+      // Initialize all days with base daily average
+      for (let i = 1; i <= currentDay; i++) {
+        dailyLogCounts[i] = baseDaily;
+      }
+
+      // Add logs to each day
+      logsData?.forEach(log => {
+        const date = new Date(log.viewed_at);
+        const day = date.getDate();
+        if (day <= currentDay) {
+          dailyLogCounts[day]++;
+        }
+      });
+
+      // Special handling for today - use actual today value
+      dailyLogCounts[currentDay] = stats.today; // Use the actual today value from stats
+
+      // Convert to chart data format
+      const chartData = Array.from({ length: currentDay }, (_, i) => ({
+        name: `${i + 1}`,
+        views: dailyLogCounts[i + 1] || 0
+      }));
+      
+      setMonthlyData(chartData);
+    } catch (error) {
+      console.error('Error in fetchMonthlyData:', error);
+    }
   };
-  if (isLoading || userRole !== "admin") {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Header user={session?.user} userRole={userRole} />

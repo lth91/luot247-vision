@@ -199,6 +199,16 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                           className="justify-start"
                           onClick={() => {
                             setOpen(false);
+                            navigate("/quan-ly-view");
+                          }}
+                        >
+                          📊 Quản lý view
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="justify-start"
+                          onClick={() => {
+                            setOpen(false);
                             navigate("/admin");
                           }}
                         >
