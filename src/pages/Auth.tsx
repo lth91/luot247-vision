@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -15,40 +15,78 @@ const Auth = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
-  const [emailSent, setEmailSent] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   useEffect(() => {
     // Check if user is already logged in
-    supabase.auth.getSession().then(({
-      data: {
-        session
-      }
-    }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         navigate("/");
       }
     });
+
+    // Check for remembered email
+    const rememberedEmail = localStorage.getItem("rememberedEmail");
+    if (rememberedEmail) {
+      setEmail(rememberedEmail);
+      setRememberMe(true);
+    }
   }, [navigate]);
-  const handleMagicLink = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    
     try {
-      emailSchema.parse({
-        email
+      emailSchema.parse({ email });
+      const trimmedEmail = email.trim();
+      
+      // Generate a consistent password based on email (for auto-login)
+      const autoPassword = `auto_${trimmedEmail}_pass`;
+      
+      // Try to sign in first
+      let { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: trimmedEmail,
+        password: autoPassword,
       });
-      const {
-        error
-      } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        options: {
-          emailRedirectTo: `${window.location.origin}/`
+      
+      // If user doesn't exist, create account automatically
+      if (signInError?.message.includes("Invalid login credentials")) {
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: trimmedEmail,
+          password: autoPassword,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+          }
+        });
+        
+        if (signUpError) {
+          toast.error("Không thể tạo tài khoản: " + signUpError.message);
+          return;
         }
-      });
-      if (error) {
-        toast.error("Không thể gửi link đăng nhập: " + error.message);
+        
+        // Sign in after signup
+        const { error: finalSignInError } = await supabase.auth.signInWithPassword({
+          email: trimmedEmail,
+          password: autoPassword,
+        });
+        
+        if (finalSignInError) {
+          toast.error("Không thể đăng nhập: " + finalSignInError.message);
+          return;
+        }
+      } else if (signInError) {
+        toast.error("Không thể đăng nhập: " + signInError.message);
         return;
       }
-      setEmailSent(true);
-      toast.success("Link đăng nhập đã được gửi! Vui lòng kiểm tra email.");
+      
+      // Handle remember me
+      if (rememberMe) {
+        localStorage.setItem("rememberedEmail", trimmedEmail);
+      } else {
+        localStorage.removeItem("rememberedEmail");
+      }
+      
+      toast.success("Đăng nhập thành công!");
+      navigate("/");
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
@@ -74,33 +112,38 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {emailSent ? <div className="text-center space-y-4 py-8">
-              <div className="text-6xl mb-4">📧</div>
-              <h3 className="text-xl font-semibold">Kiểm tra email của bạn!</h3>
-              <p className="text-muted-foreground">
-                Chúng tôi đã gửi link đăng nhập đến <strong>{email}</strong>
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Nhấn vào link trong email để đăng nhập vào tài khoản của bạn.
-              </p>
-              <Button variant="outline" onClick={() => {
-            setEmailSent(false);
-            setEmail("");
-          }}>
-                Gửi lại với email khác
-              </Button>
-            </div> : <form onSubmit={handleMagicLink} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="email@example.com" value={email} onChange={e => setEmail(e.target.value)} required disabled={isLoading} />
-                <p className="text-xs text-muted-foreground">
-                  Nhập email để nhận link đăng nhập
-                </p>
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Đang gửi..." : "Gửi link đăng nhập"}
-              </Button>
-            </form>}
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="email@example.com" 
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
+                required 
+                disabled={isLoading} 
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="remember" 
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+              />
+              <Label 
+                htmlFor="remember" 
+                className="text-sm font-normal cursor-pointer"
+              >
+                Ghi nhớ tài khoản
+              </Label>
+            </div>
+            
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>;
