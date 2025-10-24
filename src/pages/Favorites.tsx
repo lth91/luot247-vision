@@ -223,57 +223,58 @@ const Favorites = () => {
       
       {/* Title and Controls */}
       <div className="w-full border-b bg-background sticky top-[60px] z-10">
-        <div className="container py-4">
-          <div className="flex items-center justify-between gap-4">
-            <h1 className="text-2xl font-bold text-primary">Danh sách yêu thích</h1>
-            
-            <div className="flex items-center gap-3">
-              {/* Sort Dropdown */}
-              <div className="flex items-center gap-2">
-                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                <Select value={sortOption} onValueChange={(value: SortOption) => setSortOption(value)}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Sắp xếp" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="like_time_desc">Thời gian like (mới nhất)</SelectItem>
-                    <SelectItem value="like_time_asc">Thời gian like (cũ nhất)</SelectItem>
-                    <SelectItem value="news_time_desc">Thời gian lên tin (mới nhất)</SelectItem>
-                    <SelectItem value="news_time_asc">Thời gian lên tin (cũ nhất)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {/* Clear All Button */}
-              {favorites.length > 0 && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm" className="shrink-0">
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Xóa tất cả
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Bạn có chắc chắn muốn xóa toàn bộ danh sách yêu thích? 
-                        Hành động này không thể hoàn tác.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Hủy</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleClearAll}>
-                        Xóa tất cả
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
+        <div className="container py-3 md:py-4">
+          {/* Title */}
+          <h1 className="text-xl md:text-2xl font-bold text-primary mb-3">Danh sách yêu thích</h1>
+          
+          {/* Controls Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            {/* Sort Dropdown - Full width on mobile */}
+            <div className="flex items-center gap-2 flex-1">
+              <ArrowUpDown className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Select value={sortOption} onValueChange={(value: SortOption) => setSortOption(value)}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="Sắp xếp" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="like_time_desc">Thời gian like (mới nhất)</SelectItem>
+                  <SelectItem value="like_time_asc">Thời gian like (cũ nhất)</SelectItem>
+                  <SelectItem value="news_time_desc">Thời gian lên tin (mới nhất)</SelectItem>
+                  <SelectItem value="news_time_asc">Thời gian lên tin (cũ nhất)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+            
+            {/* Clear All Button - Full width on mobile */}
+            {favorites.length > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" className="w-full sm:w-auto shrink-0">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Xóa tất cả
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="max-w-[90vw] sm:max-w-md">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Bạn có chắc chắn muốn xóa toàn bộ danh sách yêu thích? 
+                      Hành động này không thể hoàn tác.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                    <AlertDialogCancel className="w-full sm:w-auto">Hủy</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleClearAll} className="w-full sm:w-auto">
+                      Xóa tất cả
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
           
-          <p className="text-sm text-muted-foreground mt-2">
+          {/* Info text */}
+          <p className="text-xs sm:text-sm text-muted-foreground mt-3">
             {favorites.length > 0
               ? `Bạn có ${favorites.length} tin yêu thích • ${getSortLabel(sortOption)}`
               : "Chưa có tin nào trong danh sách yêu thích"}
