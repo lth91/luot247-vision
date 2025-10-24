@@ -143,6 +143,17 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                     className="justify-start"
                     onClick={() => {
                       setOpen(false);
+                      navigate("/favorites");
+                    }}
+                  >
+                    ❤️ Danh sách yêu thích
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => {
+                      setOpen(false);
                       navigate("/about");
                     }}
                   >
@@ -151,39 +162,51 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
 
                   {userRole === "admin" && (
                     <>
-                      <Button
-                        variant="ghost"
-                        className="justify-start"
-                        onClick={() => {
-                          setOpen(false);
-                          navigate("/duyet-tin");
-                        }}
-                      >
-                        ✅ Duyệt tin
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="justify-start"
-                        onClick={() => {
-                          setOpen(false);
-                          navigate("/tai-du-lieu");
-                        }}
-                      >
-                        📊 Quản lý dữ liệu
-                      </Button>
+                      <div className="border-t pt-4 mt-4">
+                        <p className="text-xs text-muted-foreground px-2 mb-2">Quản trị</p>
+                        <Button
+                          variant="ghost"
+                          className="justify-start"
+                          onClick={() => {
+                            setOpen(false);
+                            navigate("/duyet-tin");
+                          }}
+                        >
+                          ✅ Duyệt tin
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="justify-start"
+                          onClick={() => {
+                            setOpen(false);
+                            navigate("/tai-du-lieu");
+                          }}
+                        >
+                          📊 Quản lý dữ liệu
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="justify-start"
+                          onClick={() => {
+                            setOpen(false);
+                            navigate("/viewcount");
+                          }}
+                        >
+                          📈 Thống kê
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="justify-start"
+                          onClick={() => {
+                            setOpen(false);
+                            navigate("/admin");
+                          }}
+                        >
+                          👥 Quản lý người dùng
+                        </Button>
+                      </div>
                     </>
                   )}
-
-                  <Button
-                    variant="ghost"
-                    className="justify-start"
-                    onClick={() => {
-                      setOpen(false);
-                      navigate("/viewcount");
-                    }}
-                  >
-                    📈 Thống kê
-                  </Button>
 
                   <div className="border-t pt-4">
                     <div className="flex items-center justify-between px-2 py-2">

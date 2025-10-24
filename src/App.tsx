@@ -12,6 +12,8 @@ import DataManagement from "./pages/DataManagement";
 import ViewCount from "./pages/ViewCount";
 import Home2 from "./pages/Home2";
 import About from "./pages/About";
+import Favorites from "./pages/Favorites";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +34,8 @@ const App = () => (
             <Route path="/viewcount" element={<ViewCount />} />
             <Route path="/home2" element={<Home2 />} />
             <Route path="/about" element={<About />} />
+            <Route path="/favorites" element={<Favorites />} />
+            <Route path="/admin" element={<Admin />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
