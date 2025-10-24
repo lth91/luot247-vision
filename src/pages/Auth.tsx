@@ -17,7 +17,6 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
-  const [isSignUp, setIsSignUp] = useState(false);
   
   const isAdminEmail = email.trim() === "longth91@gmail.com";
   useEffect(() => {
@@ -52,17 +51,23 @@ const Auth = () => {
         return;
       }
       
-      if (isSignUp && !isAdmin && !password) {
-        toast.error("Vui lòng nhập mật khẩu");
-        setIsLoading(false);
-        return;
-      }
-      
       // Generate a consistent password based on email (for auto-login non-admin users)
-      const loginPassword = (isAdmin || isSignUp) ? password : `auto_${trimmedEmail}_pass`;
+      const loginPassword = isAdmin ? password : `auto_${trimmedEmail}_pass`;
       
-      if (isSignUp) {
-        // Sign up flow
+      // Sign in flow
+      let { error: signInError } = await supabase.auth.signInWithPassword({
+        email: trimmedEmail,
+        password: loginPassword,
+      });
+      
+      // If user doesn't exist, create account automatically (but not for admin)
+      if (signInError?.message.includes("Invalid login credentials")) {
+        if (isAdmin) {
+          toast.error("Email hoặc mật khẩu không đúng");
+          setIsLoading(false);
+          return;
+        }
+        
         const { error: signUpError } = await supabase.auth.signUp({
           email: trimmedEmail,
           password: loginPassword,
@@ -80,68 +85,32 @@ const Auth = () => {
           return;
         }
         
-        toast.success("Tài khoản đã được tạo thành công!");
-        setIsSignUp(false);
-        setPassword("");
-      } else {
-        // Sign in flow
-        let { error: signInError } = await supabase.auth.signInWithPassword({
+        // Try to sign in immediately after signup
+        const { error: finalSignInError } = await supabase.auth.signInWithPassword({
           email: trimmedEmail,
           password: loginPassword,
         });
         
-        // If user doesn't exist, create account automatically (but not for admin)
-        if (signInError?.message.includes("Invalid login credentials")) {
-          if (isAdmin) {
-            toast.error("Email hoặc mật khẩu không đúng");
-            setIsLoading(false);
-            return;
-          }
-          
-          const { error: signUpError } = await supabase.auth.signUp({
-            email: trimmedEmail,
-            password: loginPassword,
-            options: {
-              emailRedirectTo: `${window.location.origin}/`,
-              data: {
-                email: trimmedEmail,
-              }
-            }
-          });
-          
-          if (signUpError) {
-            toast.error("Không thể tạo tài khoản: " + signUpError.message);
-            setIsLoading(false);
-            return;
-          }
-          
-          // Try to sign in immediately after signup
-          const { error: finalSignInError } = await supabase.auth.signInWithPassword({
-            email: trimmedEmail,
-            password: loginPassword,
-          });
-          
-          if (finalSignInError) {
-            toast.error("Tài khoản đã được tạo. Vui lòng kiểm tra email để xác nhận, sau đó đăng nhập lại.");
-            setIsLoading(false);
-            return;
-          }
-        } else if (signInError) {
-          toast.error(isAdmin ? "Email hoặc mật khẩu không đúng" : "Không thể đăng nhập: " + signInError.message);
+        if (finalSignInError) {
+          toast.error("Tài khoản đã được tạo. Vui lòng kiểm tra email để xác nhận, sau đó đăng nhập lại.");
           setIsLoading(false);
           return;
         }
-        
-        // Handle remember me
-        if (rememberMe) {
-          localStorage.setItem("rememberedEmail", trimmedEmail);
-        } else {
-          localStorage.removeItem("rememberedEmail");
-        }
-        
-        toast.success("Đăng nhập thành công!");
-        navigate("/");
+      } else if (signInError) {
+        toast.error(isAdmin ? "Email hoặc mật khẩu không đúng" : "Không thể đăng nhập: " + signInError.message);
+        setIsLoading(false);
+        return;
       }
+      
+      // Handle remember me
+      if (rememberMe) {
+        localStorage.setItem("rememberedEmail", trimmedEmail);
+      } else {
+        localStorage.removeItem("rememberedEmail");
+      }
+      
+      toast.success("Đăng nhập thành công!");
+      navigate("/");
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
@@ -161,10 +130,10 @@ const Auth = () => {
             </div>
           </div>
           <CardTitle className="text-2xl text-center">
-            {isSignUp ? "Tạo tài khoản mới" : "Đăng nhập"}
+            Đăng nhập
           </CardTitle>
           <CardDescription className="text-center">
-            {isSignUp ? "Nhập thông tin để đăng ký" : "Đăng nhập hoặc tạo tài khoản mới"}
+            Nhập email để đăng nhập hoặc tạo tài khoản mới
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -182,7 +151,7 @@ const Auth = () => {
               />
             </div>
             
-            {(isAdminEmail || isSignUp) && (
+            {isAdminEmail && (
               <div className="space-y-2">
                 <Label htmlFor="password">Mật khẩu</Label>
                 <Input 
@@ -197,8 +166,7 @@ const Auth = () => {
               </div>
             )}
             
-            {!isSignUp && (
-              <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="remember" 
                   checked={rememberMe}
@@ -211,29 +179,10 @@ const Auth = () => {
                   Ghi nhớ tài khoản
                 </Label>
               </div>
-            )}
             
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading 
-                ? (isSignUp ? "Đang tạo tài khoản..." : "Đang đăng nhập...") 
-                : (isSignUp ? "Đăng ký" : "Đăng nhập")
-              }
+              {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
             </Button>
-            
-            <div className="text-center">
-              <Button
-                type="button"
-                variant="link"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setPassword("");
-                }}
-                disabled={isLoading}
-                className="text-sm"
-              >
-                {isSignUp ? "Đã có tài khoản? Đăng nhập" : "Chưa có tài khoản? Đăng ký"}
-              </Button>
-            </div>
           </form>
         </CardContent>
       </Card>
