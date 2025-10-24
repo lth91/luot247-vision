@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useReadingContext } from "@/contexts/ReadingContext";
+import { useFavorites } from "@/contexts/FavoritesContext";
 import { ShareDialog } from "@/components/ShareDialog";
 
 interface NewsItemProps {
@@ -15,8 +16,6 @@ interface NewsItemProps {
   viewCount: number;
   url?: string;
   createdAt: string;
-  isFavorite?: boolean;
-  onFavoriteToggle?: () => void;
   isAuthenticated: boolean;
   isLast?: boolean;
 }
@@ -30,13 +29,16 @@ export const NewsItem = ({
   isLast = false,
 }: NewsItemProps) => {
   const navigate = useNavigate();
-  const [liked, setLiked] = useState(false);
   const [disliked, setDisliked] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   
   // Get highlight state from ReadingContext
   const { highlightedNewsId } = useReadingContext();
   const isHighlighted = highlightedNewsId === id;
+  
+  // Get favorites state from FavoritesContext
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const liked = isFavorite(id);
 
   const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -45,39 +47,8 @@ export const NewsItem = ({
       return;
     }
 
-    const newLikedState = !liked;
-    setLiked(newLikedState);
-    setDisliked(false);
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      if (newLikedState) {
-        // Add to favorites
-        const { error } = await supabase
-          .from('favorites')
-          .insert({ user_id: user.id, news_id: id });
-        
-        if (error && !error.message.includes('duplicate')) {
-          throw error;
-        }
-        toast.success("Đã thêm vào yêu thích");
-      } else {
-        // Remove from favorites
-        const { error } = await supabase
-          .from('favorites')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('news_id', id);
-        
-        if (error) throw error;
-        toast.success("Đã xóa khỏi yêu thích");
-      }
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-      setLiked(!newLikedState);
-    }
+    await toggleFavorite(id);
+    setDisliked(false); // Clear dislike when liking
   };
 
   const handleDislike = async (e: React.MouseEvent) => {
@@ -86,8 +57,13 @@ export const NewsItem = ({
       toast.error("Vui lòng đăng nhập");
       return;
     }
+    
     setDisliked(!disliked);
-    setLiked(false);
+    
+    // If disliking and currently liked, remove from favorites
+    if (!disliked && liked) {
+      await toggleFavorite(id);
+    }
   };
 
   const handleShare = async (e: React.MouseEvent) => {

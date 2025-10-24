@@ -5,11 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { useReadingContext } from "@/contexts/ReadingContext";
+import { useFavorites } from "@/contexts/FavoritesContext";
 
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [showReadNews, setShowReadNews] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -30,6 +30,9 @@ const Index = () => {
     setHighlightedNewsId,
     setIsFromSharedLink
   } = useReadingContext();
+  
+  // Use FavoritesContext
+  const { favoriteIds } = useFavorites();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -54,10 +57,9 @@ const Index = () => {
           setUserRole(data?.role || null);
         });
 
-      fetchFavorites();
+      // fetchFavorites(); // Removed - using FavoritesContext now
     } else {
       setUserRole(null);
-      setFavorites(new Set());
     }
   }, [session]);
 
@@ -150,7 +152,7 @@ const Index = () => {
         });
         
         // Find the news item closest to the top of viewport
-        const header = document.querySelector('header');
+          const header = document.querySelector('header');
         if (header) {
           const headerRect = header.getBoundingClientRect();
           const headerBottom = headerRect.bottom;
@@ -508,13 +510,13 @@ const Index = () => {
               
               // Check if element is visible and mark as read if needed
               if (elementBottom < effectiveHeaderBottom) {
-                const stored = localStorage.getItem('luot247_read_news');
-                const readIds = stored ? JSON.parse(stored) : [];
-                const isAlreadyRead = readIds.includes(newsId);
-                
-                if (!isAlreadyRead) {
+              const stored = localStorage.getItem('luot247_read_news');
+              const readIds = stored ? JSON.parse(stored) : [];
+              const isAlreadyRead = readIds.includes(newsId);
+              
+              if (!isAlreadyRead) {
                   console.log(`📖 Desktop: Marking news ${newsId} as read`);
-                  markNewsAsRead(newsId);
+                markNewsAsRead(newsId);
                 }
               }
               
@@ -537,9 +539,9 @@ const Index = () => {
             isProcessing = false;
           });
         }, 150);
-      };
-      
-      window.addEventListener('scroll', handleScroll, { passive: true });
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
       
       return () => {
         window.removeEventListener('scroll', handleScroll);
@@ -565,18 +567,6 @@ const Index = () => {
   };
 
 
-  const fetchFavorites = async () => {
-    if (!session?.user) return;
-
-    const { data, error } = await supabase
-      .from("favorites")
-      .select("news_id")
-      .eq("user_id", session.user.id);
-
-    if (!error && data) {
-      setFavorites(new Set(data.map((f) => f.news_id)));
-    }
-  };
 
   const handleDeepLink = () => {
     // Check for /tin/:id path
@@ -663,8 +653,6 @@ const Index = () => {
                   viewCount={item.view_count || 0}
                   url={item.url}
                   createdAt={item.created_at}
-                  isFavorite={favorites.has(item.id)}
-                  onFavoriteToggle={fetchFavorites}
                   isAuthenticated={!!session}
                   isLast={index === filteredNews.length - 1}
                 />

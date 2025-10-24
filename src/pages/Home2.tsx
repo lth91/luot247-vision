@@ -6,13 +6,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ThumbsUp, ThumbsDown, Share2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useReadingContext } from "@/contexts/ReadingContext";
+import { useFavorites } from "@/contexts/FavoritesContext";
 import { ShareDialog } from "@/components/ShareDialog";
 
 const Home2 = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [liked, setLiked] = useState(false);
   const [disliked, setDisliked] = useState(false);
   const [showArrows, setShowArrows] = useState(false);
   const [hasShownHints, setHasShownHints] = useState(false);
@@ -30,6 +30,10 @@ const Home2 = () => {
     clearReadNews,
     currentNews
   } = useReadingContext();
+  
+  // Use FavoritesContext
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const liked = currentNews ? isFavorite(currentNews.id) : false;
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -269,7 +273,6 @@ const Home2 = () => {
       
       const newIndex = currentNewsIndex + 1;
       setCurrentNewsIndex(newIndex);
-      setLiked(false);
       setDisliked(false);
       
       // Save the NEW current news as last visible for mobile sync
@@ -285,7 +288,6 @@ const Home2 = () => {
     if (currentNewsIndex > 0) {
       const newIndex = currentNewsIndex - 1;
       setCurrentNewsIndex(newIndex);
-      setLiked(false);
       setDisliked(false);
       
       // Save the NEW current news as last visible for mobile sync
@@ -303,39 +305,10 @@ const Home2 = () => {
       return;
     }
 
-    const newLikedState = !liked;
-    setLiked(newLikedState);
-    setDisliked(false);
-
     if (!currentNews) return;
 
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      if (newLikedState) {
-        const { error } = await supabase
-          .from('favorites')
-          .insert({ user_id: user.id, news_id: currentNews.id });
-        
-        if (error && !error.message.includes('duplicate')) {
-          throw error;
-        }
-        toast.success("Đã thêm vào yêu thích");
-      } else {
-        const { error } = await supabase
-          .from('favorites')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('news_id', currentNews.id);
-        
-        if (error) throw error;
-        toast.success("Đã xóa khỏi yêu thích");
-      }
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-      setLiked(!newLikedState);
-    }
+    await toggleFavorite(currentNews.id);
+    setDisliked(false); // Clear dislike when liking
   };
 
   const handleDislike = () => {
@@ -343,8 +316,13 @@ const Home2 = () => {
       toast.error("Vui lòng đăng nhập");
       return;
     }
+    
     setDisliked(!disliked);
-    setLiked(false);
+    
+    // If disliking and currently liked, remove from favorites
+    if (!disliked && liked && currentNews) {
+      toggleFavorite(currentNews.id);
+    }
   };
 
   const handleShare = async () => {
