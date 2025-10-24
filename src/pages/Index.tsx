@@ -72,6 +72,9 @@ const Index = () => {
     
     // Expose clear function to window for debugging
     (window as any).clearReadNews = clearReadNews;
+
+    // Handle deep link to specific news
+    handleDeepLink();
   }, []);
 
   const recordPageView = async () => {
@@ -570,6 +573,43 @@ const Index = () => {
 
     if (!error && data) {
       setFavorites(new Set(data.map((f) => f.news_id)));
+    }
+  };
+
+  const handleDeepLink = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const newsId = urlParams.get('news');
+    
+    if (newsId) {
+      console.log('🔗 Deep link detected for news:', newsId);
+      
+      // Wait for news to load
+      setTimeout(() => {
+        const newsElement = document.querySelector(`[data-news-id="${newsId}"]`);
+        if (newsElement) {
+          const headerHeight = 60;
+          const targetPosition = newsElement.getBoundingClientRect().top + window.scrollY - headerHeight;
+          
+          window.scrollTo({
+            top: targetPosition,
+            behavior: 'smooth'
+          });
+          
+          // Highlight the news item temporarily
+          setTimeout(() => {
+            const { setHighlightedNewsId } = useReadingContext();
+            setHighlightedNewsId(newsId);
+            
+            setTimeout(() => {
+              setHighlightedNewsId(null);
+            }, 3000);
+          }, 500);
+          
+          console.log('✅ Scrolled to news:', newsId);
+        } else {
+          console.log('❌ News element not found:', newsId);
+        }
+      }, 1500);
     }
   };
 

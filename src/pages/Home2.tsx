@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ThumbsUp, ThumbsDown, Share2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useReadingContext } from "@/contexts/ReadingContext";
+import { ShareDialog } from "@/components/ShareDialog";
 
 const Home2 = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -15,6 +16,7 @@ const Home2 = () => {
   const [disliked, setDisliked] = useState(false);
   const [showArrows, setShowArrows] = useState(false);
   const [hasShownHints, setHasShownHints] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const mainContentRef = useRef<HTMLDivElement>(null);
 
   // Use ReadingContext
@@ -295,13 +297,45 @@ const Home2 = () => {
     }
   };
 
-  const handleLike = () => {
+  const handleLike = async () => {
     if (!session) {
       toast.error("Vui lòng đăng nhập");
       return;
     }
-    setLiked(!liked);
+
+    const newLikedState = !liked;
+    setLiked(newLikedState);
     setDisliked(false);
+
+    if (!currentNews) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      if (newLikedState) {
+        const { error } = await supabase
+          .from('favorites')
+          .insert({ user_id: user.id, news_id: currentNews.id });
+        
+        if (error && !error.message.includes('duplicate')) {
+          throw error;
+        }
+        toast.success("Đã thêm vào yêu thích");
+      } else {
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('news_id', currentNews.id);
+        
+        if (error) throw error;
+        toast.success("Đã xóa khỏi yêu thích");
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      setLiked(!newLikedState);
+    }
   };
 
   const handleDislike = () => {
@@ -315,13 +349,14 @@ const Home2 = () => {
 
   const handleShare = async () => {
     if (!currentNews) return;
-    const shareUrl = `${window.location.origin}/tin/${currentNews.id}`;
-    await navigator.clipboard.writeText(shareUrl);
-    toast.success("Đã sao chép liên kết");
+    setShareDialogOpen(true);
   };
 
   const handleSearch = () => {
-    toast.info("Tính năng tìm kiếm đang phát triển");
+    if (!currentNews) return;
+    const searchQuery = encodeURIComponent(currentNews.title);
+    const googleSearchUrl = `https://www.google.com/search?q=${searchQuery}`;
+    window.open(googleSearchUrl, '_blank', 'width=800,height=600');
   };
 
   const timeAgo = () => {
@@ -448,6 +483,15 @@ const Home2 = () => {
           </div>
         )}
       </main>
+
+      {currentNews && (
+        <ShareDialog
+          isOpen={shareDialogOpen}
+          onClose={() => setShareDialogOpen(false)}
+          newsId={currentNews.id}
+          newsTitle={currentNews.title}
+        />
+      )}
     </div>
   );
 };
