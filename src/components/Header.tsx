@@ -250,7 +250,8 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                     </div>
                   </div>
 
-                  <div className="border-t pt-4">
+                  {/* Reset tin đã đọc - Hidden but can be enabled if needed */}
+                  {/* <div className="border-t pt-4">
                     <Button
                       variant="ghost"
                       className="justify-start w-full"
@@ -261,7 +262,7 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                     >
                       🔄 Reset tin đã đọc
                     </Button>
-                  </div>
+                  </div> */}
 
                   <Button variant="ghost" className="justify-start mt-4" onClick={handleLogout}>
                     🚪 Đăng xuất
@@ -305,7 +306,8 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                     </div>
                   </div>
 
-                  <div className="border-t pt-4">
+                  {/* Reset tin đã đọc - Hidden but can be enabled if needed */}
+                  {/* <div className="border-t pt-4">
                     <Button
                       variant="ghost"
                       className="justify-start w-full"
@@ -316,7 +318,7 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                     >
                       🔄 Reset tin đã đọc
                     </Button>
-                  </div>
+                  </div> */}
                 </>
               )}
             </div>
