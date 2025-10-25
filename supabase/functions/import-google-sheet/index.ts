@@ -130,30 +130,69 @@ Deno.serve(async (req) => {
       )
     }
 
-    // If action is 'import', insert into database
+    // If action is 'import', insert into database with delay
     if (action === 'import') {
       const supabaseClient = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       )
 
-      const { data, error } = await supabaseClient
-        .from('news')
-        .insert(newsItems)
-        .select()
+      // Get authorization header to extract user info
+      const authHeader = req.headers.get('authorization')
+      let userEmail = 'unknown'
+      let userId = null
 
-      if (error) {
-        console.error('Database error:', error)
-        throw new Error(`Failed to import data: ${error.message}`)
+      if (authHeader) {
+        const token = authHeader.replace('Bearer ', '')
+        const { data: { user } } = await supabaseClient.auth.getUser(token)
+        if (user) {
+          userEmail = user.email || 'unknown'
+          userId = user.id
+        }
       }
 
-      console.log('Successfully imported:', data?.length, 'items')
+      console.log('Starting import with delay for', newsItems.length, 'items')
+
+      // Insert items one by one with 5 second delay
+      let successCount = 0
+      
+      for (const item of newsItems) {
+        const { error } = await supabaseClient
+          .from('news')
+          .insert([item])
+
+        if (!error) {
+          successCount++
+          console.log(`Imported item ${successCount}/${newsItems.length}`)
+        } else {
+          console.error('Error importing item:', error)
+        }
+
+        // Wait 5 seconds before next item (except for the last one)
+        if (successCount < newsItems.length) {
+          await new Promise(resolve => setTimeout(resolve, 5000))
+        }
+      }
+
+      // Log import history
+      if (userId) {
+        await supabaseClient
+          .from('import_history')
+          .insert({
+            user_id: userId,
+            user_email: userEmail,
+            news_count: successCount,
+            sheet_url: sheetUrl
+          })
+      }
+
+      console.log('Successfully imported:', successCount, 'items')
 
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: `Đã import thành công ${data?.length} tin tức`,
-          count: data?.length 
+          message: `Đã import thành công ${successCount} tin tức`,
+          count: successCount
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )

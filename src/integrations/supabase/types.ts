@@ -72,6 +72,33 @@ export type Database = {
           },
         ]
       }
+      import_history: {
+        Row: {
+          id: string
+          imported_at: string
+          news_count: number
+          sheet_url: string | null
+          user_email: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          imported_at?: string
+          news_count?: number
+          sheet_url?: string | null
+          user_email: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          imported_at?: string
+          news_count?: number
+          sheet_url?: string | null
+          user_email?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       news: {
         Row: {
           category: Database["public"]["Enums"]["news_category"] | null

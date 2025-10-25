@@ -10,11 +10,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const categoryButtons = [
   { value: "kinh-te", label: "Kinh tế" },
+  { value: "phap-luat", label: "Pháp luật" },
   { value: "chinh-tri", label: "Chính trị" },
+  { value: "the-gioi", label: "Thế giới" },
+  { value: "van-hoa", label: "Văn hoá" },
   { value: "xa-hoi", label: "Xã hội" },
-  { value: "the-thao", label: "Thể thao" },
-  { value: "giai-tri", label: "Giải trí" },
-  { value: "cong-nghe", label: "Công nghệ" },
+  { value: "khoa-hoc", label: "Khoa học" },
 ];
 
 const Classification = () => {

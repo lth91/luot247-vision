@@ -7,13 +7,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
-import { Download, LogOut, KeyRound, Upload } from "lucide-react";
+import { Download, LogOut, KeyRound, Upload, Clock } from "lucide-react";
 
 interface NewsPreview {
   title: string;
   description?: string;
   category?: string;
   url?: string;
+}
+
+interface ImportHistory {
+  id: string;
+  user_email: string;
+  imported_at: string;
+  news_count: number;
 }
 
 const DataManagement = () => {
@@ -25,6 +32,7 @@ const DataManagement = () => {
   const [previewData, setPreviewData] = useState<NewsPreview[]>([]);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [importHistory, setImportHistory] = useState<ImportHistory[]>([]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -65,8 +73,21 @@ const DataManagement = () => {
   useEffect(() => {
     if (session && (userRole === "admin" || userRole === "moderator")) {
       setIsLoading(false);
+      fetchImportHistory();
     }
   }, [session, userRole]);
+
+  const fetchImportHistory = async () => {
+    const { data, error } = await supabase
+      .from("import_history")
+      .select("*")
+      .order("imported_at", { ascending: false })
+      .limit(10);
+
+    if (!error && data) {
+      setImportHistory(data);
+    }
+  };
 
   const handlePreviewData = async () => {
     if (!sheetUrl.trim()) {
@@ -104,7 +125,14 @@ const DataManagement = () => {
       return;
     }
 
+    if (previewData.length === 0) {
+      toast.error("Vui lòng xem trước dữ liệu trước khi import");
+      return;
+    }
+
     setIsImporting(true);
+    const estimatedTime = previewData.length * 5; // 5 seconds per item
+    toast.info(`Đang upload ${previewData.length} tin. Ước tính: ${Math.floor(estimatedTime / 60)} phút ${estimatedTime % 60} giây`);
 
     try {
       const { data, error } = await supabase.functions.invoke('import-google-sheet', {
@@ -117,6 +145,7 @@ const DataManagement = () => {
         toast.success(data.message);
         setPreviewData([]);
         setSheetUrl("");
+        fetchImportHistory(); // Refresh history
       } else {
         toast.error(data.error || "Không thể import dữ liệu");
       }
@@ -211,9 +240,17 @@ const DataManagement = () => {
         {previewData.length > 0 && (
           <Card className="p-6 mt-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold">
-                Xem trước ({previewData.length} tin tức)
-              </h3>
+              <div>
+                <h3 className="text-xl font-semibold">
+                  Xem trước ({previewData.length} tin tức)
+                </h3>
+                <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  <span>
+                    Thời gian upload: ~{Math.floor((previewData.length * 5) / 60)} phút {(previewData.length * 5) % 60} giây
+                  </span>
+                </div>
+              </div>
               <Button 
                 onClick={handleImportData}
                 disabled={isImporting}
@@ -257,6 +294,39 @@ const DataManagement = () => {
                             Link
                           </a>
                         ) : '-'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        )}
+
+        {/* Import History */}
+        {importHistory.length > 0 && (
+          <Card className="p-6 mt-6">
+            <h3 className="text-xl font-semibold mb-4">Lịch sử upload</h3>
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tài khoản</TableHead>
+                    <TableHead>Thời gian</TableHead>
+                    <TableHead>Số lượng tin</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {importHistory.map((history) => (
+                    <TableRow key={history.id}>
+                      <TableCell className="font-medium">{history.user_email}</TableCell>
+                      <TableCell>
+                        {new Date(history.imported_at).toLocaleString('vi-VN')}
+                      </TableCell>
+                      <TableCell>
+                        <span className="px-2 py-1 bg-secondary rounded text-sm">
+                          {history.news_count} tin
+                        </span>
                       </TableCell>
                     </TableRow>
                   ))}
