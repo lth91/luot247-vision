@@ -174,7 +174,7 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                     ℹ️ Về chúng tôi
                   </Button>
 
-                  {userRole === "admin" && (
+                  {(userRole === "admin" || userRole === "moderator") && (
                     <>
                       <div className="border-t pt-4 mt-4">
                         <p className="text-xs text-muted-foreground px-2 mb-2">Quản trị</p>
@@ -198,36 +198,40 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                         >
                           📊 Quản lý dữ liệu
                         </Button>
-                        <Button
-                          variant="ghost"
-                          className="justify-start"
-                          onClick={() => {
-                            setOpen(false);
-                            navigate("/viewcount");
-                          }}
-                        >
-                          📈 Thống kê
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          className="justify-start"
-                          onClick={() => {
-                            setOpen(false);
-                            navigate("/quan-ly-view");
-                          }}
-                        >
-                          📊 Quản lý view
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          className="justify-start"
-                          onClick={() => {
-                            setOpen(false);
-                            navigate("/admin");
-                          }}
-                        >
-                          👥 Quản lý người dùng
-                        </Button>
+                        {userRole === "admin" && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              className="justify-start"
+                              onClick={() => {
+                                setOpen(false);
+                                navigate("/viewcount");
+                              }}
+                            >
+                              📈 Thống kê
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              className="justify-start"
+                              onClick={() => {
+                                setOpen(false);
+                                navigate("/quan-ly-view");
+                              }}
+                            >
+                              📊 Quản lý view
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              className="justify-start"
+                              onClick={() => {
+                                setOpen(false);
+                                navigate("/admin");
+                              }}
+                            >
+                              👥 Quản lý người dùng
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </>
                   )}
