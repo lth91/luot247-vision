@@ -54,10 +54,6 @@ const ViewCount = () => {
         .then(({ data }) => {
           const role = data?.role || null;
           setUserRole(role);
-          if (role !== "admin") {
-            toast.error("Bạn không có quyền truy cập trang này");
-            navigate("/");
-          }
         });
     }
   }, [session, navigate]);
