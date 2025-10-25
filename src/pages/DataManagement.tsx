@@ -54,7 +54,7 @@ const DataManagement = () => {
         .then(({ data }) => {
           const role = data?.role || null;
           setUserRole(role);
-          if (role !== "admin" && role !== "moderator") {
+          if (role !== "admin") {
             toast.error("Bạn không có quyền truy cập trang này");
             navigate("/");
           }
@@ -63,7 +63,7 @@ const DataManagement = () => {
   }, [session, navigate]);
 
   useEffect(() => {
-    if (session && (userRole === "admin" || userRole === "moderator")) {
+    if (session && userRole === "admin") {
       setIsLoading(false);
     }
   }, [session, userRole]);

@@ -133,7 +133,7 @@ const Auth = () => {
             Đăng nhập
           </CardTitle>
           <CardDescription className="text-center">
-            Nhập email để đăng nhập hoặc tạo tài khoản mới
+            Nhập email để đăng nhập
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -167,18 +167,18 @@ const Auth = () => {
             )}
             
             <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="remember" 
-                  checked={rememberMe}
-                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                />
-                <Label 
-                  htmlFor="remember" 
-                  className="text-sm font-normal cursor-pointer"
-                >
-                  Ghi nhớ tài khoản
-                </Label>
-              </div>
+              <Checkbox 
+                id="remember" 
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+              />
+              <Label 
+                htmlFor="remember" 
+                className="text-sm font-normal cursor-pointer"
+              >
+                Ghi nhớ tài khoản
+              </Label>
+            </div>
             
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
