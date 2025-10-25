@@ -231,7 +231,7 @@ const Classification = () => {
 
   const currentNews = news[currentIndex];
 
-  if (isLoading || userRole !== "admin") {
+  if (isLoading || (userRole !== "admin" && userRole !== "moderator")) {
     return (
       <div className="min-h-screen bg-background">
         <Header user={session?.user} userRole={userRole} />
