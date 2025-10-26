@@ -165,7 +165,10 @@ const Classification = () => {
     
     const { error } = await supabase
       .from("news")
-      .update({ category: category as any })
+      .update({ 
+        category: category as any,
+        is_approved: true  // Approve the news when category is assigned
+      })
       .eq("id", news[currentIndex].id);
 
     if (error) {
@@ -178,7 +181,7 @@ const Classification = () => {
         news_id: news[currentIndex].id
       });
       
-      toast.success("Đã phân loại tin tức");
+      toast.success("Đã phân loại và duyệt tin tức");
       await fetchStats(); // Cập nhật bộ đếm
       handleNext();
     }

@@ -105,6 +105,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
+          is_approved: boolean | null
           title: string
           updated_at: string | null
           url: string | null
@@ -115,6 +116,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          is_approved?: boolean | null
           title: string
           updated_at?: string | null
           url?: string | null
@@ -125,6 +127,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          is_approved?: boolean | null
           title?: string
           updated_at?: string | null
           url?: string | null
@@ -251,11 +254,16 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user" | "moderator"
       news_category:
-        | "kinh-te"
-        | "phap-luat"
         | "chinh-tri"
+        | "kinh-te"
+        | "xa-hoi"
+        | "the-thao"
+        | "giai-tri"
+        | "cong-nghe"
+        | "phap-luat"
         | "the-gioi"
         | "van-hoa-xa-hoi-khoa-hoc"
+        | "khac"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -385,11 +393,16 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user", "moderator"],
       news_category: [
-        "kinh-te",
-        "phap-luat",
         "chinh-tri",
+        "kinh-te",
+        "xa-hoi",
+        "the-thao",
+        "giai-tri",
+        "cong-nghe",
+        "phap-luat",
         "the-gioi",
         "van-hoa-xa-hoi-khoa-hoc",
+        "khac",
       ],
     },
   },

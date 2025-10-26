@@ -131,8 +131,7 @@ const DataManagement = () => {
     }
 
     setIsImporting(true);
-    const estimatedTime = previewData.length * 5; // 5 seconds per item
-    toast.info(`Đang upload ${previewData.length} tin. Ước tính: ${Math.floor(estimatedTime / 60)} phút ${estimatedTime % 60} giây`);
+    toast.info(`Đang upload ${previewData.length} tin tức...`);
 
     try {
       const { data, error } = await supabase.functions.invoke('import-google-sheet', {
@@ -277,12 +276,9 @@ const DataManagement = () => {
                 <h3 className="text-xl font-semibold">
                   Xem trước ({previewData.length} tin tức)
                 </h3>
-                <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4" />
-                  <span>
-                    Thời gian upload: ~{Math.floor((previewData.length * 5) / 60)} phút {(previewData.length * 5) % 60} giây
-                  </span>
-                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Tin tức sẽ được import ngay lập tức và cần duyệt trước khi hiển thị trên trang chủ
+                </p>
               </div>
               <Button 
                 onClick={handleImportData}

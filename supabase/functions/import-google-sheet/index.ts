@@ -151,26 +151,24 @@ Deno.serve(async (req) => {
         }
       }
 
-      console.log('Starting import with delay for', newsItems.length, 'items')
+      console.log('Starting import for', newsItems.length, 'items')
 
-      // Insert items one by one with 5 second delay
+      // Insert items with is_approved=false to require moderator approval
       let successCount = 0
       
       for (const item of newsItems) {
         const { error } = await supabaseClient
           .from('news')
-          .insert([item])
+          .insert([{
+            ...item,
+            is_approved: false  // News requires moderator approval
+          }])
 
         if (!error) {
           successCount++
           console.log(`Imported item ${successCount}/${newsItems.length}`)
         } else {
           console.error('Error importing item:', error)
-        }
-
-        // Wait 5 seconds before next item (except for the last one)
-        if (successCount < newsItems.length) {
-          await new Promise(resolve => setTimeout(resolve, 5000))
         }
       }
 

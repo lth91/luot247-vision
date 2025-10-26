@@ -560,6 +560,7 @@ const Index = () => {
     const { data, error } = await supabase
       .from("news")
       .select("*")
+      .eq("is_approved", true)  // Only show approved news
       .order("created_at", { ascending: false });
 
     if (error) {
