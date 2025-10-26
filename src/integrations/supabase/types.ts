@@ -251,16 +251,11 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user" | "moderator"
       news_category:
-        | "chinh-tri"
         | "kinh-te"
-        | "xa-hoi"
-        | "the-thao"
-        | "giai-tri"
-        | "cong-nghe"
         | "phap-luat"
+        | "chinh-tri"
         | "the-gioi"
         | "van-hoa-xa-hoi-khoa-hoc"
-        | "khac"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -390,16 +385,11 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user", "moderator"],
       news_category: [
-        "chinh-tri",
         "kinh-te",
-        "xa-hoi",
-        "the-thao",
-        "giai-tri",
-        "cong-nghe",
         "phap-luat",
+        "chinh-tri",
         "the-gioi",
         "van-hoa-xa-hoi-khoa-hoc",
-        "khac",
       ],
     },
   },
