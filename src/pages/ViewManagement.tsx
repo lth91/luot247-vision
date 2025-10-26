@@ -255,33 +255,28 @@ const ViewManagement = () => {
     });
     
     try {
-      let totalAdded = 0;
+      // 🔥 Call Supabase Edge Function for background processing
+      toast.info("Đang khởi động background process...");
       
-      // Process daily views
-      if (dailyCount > 0 && !shouldStopRef.current) {
-        toast.info(`Đang thêm ${dailyCount} view trong ngày (trong ${durationHours}h)...`);
-        await addViewsWithDelay(dailyCount, 'daily');
-        totalAdded += dailyCount;
-      }
-      
-      // Process weekly views
-      if (weeklyCount > 0 && !shouldStopRef.current) {
-        toast.info(`Đang thêm ${weeklyCount} view trong tuần (trong ${durationHours}h)...`);
-        await addViewsWithDelay(weeklyCount, 'weekly');
-        totalAdded += weeklyCount;
-      }
-      
-      // Process monthly views
-      if (monthlyCount > 0 && !shouldStopRef.current) {
-        toast.info(`Đang thêm ${monthlyCount} view trong tháng (trong ${durationHours}h)...`);
-        await addViewsWithDelay(monthlyCount, 'monthly');
-        totalAdded += monthlyCount;
+      const { data, error } = await supabase.functions.invoke('add-views-background', {
+        body: {
+          dailyViews,
+          weeklyViews,
+          monthlyViews,
+          durationHours
+        }
+      });
+
+      if (error) {
+        console.error('Error calling Edge Function:', error);
+        toast.error("Có lỗi xảy ra khi thêm view: " + error.message);
+        return;
       }
 
-      if (shouldStopRef.current) {
-        toast.warning(`Đã dừng quá trình. Đã thêm ${processingStats.totalAdded} view`);
+      if (data?.success) {
+        toast.success(`✅ Đã bắt đầu thêm ${totalViews} view trong ${durationHours} giờ! Process chạy ngầm, bạn có thể đóng browser.`);
       } else {
-        toast.success(`Đã thêm thành công ${totalAdded} view trong ${durationHours} giờ!`);
+        toast.error("Có lỗi xảy ra khi thêm view");
       }
       
       // Reset form
@@ -293,7 +288,7 @@ const ViewManagement = () => {
       await fetchCurrentStats();
       
     } catch (error) {
-      console.error('Error adding views:', error);
+      console.error('Error calling Edge Function:', error);
       toast.error("Có lỗi xảy ra khi thêm view");
     } finally {
       setIsProcessing(false);
@@ -329,99 +324,138 @@ const ViewManagement = () => {
     setIsProcessing(true);
     
     try {
-      // First, get current view_logs counts to calculate the correct base values
-      const now = new Date();
-      const today = now.toISOString().split('T')[0];
-      const startOfWeek = new Date(now);
-      startOfWeek.setDate(now.getDate() - now.getDay() + 1);
-      startOfWeek.setHours(0, 0, 0, 0);
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      startOfMonth.setHours(0, 0, 0, 0);
-
-      // Get current view_logs counts
-      const yesterday = new Date(now);
-      yesterday.setDate(now.getDate() - 1);
-      yesterday.setHours(0, 0, 0, 0);
-      const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-      const [yesterdayLogs, todayLogs, weekLogs, monthLogs, totalLogs] = await Promise.all([
-        supabase
-          .from('view_logs')
-          .select('id', { count: 'exact' })
-          .gte('viewed_at', yesterdayStr)
-          .lt('viewed_at', today),
-        supabase
-          .from('view_logs')
-          .select('id', { count: 'exact' })
-          .gte('viewed_at', today),
-        supabase
-          .from('view_logs')
-          .select('id', { count: 'exact' })
-          .gte('viewed_at', startOfWeek.toISOString()),
-        supabase
-          .from('view_logs')
-          .select('id', { count: 'exact' })
-          .gte('viewed_at', startOfMonth.toISOString()),
-        supabase
-          .from('view_logs')
-          .select('id', { count: 'exact' })
-      ]);
-
-      const yesterdayLogCount = yesterdayLogs.count || 0;
-      const todayLogCount = todayLogs.count || 0;
-      const weekLogCount = weekLogs.count || 0;
-      const monthLogCount = monthLogs.count || 0;
-      const totalLogCount = totalLogs.count || 0;
-
-      // Calculate new base values: target_value - current_log_count
       const updates = [];
+      const now = new Date();
+      const startOfToday = new Date(now);
+      startOfToday.setHours(0, 0, 0, 0);
       
+      // 🔥 STEP 1: Delete relevant logs to reset the period
       if (yesterdayValue > 0) {
-        const newBaseYesterday = yesterdayValue - yesterdayLogCount;
+        const startOfYesterday = new Date(now);
+        startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+        startOfYesterday.setHours(0, 0, 0, 0);
+        
+        const endOfYesterday = new Date(startOfYesterday);
+        endOfYesterday.setHours(23, 59, 59, 999);
+        
+        console.log('🗑️ Attempting to delete yesterday logs from', startOfYesterday.toISOString(), 'to', endOfYesterday.toISOString());
+        
+        const { data, error: deleteError, count } = await supabase
+          .from('view_logs')
+          .delete()
+          .gte('viewed_at', startOfYesterday.toISOString())
+          .lt('viewed_at', endOfYesterday.toISOString())
+          .select();
+        
+        if (deleteError) {
+          console.error('❌ Error deleting yesterday logs:', deleteError);
+        } else {
+          console.log('✅ Deleted yesterday logs:', data, 'count:', count || data?.length || 0);
+        }
+      }
+      
+      if (todayValue > 0) {
+        const tomorrow = new Date(startOfToday);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString();
+        
+        console.log('🗑️ Attempting to delete logs from', startOfToday.toISOString(), 'to', tomorrowStr);
+        
+        const { data, error: deleteError, count } = await supabase
+          .from('view_logs')
+          .delete()
+          .gte('viewed_at', startOfToday.toISOString())
+          .lt('viewed_at', tomorrowStr)
+          .select();
+        
+        if (deleteError) {
+          console.error('❌ Error deleting logs:', deleteError);
+        } else {
+          console.log('✅ Deleted logs:', data, 'count:', count || data?.length || 0);
+        }
+      }
+      
+      if (weekValue > 0) {
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay() + 1);
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        await supabase
+          .from('view_logs')
+          .delete()
+          .gte('viewed_at', startOfWeek.toISOString());
+        
+        console.log('✅ Deleted week\'s logs');
+      }
+      
+      if (monthValue > 0) {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        startOfMonth.setHours(0, 0, 0, 0);
+        
+        await supabase
+          .from('view_logs')
+          .delete()
+          .gte('viewed_at', startOfMonth.toISOString());
+        
+        console.log('✅ Deleted month\'s logs');
+      }
+      
+      if (totalValue > 0) {
+        await supabase
+          .from('view_logs')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+        
+        console.log('✅ Deleted all logs');
+      }
+      
+      // 🔥 STEP 2: Set base values directly
+      if (yesterdayValue > 0) {
+        console.log(`📊 Setting yesterday to ${yesterdayValue}`);
         updates.push(
           supabase
             .from('view_stats_base')
-            .update({ stat_value: Math.max(0, newBaseYesterday) })
+            .update({ stat_value: yesterdayValue, updated_at: new Date().toISOString() })
             .eq('stat_key', 'base_yesterday')
         );
       }
       
       if (todayValue > 0) {
-        const newBaseToday = todayValue - todayLogCount;
+        console.log(`📊 Setting today to ${todayValue}`);
         updates.push(
           supabase
             .from('view_stats_base')
-            .update({ stat_value: Math.max(0, newBaseToday) })
+            .update({ stat_value: todayValue, updated_at: new Date().toISOString() })
             .eq('stat_key', 'base_today')
         );
       }
       
       if (weekValue > 0) {
-        const newBaseWeek = weekValue - weekLogCount;
+        console.log(`📊 Setting week to ${weekValue}`);
         updates.push(
           supabase
             .from('view_stats_base')
-            .update({ stat_value: Math.max(0, newBaseWeek) })
+            .update({ stat_value: weekValue, updated_at: new Date().toISOString() })
             .eq('stat_key', 'base_week')
         );
       }
       
       if (monthValue > 0) {
-        const newBaseMonth = monthValue - monthLogCount;
+        console.log(`📊 Setting month to ${monthValue}`);
         updates.push(
           supabase
             .from('view_stats_base')
-            .update({ stat_value: Math.max(0, newBaseMonth) })
+            .update({ stat_value: monthValue, updated_at: new Date().toISOString() })
             .eq('stat_key', 'base_month')
         );
       }
       
       if (totalValue > 0) {
-        const newBaseTotal = totalValue - totalLogCount;
+        console.log(`📊 Setting total to ${totalValue}`);
         updates.push(
           supabase
             .from('view_stats_base')
-            .update({ stat_value: Math.max(0, newBaseTotal) })
+            .update({ stat_value: totalValue, updated_at: new Date().toISOString() })
             .eq('stat_key', 'base_total')
         );
       }
@@ -448,6 +482,11 @@ const ViewManagement = () => {
       
       // Refresh current stats
       await fetchCurrentStats();
+      
+      // Verify the update by checking get_current_stats again
+      const { data: verifyStats } = await supabase.rpc('get_current_stats');
+      console.log('✅ Verification - New stats:', verifyStats?.[0]);
+      console.log('✅ Expected today:', todayValue, 'Actual today:', verifyStats?.[0]?.today);
       
     } catch (error) {
       console.error('Error updating views:', error);
@@ -561,6 +600,8 @@ const ViewManagement = () => {
               </CardTitle>
               <CardDescription>
                 Nhập số view muốn thêm vào hệ thống. View sẽ được thêm với delay để trông giống view thật.
+                <br />
+                <span className="font-medium text-green-600">✅ Process chạy ngầm trên server - bạn có thể đóng browser!</span>
               </CardDescription>
             </CardHeader>
           <CardContent>
@@ -626,6 +667,8 @@ const ViewManagement = () => {
                     <SelectValue placeholder="Chọn thời gian" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="0.167">10 phút</SelectItem>
+                    <SelectItem value="0.5">30 phút</SelectItem>
                     <SelectItem value="1">1 giờ</SelectItem>
                     <SelectItem value="6">6 giờ</SelectItem>
                     <SelectItem value="12">12 giờ</SelectItem>
@@ -636,6 +679,9 @@ const ViewManagement = () => {
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   View sẽ được phân bổ đều trong khoảng thời gian này
+                  {timeDuration && parseFloat(timeDuration) < 1 && (
+                    <span className="ml-1 text-blue-600">({parseFloat(timeDuration) * 60} phút)</span>
+                  )}
                 </p>
               </div>
 
