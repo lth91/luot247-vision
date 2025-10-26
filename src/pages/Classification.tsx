@@ -231,6 +231,37 @@ const Classification = () => {
     handleNext();
   };
 
+  const handleBulkApprove = async () => {
+    if (!session?.user || stats.pending === 0) return;
+    
+    const confirmed = window.confirm(`Bạn có chắc chắn muốn duyệt tất cả ${stats.pending} tin đang chờ? Tất cả sẽ được phân loại vào "Kinh tế".`);
+    if (!confirmed) return;
+
+    try {
+      // Update all pending news (category = 'khac') to 'kinh-te' and approve them
+      const { error } = await supabase
+        .from("news")
+        .update({ 
+          category: "kinh-te" as any,
+          is_approved: true
+        })
+        .eq("category", "khac");
+
+      if (error) {
+        toast.error("Không thể duyệt hàng loạt");
+        console.error(error);
+      } else {
+        toast.success(`Đã duyệt thành công ${stats.pending} tin tức`);
+        await fetchNews();
+        await fetchStats();
+        setCurrentIndex(0);
+      }
+    } catch (error) {
+      toast.error("Có lỗi xảy ra khi duyệt hàng loạt");
+      console.error(error);
+    }
+  };
+
   const currentNews = news[currentIndex];
 
   if (isLoading || (userRole !== "admin" && userRole !== "moderator")) {
@@ -248,6 +279,20 @@ const Classification = () => {
     <div className="min-h-screen bg-background">
       <Header user={session?.user} userRole={userRole} />
       <main className="container max-w-4xl py-8">
+        {/* Bulk Approve Button */}
+        {stats.pending > 0 && (
+          <div className="mb-6">
+            <Button
+              onClick={handleBulkApprove}
+              variant="default"
+              size="lg"
+              className="w-full"
+            >
+              Duyệt tất cả {stats.pending} tin đang chờ
+            </Button>
+          </div>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <Card className="p-4 text-center">
