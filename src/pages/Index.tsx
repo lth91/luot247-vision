@@ -552,6 +552,11 @@ const Index = () => {
 
   const fetchNews = async () => {
     setIsLoading(true);
+    
+    // Get the last stored news count to check for new items
+    const lastNewsCount = localStorage.getItem('luot247_last_news_count');
+    const lastNewsTimestamp = localStorage.getItem('luot247_last_news_timestamp');
+    
     const { data, error } = await supabase
       .from("news")
       .select("*")
@@ -562,6 +567,43 @@ const Index = () => {
       console.error(error);
     } else {
       setNews(data || []);
+      
+      // Check if there are new news items
+      const currentNewsCount = data?.length || 0;
+      const currentTimestamp = new Date().toISOString();
+      
+      // Check if news count increased OR if we're checking for the first time
+      const hasNewNews = lastNewsCount && parseInt(lastNewsCount) < currentNewsCount;
+      const isFirstLoad = !lastNewsCount && !lastNewsTimestamp;
+      
+      console.log('📊 News check:', {
+        lastNewsCount,
+        currentNewsCount,
+        hasNewNews,
+        isFirstLoad
+      });
+      
+      if (hasNewNews) {
+        console.log('🆕 New news detected! Clearing saved position to show latest news');
+        // Clear saved scroll position to force showing latest news
+        localStorage.removeItem('luot247_scroll_position');
+        localStorage.removeItem('luot247_last_visible_news');
+        
+        // Update stored news count and timestamp
+        localStorage.setItem('luot247_last_news_count', currentNewsCount.toString());
+        localStorage.setItem('luot247_last_news_timestamp', currentTimestamp);
+        
+        toast.success(`Có ${currentNewsCount - parseInt(lastNewsCount)} tin tức mới!`);
+      } else if (!isFirstLoad) {
+        console.log('📰 No new news, keeping saved position');
+        // Update stored news count to track
+        localStorage.setItem('luot247_last_news_count', currentNewsCount.toString());
+      } else {
+        console.log('🆕 First load, storing initial count');
+        // First load, store the initial count
+        localStorage.setItem('luot247_last_news_count', currentNewsCount.toString());
+        localStorage.setItem('luot247_last_news_timestamp', currentTimestamp);
+      }
     }
     setIsLoading(false);
   };

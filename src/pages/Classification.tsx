@@ -13,7 +13,7 @@ const categoryButtons = [
   { value: "phap-luat", label: "Pháp luật" },
   { value: "chinh-tri", label: "Chính trị" },
   { value: "the-gioi", label: "Thế giới" },
-  { value: "van-hoa", label: "Văn hoá, Xã hội, Khoa học" },
+  { value: "van-hoa-xa-hoi-khoa-hoc", label: "Văn hoá, Xã hội, Khoa học" },
 ];
 
 const Classification = () => {

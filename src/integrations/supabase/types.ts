@@ -257,6 +257,9 @@ export type Database = {
         | "the-thao"
         | "giai-tri"
         | "cong-nghe"
+        | "phap-luat"
+        | "the-gioi"
+        | "van-hoa-xa-hoi-khoa-hoc"
         | "khac"
     }
     CompositeTypes: {
@@ -393,6 +396,9 @@ export const Constants = {
         "the-thao",
         "giai-tri",
         "cong-nghe",
+        "phap-luat",
+        "the-gioi",
+        "van-hoa-xa-hoi-khoa-hoc",
         "khac",
       ],
     },
