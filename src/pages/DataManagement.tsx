@@ -236,6 +236,39 @@ const DataManagement = () => {
           </div>
         </Card>
 
+        {/* Import History - Moved to top */}
+        {importHistory.length > 0 && (
+          <Card className="p-6 mt-6">
+            <h3 className="text-xl font-semibold mb-4">Lịch sử upload</h3>
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tài khoản</TableHead>
+                    <TableHead>Thời gian</TableHead>
+                    <TableHead>Số lượng tin</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {importHistory.map((history) => (
+                    <TableRow key={history.id}>
+                      <TableCell className="font-medium">{history.user_email}</TableCell>
+                      <TableCell>
+                        {new Date(history.imported_at).toLocaleString('vi-VN')}
+                      </TableCell>
+                      <TableCell>
+                        <span className="px-2 py-1 bg-secondary rounded text-sm">
+                          {history.news_count} tin
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        )}
+
         {/* Preview Table */}
         {previewData.length > 0 && (
           <Card className="p-6 mt-6">
@@ -294,39 +327,6 @@ const DataManagement = () => {
                             Link
                           </a>
                         ) : '-'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </Card>
-        )}
-
-        {/* Import History */}
-        {importHistory.length > 0 && (
-          <Card className="p-6 mt-6">
-            <h3 className="text-xl font-semibold mb-4">Lịch sử upload</h3>
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tài khoản</TableHead>
-                    <TableHead>Thời gian</TableHead>
-                    <TableHead>Số lượng tin</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {importHistory.map((history) => (
-                    <TableRow key={history.id}>
-                      <TableCell className="font-medium">{history.user_email}</TableCell>
-                      <TableCell>
-                        {new Date(history.imported_at).toLocaleString('vi-VN')}
-                      </TableCell>
-                      <TableCell>
-                        <span className="px-2 py-1 bg-secondary rounded text-sm">
-                          {history.news_count} tin
-                        </span>
                       </TableCell>
                     </TableRow>
                   ))}
