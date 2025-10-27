@@ -590,6 +590,10 @@ const Index = () => {
         localStorage.removeItem('luot247_scroll_position');
         localStorage.removeItem('luot247_last_visible_news');
         
+        // Reset reading position to start from new news
+        setCurrentNewsIndex(0);
+        localStorage.removeItem('luot247_current_index');
+        
         // Update stored news count and timestamp
         localStorage.setItem('luot247_last_news_count', currentNewsCount.toString());
         localStorage.setItem('luot247_last_news_timestamp', currentTimestamp);
