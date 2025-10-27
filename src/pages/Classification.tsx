@@ -106,11 +106,13 @@ const Classification = () => {
 
     const now = new Date();
     
-    // Tính thời điểm 7h sáng hôm nay (UTC+7)
-    const today7AM = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    // Tính thời điểm 7h sáng hôm nay (Vietnam Time)
+    // JavaScript uses local timezone. For Vietnam (UTC+7), we need 7 AM = midnight UTC
+    // Create at midnight local, then convert to UTC
+    const today7AM = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
     
-    // Tính thời điểm 7h sáng ngày 1 tháng này (UTC+7)
-    const firstOfMonth7AM = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+    // Tính thời điểm 7h sáng ngày 1 tháng này (midnight UTC = 7 AM Vietnam)
+    const firstOfMonth7AM = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0));
 
     // Lấy timestamp đăng nhập từ localStorage
     const loginTimestamp = localStorage.getItem("classificationLoginTime");
