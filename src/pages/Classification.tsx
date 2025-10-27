@@ -200,24 +200,40 @@ const Classification = () => {
   const handleReject = async () => {
     if (!news[currentIndex] || !session?.user) return;
     
+    // Instead of deleting, set category to null which will exclude it from future fetches (since we filter by category = 'khac')
     const { error } = await supabase
       .from("news")
-      .delete()
+      .update({ 
+        category: null, // Set to null to exclude from "khac" queries
+        is_approved: false 
+      })
       .eq("id", news[currentIndex].id);
 
     if (error) {
-      toast.error("Không thể xóa tin tức");
+      toast.error("Không thể từ chối tin tức");
       console.error(error);
     } else {
+      // Remove the rejected news from local state
+      const updatedNews = news.filter(item => item.id !== news[currentIndex].id);
+      setNews(updatedNews);
+      
+      // Update current index if needed
+      if (updatedNews.length === 0) {
+        // No more news, fetch new ones
+        await fetchNews();
+      } else if (currentIndex >= updatedNews.length) {
+        // Moved beyond the array, go to last item
+        setCurrentIndex(updatedNews.length - 1);
+      }
+      
       // Lưu lịch sử phân loại (đánh dấu là đã xử lý)
       await supabase.from("classification_history").insert({
         user_id: session.user.id,
         news_id: news[currentIndex].id
       });
       
-      toast.success("Đã xóa tin tức");
+      toast.success("Đã từ chối tin tức");
       await fetchStats(); // Cập nhật bộ đếm
-      handleNext();
     }
   };
 
