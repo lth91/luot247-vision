@@ -3,10 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Edit } from "lucide-react";
 
 const categoryButtons = [
   { value: "kinh-te", label: "Kinh tế" },
@@ -23,6 +26,11 @@ const Classification = () => {
   const [news, setNews] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editUrl, setEditUrl] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
   const [stats, setStats] = useState({
     sinceLogin: 0,
     today: 0,
@@ -233,6 +241,51 @@ const Classification = () => {
     handleNext();
   };
 
+  const handleOpenEdit = () => {
+    if (!currentNews) return;
+    setEditTitle(currentNews.title || "");
+    setEditDescription(currentNews.description || "");
+    setEditUrl(currentNews.url || "");
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateNews = async () => {
+    if (!currentNews || !session?.user) return;
+    
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase
+        .from("news")
+        .update({
+          title: editTitle,
+          description: editDescription,
+          url: editUrl
+        })
+        .eq("id", currentNews.id);
+
+      if (error) throw error;
+
+      toast.success("Đã cập nhật tin tức");
+      
+      // Update local state
+      const updatedNews = [...news];
+      updatedNews[currentIndex] = {
+        ...news[currentIndex],
+        title: editTitle,
+        description: editDescription,
+        url: editUrl
+      };
+      setNews(updatedNews);
+      
+      setIsEditDialogOpen(false);
+    } catch (error) {
+      console.error(error);
+      toast.error("Không thể cập nhật tin tức");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const currentNews = news[currentIndex];
 
   if (isLoading || (userRole !== "admin" && userRole !== "moderator")) {
@@ -304,7 +357,7 @@ const Classification = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-4 justify-center">
+            <div className="flex gap-4 justify-center flex-wrap">
               <Button
                 variant="outline"
                 size="lg"
@@ -314,6 +367,15 @@ const Classification = () => {
               >
                 <ChevronLeft className="mr-2 h-4 w-4" />
                 QUAY LẠI
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleOpenEdit}
+                className="min-w-[140px]"
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                CHỈNH SỬA
               </Button>
               <Button
                 variant="destructive"
@@ -341,6 +403,69 @@ const Classification = () => {
           </div>
         ) : null}
       </main>
+
+      {/* Edit News Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Chỉnh sửa tin tức</DialogTitle>
+            <DialogDescription>
+              Chỉnh sửa nội dung tin tức trước khi duyệt
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Tiêu đề</Label>
+              <Textarea
+                id="edit-title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="min-h-[100px]"
+                placeholder="Nhập tiêu đề..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Mô tả</Label>
+              <Textarea
+                id="edit-description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                className="min-h-[150px]"
+                placeholder="Nhập mô tả..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-url">URL</Label>
+              <Textarea
+                id="edit-url"
+                value={editUrl}
+                onChange={(e) => setEditUrl(e.target.value)}
+                className="min-h-[80px]"
+                placeholder="Nhập URL..."
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+              disabled={isUpdating}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleUpdateNews}
+              disabled={isUpdating || !editTitle.trim()}
+            >
+              {isUpdating ? "Đang cập nhật..." : "Lưu thay đổi"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
