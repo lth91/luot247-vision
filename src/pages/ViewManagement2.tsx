@@ -221,53 +221,163 @@ const ViewManagement2 = () => {
       if (editValues.yesterday !== currentStats.yesterday) {
         updatesToDo.push({
           key: 'yesterday',
-          value: editValues.yesterday
+          value: editValues.yesterday,
+          needsLogReset: true,
+          periodType: 'yesterday'
         });
       }
       
       if (editValues.today !== currentStats.today) {
         updatesToDo.push({
           key: 'today',
-          value: editValues.today
+          value: editValues.today,
+          needsLogReset: true,
+          periodType: 'today'
         });
       }
       
       if (editValues.thisWeek !== currentStats.thisWeek) {
         updatesToDo.push({
           key: 'this_week',
-          value: editValues.thisWeek
+          value: editValues.thisWeek,
+          needsLogReset: true,
+          periodType: 'week'
         });
       }
       
       if (editValues.thisMonth !== currentStats.thisMonth) {
         updatesToDo.push({
           key: 'this_month',
-          value: editValues.thisMonth
+          value: editValues.thisMonth,
+          needsLogReset: true,
+          periodType: 'month'
         });
       }
       
       if (editValues.total !== currentStats.total) {
         updatesToDo.push({
           key: 'total',
-          value: editValues.total
+          value: editValues.total,
+          needsLogReset: false
         });
       }
 
       if (updatesToDo.length > 0) {
         // Execute all updates
         for (const update of updatesToDo) {
-          // @ts-ignore
-          const { error } = await (supabase as any)
+          // Calculate the difference between desired value and current logs
+          // We need to set base_value so that: base_value + logs = desired_value
+          // Therefore: base_value = desired_value - logs
+          let newBaseValue = update.value;
+          
+          // If this stat needs log reset, we need to calculate the correct base value
+          if (update.needsLogReset && update.periodType) {
+            // Get current logs count for this period
+            const now = new Date();
+            let startTime: string;
+            let endTime: string | null = null;
+            
+            if (update.periodType === 'yesterday') {
+              const startOfYesterday = new Date(now);
+              startOfYesterday.setDate(now.getDate() - 1);
+              startOfYesterday.setHours(7, 0, 0, 0);
+              
+              const endOfYesterday = new Date(startOfYesterday);
+              endOfYesterday.setHours(30, 59, 59, 999);
+              
+              startTime = startOfYesterday.toISOString();
+              endTime = endOfYesterday.toISOString();
+            } else if (update.periodType === 'today') {
+              const startOfToday = new Date(now);
+              startOfToday.setHours(7, 0, 0, 0);
+              
+              const endOfToday = new Date(startOfToday);
+              endOfToday.setHours(30, 59, 59, 999);
+              
+              startTime = startOfToday.toISOString();
+              endTime = endOfToday.toISOString();
+            } else if (update.periodType === 'week') {
+              const startOfWeek = new Date(now);
+              startOfWeek.setDate(now.getDate() - now.getDay() + 1);
+              startOfWeek.setHours(7, 0, 0, 0);
+              startTime = startOfWeek.toISOString();
+            } else if (update.periodType === 'month') {
+              const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 7, 0, 0, 0);
+              startTime = startOfMonth.toISOString();
+            } else {
+              startTime = '1970-01-01T00:00:00Z';
+            }
+            
+            // Get current log count
+            let logCount = 0;
+            if (endTime) {
+              const { count } = await supabase
+                .from('view_logs2')
+                .select('*', { count: 'exact', head: true })
+                .gte('viewed_at', startTime)
+                .lt('viewed_at', endTime);
+              logCount = count || 0;
+            } else {
+              const { count } = await supabase
+                .from('view_logs2')
+                .select('*', { count: 'exact', head: true })
+                .gte('viewed_at', startTime);
+              logCount = count || 0;
+            }
+            
+            // Calculate base value: base = desired - logs
+            newBaseValue = update.value - logCount;
+            
+            // If setting to 0 or less, also delete the logs to fully reset
+            if (update.value <= 0 && logCount > 0) {
+              console.log(`Deleting logs from ${startTime} to ${endTime || 'now'}`);
+              if (endTime) {
+                await supabase
+                  .from('view_logs2')
+                  .delete()
+                  .gte('viewed_at', startTime)
+                  .lt('viewed_at', endTime);
+              } else {
+                await supabase
+                  .from('view_logs2')
+                  .delete()
+                  .gte('viewed_at', startTime);
+              }
+              // Reset base to 0 since we deleted the logs
+              newBaseValue = update.value;
+            }
+          }
+          
+          // Update base value (records should already exist from migration)
+          const { error } = await supabase
             .from('view_stats2')
             .update({ 
-              stat_value: update.value, 
+              stat_value: newBaseValue, 
               updated_at: new Date().toISOString() 
             })
             .eq('stat_key', update.key);
           
           if (error) {
             console.error(`Error updating ${update.key}:`, error);
-            throw error;
+            
+            // If record doesn't exist, insert it (bypassing RLS with upsert)
+            if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
+              console.log(`Record not found for ${update.key}, attempting insert...`);
+              const { error: insertError } = await supabase
+                .from('view_stats2')
+                .insert({ 
+                  stat_key: update.key,
+                  stat_value: newBaseValue, 
+                  updated_at: new Date().toISOString() 
+                });
+              
+              if (insertError) {
+                console.error(`Error inserting ${update.key}:`, insertError);
+                throw insertError;
+              }
+            } else {
+              throw error;
+            }
           }
         }
         

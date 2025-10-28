@@ -55,7 +55,7 @@ const App = () => {
                 <Route path="/duyet-tin" element={<Classification />} />
                 <Route path="/tai-du-lieu" element={<DataManagement />} />
                 <Route path="/data-management" element={<DataManagement />} />
-                <Route path="/viewcount" element={<ViewCount />} />
+                <Route path="/viewcount" element={<ViewCount2 />} />
                 <Route path="/viewcount2" element={<ViewCount2 />} />
                 <Route path="/quan-ly-view" element={<ViewManagement />} />
                 <Route path="/quan-ly-view2" element={<ViewManagement2 />} />
