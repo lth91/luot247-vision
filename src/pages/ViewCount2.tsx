@@ -2,26 +2,16 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Card } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-const categoryLabels = {
-  "chinh-tri": "Chính trị",
-  "kinh-te": "Kinh tế",
-  "xa-hoi": "Xã hội",
-  "the-thao": "Thể thao",
-  "giai-tri": "Giải trí",
-  "cong-nghe": "Công nghệ",
-  "khac": "Khác"
-};
-const ViewCount = () => {
+
+const ViewCount2 = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [news, setNews] = useState<any[]>([]);
   const [stats, setStats] = useState({
     yesterday: 0,
     today: 0,
@@ -32,6 +22,7 @@ const ViewCount = () => {
   const [weeklyData, setWeeklyData] = useState<any[]>([]);
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
@@ -52,14 +43,12 @@ const ViewCount = () => {
         .eq("user_id", session.user.id)
         .maybeSingle()
         .then(({ data }) => {
-          const role = data?.role || null;
-          setUserRole(role);
+          setUserRole(data?.role || null);
         });
     }
   }, [session, navigate]);
+
   useEffect(() => {
-    // Fetch data for public access - no login required
-    fetchNews();
     fetchStats();
     setIsLoading(false);
   }, []);
@@ -76,26 +65,16 @@ const ViewCount = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       fetchStats();
-    }, 30000); // 30 seconds
+      fetchWeeklyData();
+      fetchMonthlyData();
+    }, 30000);
 
     return () => clearInterval(interval);
   }, []);
-  const fetchNews = async () => {
-    const {
-      data,
-      error
-    } = await supabase.from("news").select("*").order("view_count", {
-      ascending: false
-    });
-    if (error) {
-      toast.error("Không thể tải dữ liệu");
-      console.error(error);
-    } else {
-      setNews(data || []);
-    }
-  };
+
   const fetchStats = async () => {
-    const { data, error } = await supabase.rpc('get_current_stats');
+    // @ts-ignore
+    const { data, error } = await supabase.rpc('get_view2_stats');
     
     if (error) {
       console.error('Error fetching stats:', error);
@@ -114,68 +93,35 @@ const ViewCount = () => {
       });
     }
   };
+
   const fetchWeeklyData = async () => {
     try {
-      // Get base stats first
-      const { data: baseStats, error: baseError } = await supabase
-        .from('view_stats_base')
-        .select('stat_key, stat_value');
-
-      if (baseError) {
-        console.error('Error fetching base stats:', baseError);
-        return;
-      }
-
-      // Get view logs for the current week
       const now = new Date();
-      const startOfWeek = new Date(now);
-      startOfWeek.setDate(now.getDate() - now.getDay() + 1); // Monday
-      startOfWeek.setHours(0, 0, 0, 0);
+      const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay(); // Convert Sunday to 7
+      const daysFromMonday = dayOfWeek - 1; // Days since Monday
       
-      const { data: logsData, error: logsError } = await supabase
-        .from('view_logs')
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - daysFromMonday);
+      weekStart.setHours(7, 0, 0, 0); // 7 AM Vietnam time
+      
+      const { data: logsData } = await (supabase as any)
+        // @ts-ignore
+        .from('view_logs2')
         .select('viewed_at')
-        .gte('viewed_at', startOfWeek.toISOString())
+        .gte('viewed_at', weekStart.toISOString())
         .order('viewed_at', { ascending: true });
 
-      if (logsError) {
-        console.error('Error fetching weekly logs:', logsError);
-        return;
-      }
-
-      // Calculate base daily average
-      const baseToday = baseStats?.find(s => s.stat_key === 'base_today')?.stat_value || 0;
-      const baseWeek = baseStats?.find(s => s.stat_key === 'base_week')?.stat_value || 0;
-      const baseDaily = Math.floor(baseWeek / 7); // Average daily base views
-
-      // Group logs by day
-      const dailyLogCounts: { [key: string]: number } = {};
-      const weekDays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
-      
-      // Initialize all days with base daily average
-      weekDays.forEach(day => {
-        dailyLogCounts[day] = baseDaily;
-      });
-
-      // Add logs to each day
-      logsData?.forEach(log => {
+      const dailyCounts: { [key: string]: number } = {};
+      logsData?.forEach((log: any) => {
         const date = new Date(log.viewed_at);
-        const dayOfWeek = date.getDay();
-        const dayName = weekDays[dayOfWeek === 0 ? 6 : dayOfWeek - 1];
-        dailyLogCounts[dayName]++;
+        const dayName = getDayName(date.getDay());
+        dailyCounts[dayName] = (dailyCounts[dayName] || 0) + 1;
       });
 
-      // Special handling for today - use actual today value
-      const todayName = weekDays[now.getDay() === 0 ? 6 : now.getDay() - 1];
-      dailyLogCounts[todayName] = stats.today; // Use the actual today value from stats
-
-      // Convert to chart data format
-      const currentDayOfWeek = now.getDay();
-      const daysFromMonday = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
-      
+      const weekDays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
       const chartData = weekDays.slice(0, daysFromMonday + 1).map(day => ({
         name: day,
-        views: dailyLogCounts[day] || 0
+        views: dailyCounts[day] || 0
       }));
       
       setWeeklyData(chartData);
@@ -183,94 +129,33 @@ const ViewCount = () => {
       console.error('Error in fetchWeeklyData:', error);
     }
   };
+
   const fetchMonthlyData = async () => {
     try {
-      // Get base stats first
-      const { data: baseStats, error: baseError } = await supabase
-        .from('view_stats_base')
-        .select('stat_key, stat_value');
-
-      if (baseError) {
-        console.error('Error fetching base stats:', baseError);
-        return;
-      }
-
-      // Get view logs for the current month
       const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      startOfMonth.setHours(0, 0, 0, 0);
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1, 7, 0, 0); // 7 AM on 1st
       
-      const { data: logsData, error: logsError } = await supabase
-        .from('view_logs')
+      const { data: logsData } = await (supabase as any)
+        // @ts-ignore
+        .from('view_logs2')
         .select('viewed_at')
-        .gte('viewed_at', startOfMonth.toISOString())
+        .gte('viewed_at', firstDay.toISOString())
         .order('viewed_at', { ascending: true });
 
-      if (logsError) {
-        console.error('Error fetching monthly logs:', logsError);
-        return;
-      }
-
-      // Get base stats and current day info
-      const baseMonth = baseStats?.find(s => s.stat_key === 'base_month')?.stat_value || 0;
+      const dailyCounts: { [key: number]: number } = {};
       const currentDay = now.getDate();
-      const totalDaysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
       
-      // Count actual view logs per day (these are the real views from view_logs)
-      const dailyLogCounts: { [key: number]: number } = {};
-      
-      logsData?.forEach(log => {
+      logsData?.forEach((log: any) => {
         const date = new Date(log.viewed_at);
         const day = date.getDate();
         if (day <= currentDay) {
-          dailyLogCounts[day] = (dailyLogCounts[day] || 0) + 1;
+          dailyCounts[day] = (dailyCounts[day] || 0) + 1;
         }
       });
 
-      // Get total monthly views from stats
-      const totalMonthViews = stats.thisMonth; // This includes base + logs
-      const todayViews = stats.today; // Actual views for today
-      
-      // Start by setting today's views accurately
-      const dailyViews: { [key: number]: number } = {};
-      dailyViews[currentDay] = todayViews;
-      
-      // Calculate remaining views to distribute across other days (1 to currentDay-1)
-      const remainingViews = totalMonthViews - todayViews;
-      const daysToFill = currentDay - 1; // All days except today
-      
-      // Calculate average for remaining days
-      const averageDaily = daysToFill > 0 ? Math.floor(remainingViews / daysToFill) : 0;
-      
-      // Generate random variation for days 1 to (currentDay - 1)
-      let totalAssignedViews = 0;
-      for (let i = 1; i < currentDay; i++) {
-        // Random multiplier between 0.7 and 1.3 (30% variation)
-        const randomMultiplier = 0.7 + Math.random() * 0.6;
-        const dailyView = Math.round(averageDaily * randomMultiplier);
-        dailyViews[i] = dailyView;
-        totalAssignedViews += dailyView;
-      }
-      
-      // Normalize to match exact remaining total
-      const scaleFactor = totalAssignedViews > 0 ? remainingViews / totalAssignedViews : 1;
-      for (let i = 1; i < currentDay; i++) {
-        dailyViews[i] = Math.round(dailyViews[i] * scaleFactor);
-      }
-      
-      // Final adjustment: ensure exact total
-      let finalTotal = Object.values(dailyViews).reduce((sum, val) => sum + val, 0);
-      const difference = totalMonthViews - finalTotal;
-      
-      // Adjust the difference on the day before today to maintain accuracy
-      if (currentDay > 1 && difference !== 0) {
-        dailyViews[currentDay - 1] += difference;
-      }
-
-      // Convert to daily chart data format (not cumulative)
       const chartData = Array.from({ length: currentDay }, (_, i) => ({
         name: `${i + 1}`,
-        views: dailyViews[i + 1] || 0
+        views: dailyCounts[i + 1] || 0
       }));
       
       setMonthlyData(chartData);
@@ -278,6 +163,12 @@ const ViewCount = () => {
       console.error('Error in fetchMonthlyData:', error);
     }
   };
+
+  const getDayName = (dayIndex: number): string => {
+    const days = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+    return days[dayIndex === 0 ? 6 : dayIndex - 1];
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -289,10 +180,11 @@ const ViewCount = () => {
     );
   }
 
-  return <div className="min-h-screen bg-background">
+  return (
+    <div className="min-h-screen bg-background">
       <Header user={session?.user} userRole={userRole} />
       <main className="container py-8 space-y-8">
-        <h1 className="text-3xl font-bold">Thống kê lượt xem</h1>
+        <h1 className="text-3xl font-bold">Thống kê lượt xem (Version 2)</h1>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -332,8 +224,9 @@ const ViewCount = () => {
           </Card>
         </div>
 
-        {/* Charts Grid - TEMPORARILY HIDDEN */}
-        {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Weekly Chart */}
           <Card className="p-4 md:p-6">
             <h2 className="text-lg md:text-xl font-bold mb-4">Biểu đồ view tuần này</h2>
             <ChartContainer config={{
@@ -361,6 +254,7 @@ const ViewCount = () => {
             </ChartContainer>
           </Card>
 
+          {/* Monthly Chart */}
           <Card className="p-4 md:p-6">
             <h2 className="text-lg md:text-xl font-bold mb-4">Biểu đồ view tháng này</h2>
             <ChartContainer config={{
@@ -387,11 +281,10 @@ const ViewCount = () => {
               </ResponsiveContainer>
             </ChartContainer>
           </Card>
-        </div> */}
-
-        {/* News Table */}
-        
+        </div>
       </main>
-    </div>;
+    </div>
+  );
 };
-export default ViewCount;
+
+export default ViewCount2;
