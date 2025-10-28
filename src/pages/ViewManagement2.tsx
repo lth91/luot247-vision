@@ -311,14 +311,14 @@ const ViewManagement2 = () => {
             // Get current log count
             let logCount = 0;
             if (endTime) {
-              const { count } = await supabase
+              const { count } = await (supabase as any)
                 .from('view_logs2')
                 .select('*', { count: 'exact', head: true })
                 .gte('viewed_at', startTime)
                 .lt('viewed_at', endTime);
               logCount = count || 0;
             } else {
-              const { count } = await supabase
+              const { count } = await (supabase as any)
                 .from('view_logs2')
                 .select('*', { count: 'exact', head: true })
                 .gte('viewed_at', startTime);
@@ -332,13 +332,13 @@ const ViewManagement2 = () => {
             if (update.value <= 0 && logCount > 0) {
               console.log(`Deleting logs from ${startTime} to ${endTime || 'now'}`);
               if (endTime) {
-                await supabase
+                await (supabase as any)
                   .from('view_logs2')
                   .delete()
                   .gte('viewed_at', startTime)
                   .lt('viewed_at', endTime);
               } else {
-                await supabase
+                await (supabase as any)
                   .from('view_logs2')
                   .delete()
                   .gte('viewed_at', startTime);
@@ -349,7 +349,7 @@ const ViewManagement2 = () => {
           }
           
           // Update base value (records should already exist from migration)
-          const { error } = await supabase
+          const { error } = await (supabase as any)
             .from('view_stats2')
             .update({ 
               stat_value: newBaseValue, 
@@ -363,7 +363,7 @@ const ViewManagement2 = () => {
             // If record doesn't exist, insert it (bypassing RLS with upsert)
             if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
               console.log(`Record not found for ${update.key}, attempting insert...`);
-              const { error: insertError } = await supabase
+              const { error: insertError } = await (supabase as any)
                 .from('view_stats2')
                 .insert({ 
                   stat_key: update.key,

@@ -84,10 +84,10 @@ const Index = () => {
   const recordPageView = async () => {
     try {
       // Insert a view log record for website visit (no specific news_id)
-      await supabase.from("view_logs").insert({
+      await (supabase as any).from("view_logs2").insert({
         viewed_at: new Date().toISOString()
       });
-      console.log('✅ Page view recorded');
+      console.log('✅ Page view recorded to view_logs2');
     } catch (error) {
       console.error('❌ Error recording page view:', error);
     }
