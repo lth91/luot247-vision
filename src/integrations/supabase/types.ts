@@ -156,6 +156,35 @@ export type Database = {
         }
         Relationships: []
       }
+      user_read_news: {
+        Row: {
+          id: string
+          news_id: string
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          news_id: string
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          news_id?: string
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_read_news_news_id_fkey"
+            columns: ["news_id"]
+            isOneToOne: false
+            referencedRelation: "news"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -203,6 +232,24 @@ export type Database = {
           },
         ]
       }
+      view_logs2: {
+        Row: {
+          created_at: string | null
+          id: string
+          viewed_at: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          viewed_at?: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          viewed_at?: string
+        }
+        Relationships: []
+      }
       view_stats_base: {
         Row: {
           id: string
@@ -224,12 +271,50 @@ export type Database = {
         }
         Relationships: []
       }
+      view_stats2: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_reset_at: string | null
+          stat_key: string
+          stat_value: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_reset_at?: string | null
+          stat_key: string
+          stat_value?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_reset_at?: string | null
+          stat_key?: string
+          stat_value?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      add_view2_logs: { Args: { count: number }; Returns: undefined }
       get_current_stats: {
+        Args: never
+        Returns: {
+          this_month: number
+          this_week: number
+          today: number
+          total: number
+          yesterday: number
+        }[]
+      }
+      get_view2_stats: {
         Args: never
         Returns: {
           this_month: number
@@ -250,6 +335,8 @@ export type Database = {
         Args: { news_id_param: string }
         Returns: undefined
       }
+      reset_daily_view_stats2: { Args: never; Returns: undefined }
+      vietnam_time: { Args: never; Returns: string }
     }
     Enums: {
       app_role: "admin" | "user" | "moderator"
@@ -260,10 +347,10 @@ export type Database = {
         | "the-thao"
         | "giai-tri"
         | "cong-nghe"
+        | "khac"
         | "phap-luat"
         | "the-gioi"
         | "van-hoa-xa-hoi-khoa-hoc"
-        | "khac"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -399,10 +486,10 @@ export const Constants = {
         "the-thao",
         "giai-tri",
         "cong-nghe",
+        "khac",
         "phap-luat",
         "the-gioi",
         "van-hoa-xa-hoi-khoa-hoc",
-        "khac",
       ],
     },
   },
