@@ -224,9 +224,8 @@ const ViewCount2 = () => {
           </Card>
         </div>
 
-        {/* Charts Grid - Tạm ẩn */}
-        {false && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Weekly Chart */}
             <Card className="p-4 md:p-6">
               <h2 className="text-lg md:text-xl font-bold mb-4">Biểu đồ view tuần này</h2>
@@ -282,8 +281,7 @@ const ViewCount2 = () => {
                 </ResponsiveContainer>
               </ChartContainer>
             </Card>
-          </div>
-        )}
+        </div>
       </main>
     </div>
   );
