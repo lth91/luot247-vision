@@ -112,10 +112,21 @@ const ViewCount2 = () => {
         .order('viewed_at', { ascending: true });
 
       const dailyCounts: { [key: string]: number } = {};
+      const today7AM = new Date(now);
+      today7AM.setHours(7, 0, 0, 0);
+      
       logsData?.forEach((log: any) => {
-        const date = new Date(log.viewed_at);
-        const dayName = getDayName(date.getDay());
-        dailyCounts[dayName] = (dailyCounts[dayName] || 0) + 1;
+        const logDate = new Date(log.viewed_at);
+        const dayName = getDayName(logDate.getDay());
+        
+        // Chỉ đếm views từ 7h sáng cho ngày hôm nay
+        const isToday = logDate.getDate() === now.getDate() && 
+                       logDate.getMonth() === now.getMonth() &&
+                       logDate.getFullYear() === now.getFullYear();
+        
+        if (!isToday || logDate >= today7AM) {
+          dailyCounts[dayName] = (dailyCounts[dayName] || 0) + 1;
+        }
       });
 
       const weekDays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
@@ -144,12 +155,20 @@ const ViewCount2 = () => {
 
       const dailyCounts: { [key: number]: number } = {};
       const currentDay = now.getDate();
+      const today7AM = new Date(now);
+      today7AM.setHours(7, 0, 0, 0);
       
       logsData?.forEach((log: any) => {
-        const date = new Date(log.viewed_at);
-        const day = date.getDate();
+        const logDate = new Date(log.viewed_at);
+        const day = logDate.getDate();
+        
         if (day <= currentDay) {
-          dailyCounts[day] = (dailyCounts[day] || 0) + 1;
+          // Chỉ đếm views từ 7h sáng cho ngày hôm nay
+          const isToday = day === currentDay;
+          
+          if (!isToday || logDate >= today7AM) {
+            dailyCounts[day] = (dailyCounts[day] || 0) + 1;
+          }
         }
       });
 
