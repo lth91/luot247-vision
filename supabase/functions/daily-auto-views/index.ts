@@ -23,56 +23,53 @@ serve(async (req) => {
     const totalViews = Math.floor(600 + Math.random() * 200)
     console.log(`Will add ${totalViews} views today`)
 
-    // Get current time in Vietnam (GMT+7)
-    const now = new Date()
-    const vietnamOffset = 7 * 60 // GMT+7 in minutes
-    const localTime = new Date(now.getTime() + vietnamOffset * 60 * 1000)
-    
-    // Today at 7 AM GMT+7
-    const today7AM = new Date(localTime)
-    today7AM.setUTCHours(0, 0, 0, 0) // Reset to midnight UTC (7 AM GMT+7)
-    
-    // Today at 11 PM GMT+7 (end of day)
-    const today11PM = new Date(today7AM)
-    today11PM.setUTCHours(16, 0, 0, 0) // 16:00 UTC = 23:00 GMT+7
-
     const viewsToInsert = []
 
-    // Phân bố views theo giờ với peak hours
+    // Phân bố views theo giờ với peak hours (7 AM - 10 PM GMT+7)
     const hourlyDistribution = {
-      7: 0.03,  // 7-8 AM: 3%
-      8: 0.08,  // 8-9 AM: 8% (peak morning)
-      9: 0.10,  // 9-10 AM: 10% (peak morning)
-      10: 0.07, // 10-11 AM: 7%
-      11: 0.06, // 11-12 AM: 6%
-      12: 0.09, // 12-1 PM: 9% (lunch peak)
-      13: 0.08, // 1-2 PM: 8% (lunch peak)
-      14: 0.06, // 2-3 PM: 6%
-      15: 0.05, // 3-4 PM: 5%
-      16: 0.05, // 4-5 PM: 5%
-      17: 0.06, // 5-6 PM: 6%
-      18: 0.08, // 6-7 PM: 8% (evening peak)
-      19: 0.09, // 7-8 PM: 9% (evening peak)
-      20: 0.07, // 8-9 PM: 7% (evening peak)
-      21: 0.05, // 9-10 PM: 5%
-      22: 0.03, // 10-11 PM: 3%
+      0: 0.03,   // 7-8 AM GMT+7 (0-1 UTC)
+      1: 0.08,   // 8-9 AM GMT+7 (1-2 UTC) - peak morning
+      2: 0.10,   // 9-10 AM GMT+7 (2-3 UTC) - peak morning  
+      3: 0.07,   // 10-11 AM GMT+7 (3-4 UTC)
+      4: 0.06,   // 11-12 AM GMT+7 (4-5 UTC)
+      5: 0.09,   // 12-1 PM GMT+7 (5-6 UTC) - lunch peak
+      6: 0.08,   // 1-2 PM GMT+7 (6-7 UTC) - lunch peak
+      7: 0.06,   // 2-3 PM GMT+7 (7-8 UTC)
+      8: 0.05,   // 3-4 PM GMT+7 (8-9 UTC)
+      9: 0.05,   // 4-5 PM GMT+7 (9-10 UTC)
+      10: 0.06,  // 5-6 PM GMT+7 (10-11 UTC)
+      11: 0.08,  // 6-7 PM GMT+7 (11-12 UTC) - evening peak
+      12: 0.09,  // 7-8 PM GMT+7 (12-13 UTC) - evening peak
+      13: 0.07,  // 8-9 PM GMT+7 (13-14 UTC) - evening peak
+      14: 0.05,  // 9-10 PM GMT+7 (14-15 UTC)
+      15: 0.03,  // 10-11 PM GMT+7 (15-16 UTC)
     }
 
+    // Get today's date at midnight UTC (7 AM GMT+7)
+    const now = new Date()
+    const todayUTC = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(), 
+      now.getUTCDate(),
+      0, 0, 0, 0
+    ))
+
     // Tạo views cho mỗi giờ
-    for (const [hour, percentage] of Object.entries(hourlyDistribution)) {
+    for (const [utcHour, percentage] of Object.entries(hourlyDistribution)) {
       const viewsInHour = Math.floor(totalViews * percentage)
       
       for (let i = 0; i < viewsInHour; i++) {
         // Random timestamp trong giờ đó
         const randomMinute = Math.floor(Math.random() * 60)
         const randomSecond = Math.floor(Math.random() * 60)
+        const randomMs = Math.floor(Math.random() * 1000)
         
-        const timestamp = new Date(today7AM)
+        const timestamp = new Date(todayUTC)
         timestamp.setUTCHours(
-          parseInt(hour) - 7, // Convert GMT+7 to UTC
+          parseInt(utcHour),
           randomMinute,
           randomSecond,
-          0
+          randomMs
         )
         
         viewsToInsert.push({
@@ -121,7 +118,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: error instanceof Error ? error.message : 'Unknown error'
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
