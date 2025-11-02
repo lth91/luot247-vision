@@ -129,6 +129,12 @@ const ViewCount2 = () => {
         }
       });
 
+      // Lấy tên ngày hôm nay
+      const todayName = getDayName(now.getDay());
+      
+      // Thay thế view hôm nay bằng stats.today để đồng bộ
+      dailyCounts[todayName] = stats.today;
+
       const weekDays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
       const chartData = weekDays.slice(0, daysFromMonday + 1).map(day => ({
         name: day,
@@ -171,6 +177,9 @@ const ViewCount2 = () => {
           }
         }
       });
+
+      // Thay thế view hôm nay bằng stats.today để đồng bộ
+      dailyCounts[currentDay] = stats.today;
 
       const chartData = Array.from({ length: currentDay }, (_, i) => ({
         name: `${i + 1}`,
