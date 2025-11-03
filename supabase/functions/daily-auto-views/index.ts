@@ -12,100 +12,116 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Starting daily auto views generation...')
+    console.log('Starting 30-minute auto views generation...')
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    // Random số views từ 600-800
-    const totalViews = Math.floor(600 + Math.random() * 200)
-    console.log(`Will add ${totalViews} views today`)
+    // Lấy thời gian hiện tại ở GMT+7
+    const now = new Date()
+    const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000))
+    const currentHour = vietnamTime.getUTCHours()
+    const currentMinute = vietnamTime.getUTCMinutes()
+    
+    console.log(`Current Vietnam time: ${vietnamTime.toISOString()}, Hour: ${currentHour}:${currentMinute}`)
+
+    // Chỉ chạy từ 7 AM đến 10 PM (giờ Việt Nam)
+    if (currentHour < 7 || currentHour >= 22) {
+      console.log('Outside active hours (7 AM - 10 PM Vietnam time), skipping...')
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Outside active hours, no views added'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      )
+    }
+
+    // Tổng view mục tiêu cho cả ngày: 600-800
+    // Chia đều cho 30 khoảng 30 phút (7AM-10PM = 15h = 30 khoảng)
+    const dailyTarget = 700 // Trung bình
+    const totalIntervals = 30 // 15 giờ * 2 (mỗi giờ có 2 khoảng 30 phút)
+    
+    // Phân bố theo giờ (peak hours)
+    const hourlyWeight: { [key: number]: number } = {
+      7: 0.5,   // 7-8 AM: ít
+      8: 1.2,   // 8-9 AM: peak morning
+      9: 1.5,   // 9-10 AM: peak morning
+      10: 1.0,  // 10-11 AM
+      11: 0.8,  // 11-12 AM
+      12: 1.3,  // 12-1 PM: lunch peak
+      13: 1.2,  // 1-2 PM: lunch peak
+      14: 0.9,  // 2-3 PM
+      15: 0.7,  // 3-4 PM
+      16: 0.7,  // 4-5 PM
+      17: 0.9,  // 5-6 PM
+      18: 1.2,  // 6-7 PM: evening peak
+      19: 1.4,  // 7-8 PM: evening peak
+      20: 1.1,  // 8-9 PM: evening peak
+      21: 0.6,  // 9-10 PM
+    }
+
+    const totalWeight = Object.values(hourlyWeight).reduce((sum, w) => sum + w, 0)
+    const baseViewsPerInterval = dailyTarget / totalIntervals
+    const currentWeight = hourlyWeight[currentHour] || 1.0
+    const weightedViews = Math.round(baseViewsPerInterval * currentWeight * (totalWeight / totalIntervals))
+    
+    // Thêm random variation ±20%
+    const variation = 0.8 + Math.random() * 0.4
+    const viewsToAdd = Math.round(weightedViews * variation)
+    
+    console.log(`Will add ${viewsToAdd} views for this 30-minute interval (base: ${baseViewsPerInterval.toFixed(1)}, weight: ${currentWeight})`)
 
     const viewsToInsert = []
+    
+    // Tính khoảng thời gian 30 phút hiện tại
+    const intervalStart = new Date(vietnamTime)
+    intervalStart.setUTCMinutes(currentMinute < 30 ? 0 : 30, 0, 0)
+    
+    const intervalEnd = new Date(intervalStart)
+    intervalEnd.setUTCMinutes(intervalStart.getUTCMinutes() + 30)
+    
+    // Chuyển về UTC để lưu vào database
+    const intervalStartUTC = new Date(intervalStart.getTime() - (7 * 60 * 60 * 1000))
+    const intervalEndUTC = new Date(intervalEnd.getTime() - (7 * 60 * 60 * 1000))
+    
+    console.log(`Time range: ${intervalStartUTC.toISOString()} to ${intervalEndUTC.toISOString()}`)
 
-    // Phân bố views theo giờ với peak hours (7 AM - 10 PM GMT+7)
-    const hourlyDistribution = {
-      0: 0.03,   // 7-8 AM GMT+7 (0-1 UTC)
-      1: 0.08,   // 8-9 AM GMT+7 (1-2 UTC) - peak morning
-      2: 0.10,   // 9-10 AM GMT+7 (2-3 UTC) - peak morning  
-      3: 0.07,   // 10-11 AM GMT+7 (3-4 UTC)
-      4: 0.06,   // 11-12 AM GMT+7 (4-5 UTC)
-      5: 0.09,   // 12-1 PM GMT+7 (5-6 UTC) - lunch peak
-      6: 0.08,   // 1-2 PM GMT+7 (6-7 UTC) - lunch peak
-      7: 0.06,   // 2-3 PM GMT+7 (7-8 UTC)
-      8: 0.05,   // 3-4 PM GMT+7 (8-9 UTC)
-      9: 0.05,   // 4-5 PM GMT+7 (9-10 UTC)
-      10: 0.06,  // 5-6 PM GMT+7 (10-11 UTC)
-      11: 0.08,  // 6-7 PM GMT+7 (11-12 UTC) - evening peak
-      12: 0.09,  // 7-8 PM GMT+7 (12-13 UTC) - evening peak
-      13: 0.07,  // 8-9 PM GMT+7 (13-14 UTC) - evening peak
-      14: 0.05,  // 9-10 PM GMT+7 (14-15 UTC)
-      15: 0.03,  // 10-11 PM GMT+7 (15-16 UTC)
-    }
-
-    // Get today's date at midnight UTC (7 AM GMT+7)
-    const now = new Date()
-    const todayUTC = new Date(Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(), 
-      now.getUTCDate(),
-      0, 0, 0, 0
-    ))
-
-    // Tạo views cho mỗi giờ
-    for (const [utcHour, percentage] of Object.entries(hourlyDistribution)) {
-      const viewsInHour = Math.floor(totalViews * percentage)
+    // Tạo views với random timestamps trong 30 phút này
+    for (let i = 0; i < viewsToAdd; i++) {
+      const randomMs = Math.floor(Math.random() * 30 * 60 * 1000) // Random trong 30 phút
+      const timestamp = new Date(intervalStartUTC.getTime() + randomMs)
       
-      for (let i = 0; i < viewsInHour; i++) {
-        // Random timestamp trong giờ đó
-        const randomMinute = Math.floor(Math.random() * 60)
-        const randomSecond = Math.floor(Math.random() * 60)
-        const randomMs = Math.floor(Math.random() * 1000)
-        
-        const timestamp = new Date(todayUTC)
-        timestamp.setUTCHours(
-          parseInt(utcHour),
-          randomMinute,
-          randomSecond,
-          randomMs
-        )
-        
-        viewsToInsert.push({
-          viewed_at: timestamp.toISOString()
-        })
-      }
+      viewsToInsert.push({
+        viewed_at: timestamp.toISOString()
+      })
     }
 
-    console.log(`Generated ${viewsToInsert.length} view logs with random timestamps`)
+    console.log(`Generated ${viewsToInsert.length} view logs`)
 
-    // Insert views in batches of 100
-    const batchSize = 100
-    let insertedCount = 0
+    // Insert views
+    const { error, data } = await supabaseClient
+      .from('view_logs2')
+      .insert(viewsToInsert)
 
-    for (let i = 0; i < viewsToInsert.length; i += batchSize) {
-      const batch = viewsToInsert.slice(i, i + batchSize)
-      
-      const { error } = await supabaseClient
-        .from('view_logs2')
-        .insert(batch)
-
-      if (error) {
-        console.error('Error inserting batch:', error)
-      } else {
-        insertedCount += batch.length
-        console.log(`Inserted batch ${Math.floor(i / batchSize) + 1}, total: ${insertedCount}`)
-      }
+    if (error) {
+      console.error('Error inserting views:', error)
+      throw error
     }
 
-    console.log(`Successfully added ${insertedCount} views for today`)
+    console.log(`Successfully added ${viewsToInsert.length} views`)
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        totalAdded: insertedCount,
-        message: `Successfully added ${insertedCount} views for today`
+        totalAdded: viewsToInsert.length,
+        interval: `${intervalStart.toISOString()} - ${intervalEnd.toISOString()} (GMT+7)`,
+        message: `Successfully added ${viewsToInsert.length} views for this interval`
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -114,7 +130,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error in daily auto views:', error)
+    console.error('Error in auto views:', error)
     return new Response(
       JSON.stringify({ 
         success: false, 
