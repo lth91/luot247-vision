@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ThumbsUp, ThumbsDown, Share2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
+import { getRelativeTime } from "@/lib/dateUtils";
 
 const NewsDetail = () => {
   const { id } = useParams();
@@ -98,15 +99,7 @@ const NewsDetail = () => {
 
   const timeAgo = () => {
     if (!news) return "";
-    const now = new Date();
-    const created = new Date(news.created_at);
-    const diffMs = now.getTime() - created.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    
-    if (diffHours < 1) return "Vừa xong";
-    if (diffHours < 24) return `${diffHours} giờ trước`;
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays} ngày trước`;
+    return getRelativeTime(news.created_at);
   };
 
   if (isLoading) {

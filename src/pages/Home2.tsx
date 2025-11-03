@@ -8,6 +8,7 @@ import { ThumbsUp, ThumbsDown, Share2, Search, ChevronLeft, ChevronRight } from 
 import { useReadingContext } from "@/contexts/ReadingContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { ShareDialog } from "@/components/ShareDialog";
+import { getRelativeTime } from "@/lib/dateUtils";
 
 const Home2 = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -339,15 +340,7 @@ const Home2 = () => {
 
   const timeAgo = () => {
     if (!currentNews) return "";
-    const now = new Date();
-    const created = new Date(currentNews.created_at);
-    const diffMs = now.getTime() - created.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    
-    if (diffHours < 1) return "Vừa xong";
-    if (diffHours < 24) return `${diffHours} giờ trước`;
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays} ngày trước`;
+    return getRelativeTime(currentNews.created_at);
   };
 
   return (

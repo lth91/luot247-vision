@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
+import { formatVietnamDateShort } from "@/lib/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
@@ -300,7 +301,7 @@ const Admin = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {new Date(user.created_at).toLocaleDateString("vi-VN")}
+                      {formatVietnamDateShort(user.created_at)}
                     </TableCell>
                     <TableCell>
                       <Select
