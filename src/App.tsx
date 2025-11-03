@@ -10,9 +10,7 @@ import Auth from "./pages/Auth";
 import NewsDetail from "./pages/NewsDetail";
 import Classification from "./pages/Classification";
 import DataManagement from "./pages/DataManagement";
-import ViewCount from "./pages/ViewCount";
 import ViewCount2 from "./pages/ViewCount2";
-import ViewManagement from "./pages/ViewManagement";
 import ViewManagement2 from "./pages/ViewManagement2";
 import Home2 from "./pages/Home2";
 import About from "./pages/About";
@@ -57,7 +55,7 @@ const App = () => {
                 <Route path="/data-management" element={<DataManagement />} />
                 <Route path="/viewcount" element={<ViewCount2 />} />
                 <Route path="/viewcount2" element={<ViewCount2 />} />
-                <Route path="/quan-ly-view" element={<ViewManagement />} />
+                <Route path="/quan-ly-view" element={<ViewManagement2 />} />
                 <Route path="/quan-ly-view2" element={<ViewManagement2 />} />
                 <Route path="/home2" element={<Home2 />} />
                 <Route path="/about" element={<About />} />
