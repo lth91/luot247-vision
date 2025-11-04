@@ -282,8 +282,9 @@ const ViewManagement2 = () => {
               startOfYesterday.setDate(now.getDate() - 1);
               startOfYesterday.setHours(7, 0, 0, 0);
               
-              const endOfYesterday = new Date(startOfYesterday);
-              endOfYesterday.setHours(30, 59, 59, 999);
+              // Hôm qua kết thúc lúc 6:59:59 hôm nay (trước khi reset lúc 7:00)
+              const endOfYesterday = new Date(now);
+              endOfYesterday.setHours(6, 59, 59, 999);
               
               startTime = startOfYesterday.toISOString();
               endTime = endOfYesterday.toISOString();
@@ -291,8 +292,10 @@ const ViewManagement2 = () => {
               const startOfToday = new Date(now);
               startOfToday.setHours(7, 0, 0, 0);
               
+              // Hôm nay kết thúc lúc 6:59:59 ngày mai (trước khi reset lúc 7:00)
               const endOfToday = new Date(startOfToday);
-              endOfToday.setHours(30, 59, 59, 999);
+              endOfToday.setDate(endOfToday.getDate() + 1);
+              endOfToday.setHours(6, 59, 59, 999);
               
               startTime = startOfToday.toISOString();
               endTime = endOfToday.toISOString();
