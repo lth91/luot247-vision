@@ -97,45 +97,22 @@ const ViewCount2 = () => {
   const fetchWeeklyData = async () => {
     try {
       const now = new Date();
-      const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay(); // Convert Sunday to 7
-      const daysFromMonday = dayOfWeek - 1; // Days since Monday
+      const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay();
+      const daysFromMonday = dayOfWeek - 1;
       
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - daysFromMonday);
-      weekStart.setHours(7, 0, 0, 0); // 7 AM Vietnam time
-      
-      const { data: logsData } = await (supabase as any)
-        // @ts-ignore
-        .from('view_logs2')
-        .select('viewed_at')
-        .gte('viewed_at', weekStart.toISOString())
-        .order('viewed_at', { ascending: true });
-
       const dailyCounts: { [key: string]: number } = {};
-      const today7AM = new Date(now);
-      today7AM.setHours(7, 0, 0, 0);
+      const weekDays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
       
-      logsData?.forEach((log: any) => {
-        const logDate = new Date(log.viewed_at);
-        const dayName = getDayName(logDate.getDay());
-        
-        // Chỉ đếm views từ 7h sáng cho ngày hôm nay
-        const isToday = logDate.getDate() === now.getDate() && 
-                       logDate.getMonth() === now.getMonth() &&
-                       logDate.getFullYear() === now.getFullYear();
-        
-        if (!isToday || logDate >= today7AM) {
-          dailyCounts[dayName] = (dailyCounts[dayName] || 0) + 1;
-        }
-      });
-
-      // Lấy tên ngày hôm nay
+      // Get yesterday's day name
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      const yesterdayName = getDayName(yesterday.getDay());
       const todayName = getDayName(now.getDay());
       
-      // Thay thế view hôm nay bằng stats.today để đồng bộ
+      // Assign yesterday and today values from stats
+      dailyCounts[yesterdayName] = stats.yesterday;
       dailyCounts[todayName] = stats.today;
 
-      const weekDays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
       const chartData = weekDays.slice(0, daysFromMonday + 1).map(day => ({
         name: day,
         views: dailyCounts[day] || 0
@@ -150,35 +127,15 @@ const ViewCount2 = () => {
   const fetchMonthlyData = async () => {
     try {
       const now = new Date();
-      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1, 7, 0, 0); // 7 AM on 1st
-      
-      const { data: logsData } = await (supabase as any)
-        // @ts-ignore
-        .from('view_logs2')
-        .select('viewed_at')
-        .gte('viewed_at', firstDay.toISOString())
-        .order('viewed_at', { ascending: true });
-
-      const dailyCounts: { [key: number]: number } = {};
       const currentDay = now.getDate();
-      const today7AM = new Date(now);
-      today7AM.setHours(7, 0, 0, 0);
+      const yesterdayDay = currentDay - 1;
       
-      logsData?.forEach((log: any) => {
-        const logDate = new Date(log.viewed_at);
-        const day = logDate.getDate();
-        
-        if (day <= currentDay) {
-          // Chỉ đếm views từ 7h sáng cho ngày hôm nay
-          const isToday = day === currentDay;
-          
-          if (!isToday || logDate >= today7AM) {
-            dailyCounts[day] = (dailyCounts[day] || 0) + 1;
-          }
-        }
-      });
-
-      // Thay thế view hôm nay bằng stats.today để đồng bộ
+      const dailyCounts: { [key: number]: number } = {};
+      
+      // Assign yesterday and today from stats
+      if (yesterdayDay > 0) {
+        dailyCounts[yesterdayDay] = stats.yesterday;
+      }
       dailyCounts[currentDay] = stats.today;
 
       const chartData = Array.from({ length: currentDay }, (_, i) => ({
