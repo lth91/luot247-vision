@@ -23,8 +23,8 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
   const [open, setOpen] = useState(false);
   const [readingMode, setReadingMode] = useState(false);
   
-  // Use ReadingContext for synchronization
-  const { syncToFlipMode, syncToScrollMode } = useReadingContext();
+  // Use ReadingContext for synchronization and read news toggle
+  const { syncToFlipMode, syncToScrollMode, shouldHideReadNews, setShouldHideReadNews } = useReadingContext();
 
   useEffect(() => {
     setReadingMode(location.pathname === "/home2");
@@ -250,19 +250,18 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                     </div>
                   </div>
 
-                  {/* Reset tin đã đọc - Hidden but can be enabled if needed */}
-                  {/* <div className="border-t pt-4">
+                  <div className="border-t pt-4">
                     <Button
                       variant="ghost"
                       className="justify-start w-full"
                       onClick={() => {
                         setOpen(false);
-                        onToggleReadNews?.();
+                        setShouldHideReadNews(!shouldHideReadNews);
                       }}
                     >
-                      🔄 Reset tin đã đọc
+                      {shouldHideReadNews ? "👁️ Hiển thị tất cả tin đã đọc" : "🙈 Ẩn tin đã đọc"}
                     </Button>
-                  </div> */}
+                  </div>
 
                   <Button variant="ghost" className="justify-start mt-4" onClick={handleLogout}>
                     🚪 Đăng xuất
@@ -306,19 +305,18 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                     </div>
                   </div>
 
-                  {/* Reset tin đã đọc - Hidden but can be enabled if needed */}
-                  {/* <div className="border-t pt-4">
+                  <div className="border-t pt-4">
                     <Button
                       variant="ghost"
                       className="justify-start w-full"
                       onClick={() => {
                         setOpen(false);
-                        onToggleReadNews?.();
+                        setShouldHideReadNews(!shouldHideReadNews);
                       }}
                     >
-                      🔄 Reset tin đã đọc
+                      {shouldHideReadNews ? "👁️ Hiển thị tất cả tin đã đọc" : "🙈 Ẩn tin đã đọc"}
                     </Button>
-                  </div> */}
+                  </div>
                 </>
               )}
             </div>

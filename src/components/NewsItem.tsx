@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useReadingContext } from "@/contexts/ReadingContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { ShareDialog } from "@/components/ShareDialog";
+import { getRelativeTime } from "@/lib/dateUtils";
 
 interface NewsItemProps {
   id: string;
@@ -83,17 +84,6 @@ export const NewsItem = ({
     // navigate(`/tin/${id}`);
   };
 
-  const timeAgo = () => {
-    const now = new Date();
-    const created = new Date(createdAt);
-    const diffMs = now.getTime() - created.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    
-    if (diffHours < 1) return "Vừa xong";
-    if (diffHours < 24) return `${diffHours} giờ trước`;
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays} ngày trước`;
-  };
 
   return (
     <>
@@ -144,7 +134,7 @@ export const NewsItem = ({
             </div>
 
             <span className="text-xs text-muted-foreground">
-              {timeAgo()}
+              {getRelativeTime(createdAt)}
             </span>
           </div>
         </div>
