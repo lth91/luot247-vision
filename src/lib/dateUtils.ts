@@ -38,7 +38,7 @@ export const formatVietnamDateShort = (timestamp: string | Date): string => {
  */
 export const getRelativeTime = (timestamp: string | Date): string => {
   const now = new Date();
-  const created = toVietnamTime(timestamp);
+  const created = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
   const diffMs = now.getTime() - created.getTime();
   const diffMinutes = Math.floor(diffMs / (1000 * 60));
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
