@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
 import { Download, LogOut, KeyRound, Upload, Clock } from "lucide-react";
+import { toVietnamTime } from "@/lib/dateUtils";
 
 interface NewsPreview {
   title: string;
@@ -253,7 +254,14 @@ const DataManagement = () => {
                     <TableRow key={history.id}>
                       <TableCell className="font-medium">{history.user_email}</TableCell>
                       <TableCell>
-                        {new Date(history.imported_at).toLocaleString('vi-VN')}
+                        {toVietnamTime(history.imported_at).toLocaleString('vi-VN', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit'
+                        })}
                       </TableCell>
                       <TableCell>
                         <span className="px-2 py-1 bg-secondary rounded text-sm">
