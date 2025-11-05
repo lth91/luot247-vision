@@ -38,14 +38,10 @@ export const formatVietnamDateShort = (timestamp: string | Date): string => {
  * Calculates based on GMT+7 (Vietnam timezone)
  */
 export const getRelativeTime = (timestamp: string | Date): string => {
-  // Get current time (UTC milliseconds)
-  const now = new Date();
-  
-  // Parse created timestamp from database (UTC)
-  // Ensure it's parsed as UTC if it's a string without timezone indicator
+  // Parse the timestamp from database (UTC)
   let created: Date;
   if (typeof timestamp === 'string') {
-    // If timestamp doesn't end with Z, assume it's UTC and add Z
+    // Database timestamps are in UTC
     const utcTimestamp = timestamp.endsWith('Z') || timestamp.includes('+') || timestamp.includes('-', 10) 
       ? timestamp 
       : timestamp + 'Z';
@@ -54,7 +50,10 @@ export const getRelativeTime = (timestamp: string | Date): string => {
     created = timestamp;
   }
   
-  // Calculate difference in milliseconds (both are UTC, so diff is correct)
+  // Get current time in UTC
+  const now = new Date();
+  
+  // Calculate difference in milliseconds (both UTC)
   const diffMs = now.getTime() - created.getTime();
   const diffMinutes = Math.floor(diffMs / (1000 * 60));
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));

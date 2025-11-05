@@ -559,7 +559,7 @@ const Index = () => {
       .from("news")
       .select("*")
       .eq("is_approved", true)  // Only show approved news
-      .order("created_at", { ascending: false });
+      .order("updated_at", { ascending: false });  // Sort by approval time
 
     if (error) {
       toast.error("Không thể tải tin tức");
@@ -697,7 +697,7 @@ const Index = () => {
                   category={item.category}
                   viewCount={item.view_count || 0}
                   url={item.url}
-                  createdAt={item.created_at}
+                  createdAt={item.updated_at}  // Use updated_at to show approval time
                   isAuthenticated={!!session}
                   isLast={index === filteredNews.length - 1}
                 />
