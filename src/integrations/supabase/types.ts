@@ -304,6 +304,7 @@ export type Database = {
     }
     Functions: {
       add_view2_logs: { Args: { count: number }; Returns: undefined }
+      call_daily_auto_views: { Args: never; Returns: undefined }
       get_current_stats: {
         Args: never
         Returns: {
