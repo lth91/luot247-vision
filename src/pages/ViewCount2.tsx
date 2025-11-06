@@ -97,21 +97,37 @@ const ViewCount2 = () => {
   const fetchWeeklyData = async () => {
     try {
       const now = new Date();
-      const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay();
+      const vnNow = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // Convert to VN time
+      const dayOfWeek = vnNow.getDay() === 0 ? 7 : vnNow.getDay();
       const daysFromMonday = dayOfWeek - 1;
       
+      // Calculate Monday of current week in VN timezone
+      const monday = new Date(vnNow);
+      monday.setDate(vnNow.getDate() - daysFromMonday);
+      monday.setHours(7, 0, 0, 0); // 7 AM VN
+      const mondayUTC = new Date(monday.getTime() - (7 * 60 * 60 * 1000));
+      
+      // Fetch actual logs from database for this week
+      const { data: logs, error } = await supabase
+        .from('view_logs2')
+        .select('viewed_at')
+        .gte('viewed_at', mondayUTC.toISOString());
+      
+      if (error) {
+        console.error('Error fetching weekly logs:', error);
+        return;
+      }
+      
+      // Count views by day
       const dailyCounts: { [key: string]: number } = {};
       const weekDays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
       
-      // Get yesterday's day name
-      const yesterday = new Date(now);
-      yesterday.setDate(now.getDate() - 1);
-      const yesterdayName = getDayName(yesterday.getDay());
-      const todayName = getDayName(now.getDay());
-      
-      // Assign yesterday and today values from stats
-      dailyCounts[yesterdayName] = stats.yesterday;
-      dailyCounts[todayName] = stats.today;
+      logs?.forEach(log => {
+        const logDate = new Date(log.viewed_at);
+        const vnDate = new Date(logDate.getTime() + (7 * 60 * 60 * 1000));
+        const dayName = getDayName(vnDate.getDay());
+        dailyCounts[dayName] = (dailyCounts[dayName] || 0) + 1;
+      });
 
       const chartData = weekDays.slice(0, daysFromMonday + 1).map(day => ({
         name: day,
@@ -127,16 +143,33 @@ const ViewCount2 = () => {
   const fetchMonthlyData = async () => {
     try {
       const now = new Date();
-      const currentDay = now.getDate();
-      const yesterdayDay = currentDay - 1;
+      const vnNow = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // Convert to VN time
+      const currentDay = vnNow.getDate();
       
+      // Calculate first day of month at 7 AM VN
+      const firstDay = new Date(vnNow.getFullYear(), vnNow.getMonth(), 1, 7, 0, 0);
+      const firstDayUTC = new Date(firstDay.getTime() - (7 * 60 * 60 * 1000));
+      
+      // Fetch actual logs from database for this month
+      const { data: logs, error } = await supabase
+        .from('view_logs2')
+        .select('viewed_at')
+        .gte('viewed_at', firstDayUTC.toISOString());
+      
+      if (error) {
+        console.error('Error fetching monthly logs:', error);
+        return;
+      }
+      
+      // Count views by day
       const dailyCounts: { [key: number]: number } = {};
       
-      // Assign yesterday and today from stats
-      if (yesterdayDay > 0) {
-        dailyCounts[yesterdayDay] = stats.yesterday;
-      }
-      dailyCounts[currentDay] = stats.today;
+      logs?.forEach(log => {
+        const logDate = new Date(log.viewed_at);
+        const vnDate = new Date(logDate.getTime() + (7 * 60 * 60 * 1000));
+        const day = vnDate.getDate();
+        dailyCounts[day] = (dailyCounts[day] || 0) + 1;
+      });
 
       const chartData = Array.from({ length: currentDay }, (_, i) => ({
         name: `${i + 1}`,
