@@ -5,8 +5,6 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 const ViewCount2 = () => {
   const navigate = useNavigate();
@@ -19,8 +17,6 @@ const ViewCount2 = () => {
     thisMonth: 0,
     total: 0
   });
-  const [weeklyData, setWeeklyData] = useState<any[]>([]);
-  const [monthlyData, setMonthlyData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -53,20 +49,10 @@ const ViewCount2 = () => {
     setIsLoading(false);
   }, []);
 
-  // Fetch chart data after stats are loaded
-  useEffect(() => {
-    if (stats.today > 0) {
-      fetchWeeklyData();
-      fetchMonthlyData();
-    }
-  }, [stats]);
-
   // Auto-refresh data every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       fetchStats();
-      fetchWeeklyData();
-      fetchMonthlyData();
     }, 30000);
 
     return () => clearInterval(interval);
@@ -94,98 +80,6 @@ const ViewCount2 = () => {
     }
   };
 
-  const fetchWeeklyData = async () => {
-    try {
-      const now = new Date();
-      const vnNow = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // Convert to VN time
-      const dayOfWeek = vnNow.getDay() === 0 ? 7 : vnNow.getDay();
-      const daysFromMonday = dayOfWeek - 1;
-      
-      // Calculate Monday of current week in VN timezone
-      const monday = new Date(vnNow);
-      monday.setDate(vnNow.getDate() - daysFromMonday);
-      monday.setHours(7, 0, 0, 0); // 7 AM VN
-      const mondayUTC = new Date(monday.getTime() - (7 * 60 * 60 * 1000));
-      
-      // Fetch actual logs from database for this week
-      const { data: logs, error } = await supabase
-        .from('view_logs2')
-        .select('viewed_at')
-        .gte('viewed_at', mondayUTC.toISOString());
-      
-      if (error) {
-        console.error('Error fetching weekly logs:', error);
-        return;
-      }
-      
-      // Count views by day
-      const dailyCounts: { [key: string]: number } = {};
-      const weekDays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
-      
-      logs?.forEach(log => {
-        const logDate = new Date(log.viewed_at);
-        const vnDate = new Date(logDate.getTime() + (7 * 60 * 60 * 1000));
-        const dayName = getDayName(vnDate.getDay());
-        dailyCounts[dayName] = (dailyCounts[dayName] || 0) + 1;
-      });
-
-      const chartData = weekDays.slice(0, daysFromMonday + 1).map(day => ({
-        name: day,
-        views: dailyCounts[day] || 0
-      }));
-      
-      setWeeklyData(chartData);
-    } catch (error) {
-      console.error('Error in fetchWeeklyData:', error);
-    }
-  };
-
-  const fetchMonthlyData = async () => {
-    try {
-      const now = new Date();
-      const vnNow = new Date(now.getTime() + (7 * 60 * 60 * 1000)); // Convert to VN time
-      const currentDay = vnNow.getDate();
-      
-      // Calculate first day of month at 7 AM VN
-      const firstDay = new Date(vnNow.getFullYear(), vnNow.getMonth(), 1, 7, 0, 0);
-      const firstDayUTC = new Date(firstDay.getTime() - (7 * 60 * 60 * 1000));
-      
-      // Fetch actual logs from database for this month
-      const { data: logs, error } = await supabase
-        .from('view_logs2')
-        .select('viewed_at')
-        .gte('viewed_at', firstDayUTC.toISOString());
-      
-      if (error) {
-        console.error('Error fetching monthly logs:', error);
-        return;
-      }
-      
-      // Count views by day
-      const dailyCounts: { [key: number]: number } = {};
-      
-      logs?.forEach(log => {
-        const logDate = new Date(log.viewed_at);
-        const vnDate = new Date(logDate.getTime() + (7 * 60 * 60 * 1000));
-        const day = vnDate.getDate();
-        dailyCounts[day] = (dailyCounts[day] || 0) + 1;
-      });
-
-      const chartData = Array.from({ length: currentDay }, (_, i) => ({
-        name: `${i + 1}`,
-        views: dailyCounts[i + 1] || 0
-      }));
-      
-      setMonthlyData(chartData);
-    } catch (error) {
-      console.error('Error in fetchMonthlyData:', error);
-    }
-  };
-
-  const getDayName = (dayIndex: number): string => {
-    const days = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
-    return days[dayIndex === 0 ? 6 : dayIndex - 1];
-  };
 
   if (isLoading) {
     return (
@@ -242,64 +136,6 @@ const ViewCount2 = () => {
           </Card>
         </div>
 
-        {/* Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Weekly Chart */}
-            <Card className="p-4 md:p-6">
-              <h2 className="text-lg md:text-xl font-bold mb-4">Biểu đồ view tuần này</h2>
-              <ChartContainer config={{
-                views: {
-                  label: "Lượt xem",
-                  color: "hsl(var(--primary))"
-                }
-              }} className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={weeklyData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
-                    <YAxis stroke="hsl(var(--muted-foreground))" />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line 
-                      type="monotone" 
-                      dataKey="views" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={3}
-                      dot={{ fill: "hsl(var(--primary))", r: 4 }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </Card>
-
-            {/* Monthly Chart */}
-            <Card className="p-4 md:p-6">
-              <h2 className="text-lg md:text-xl font-bold mb-4">Biểu đồ view tháng này</h2>
-              <ChartContainer config={{
-                views: {
-                  label: "Lượt xem",
-                  color: "hsl(var(--primary))"
-                }
-              }} className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
-                    <YAxis stroke="hsl(var(--muted-foreground))" />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line 
-                      type="monotone" 
-                      dataKey="views" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={3}
-                      dot={{ fill: "hsl(var(--primary))", r: 4 }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </Card>
-        </div>
       </main>
     </div>
   );

@@ -51,6 +51,7 @@ const ViewManagement2 = () => {
   const [durationHours, setDurationHours] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
@@ -73,6 +74,7 @@ const ViewManagement2 = () => {
       setRoleChecked(true);
     }
   }, [session]);
+
 
   useEffect(() => {
     if (!sessionChecked || !roleChecked) return;
@@ -278,76 +280,116 @@ const ViewManagement2 = () => {
             let endTime: string | null = null;
             
             if (update.periodType === 'yesterday') {
-              const startOfYesterday = new Date(now);
-              startOfYesterday.setDate(now.getDate() - 1);
-              startOfYesterday.setHours(7, 0, 0, 0);
+              // Calculate yesterday 7 AM GMT+7
+              // Get current time in GMT+7
+              const vnNow = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+              const vnYesterday = new Date(vnNow);
+              vnYesterday.setDate(vnNow.getDate() - 1);
+              vnYesterday.setUTCHours(0, 0, 0, 0); // 7 AM GMT+7 = 0:00 UTC same day
               
-              // Hôm qua kết thúc lúc 6:59:59 hôm nay (trước khi reset lúc 7:00)
-              const endOfYesterday = new Date(now);
-              endOfYesterday.setHours(6, 59, 59, 999);
+              // Calculate today 7 AM GMT+7
+              const vnToday = new Date(vnNow);
+              vnToday.setUTCHours(0, 0, 0, 0);
               
-              startTime = startOfYesterday.toISOString();
-              endTime = endOfYesterday.toISOString();
+              // Convert back to UTC for database query
+              const startOfYesterdayUTC = new Date(vnYesterday.getTime() - (7 * 60 * 60 * 1000));
+              const endOfYesterdayUTC = new Date(vnToday.getTime() - (7 * 60 * 60 * 1000));
+              
+              startTime = startOfYesterdayUTC.toISOString();
+              endTime = endOfYesterdayUTC.toISOString();
             } else if (update.periodType === 'today') {
-              const startOfToday = new Date(now);
-              startOfToday.setHours(7, 0, 0, 0);
+              // Calculate today 7 AM GMT+7
+              const vnNow = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+              const vnToday = new Date(vnNow);
+              vnToday.setUTCHours(0, 0, 0, 0);
               
-              // Hôm nay kết thúc lúc 6:59:59 ngày mai (trước khi reset lúc 7:00)
-              const endOfToday = new Date(startOfToday);
-              endOfToday.setDate(endOfToday.getDate() + 1);
-              endOfToday.setHours(6, 59, 59, 999);
+              // Calculate tomorrow 7 AM GMT+7
+              const vnTomorrow = new Date(vnToday);
+              vnTomorrow.setDate(vnTomorrow.getDate() + 1);
               
-              startTime = startOfToday.toISOString();
-              endTime = endOfToday.toISOString();
+              // Convert back to UTC for database query
+              const startOfTodayUTC = new Date(vnToday.getTime() - (7 * 60 * 60 * 1000));
+              const endOfTodayUTC = new Date(vnTomorrow.getTime() - (7 * 60 * 60 * 1000));
+              
+              startTime = startOfTodayUTC.toISOString();
+              endTime = endOfTodayUTC.toISOString();
             } else if (update.periodType === 'week') {
-              const startOfWeek = new Date(now);
-              startOfWeek.setDate(now.getDate() - now.getDay() + 1);
-              startOfWeek.setHours(7, 0, 0, 0);
-              startTime = startOfWeek.toISOString();
+              // Calculate Monday 7 AM GMT+7 of current week
+              const vnNow = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+              const dayOfWeek = vnNow.getDay() === 0 ? 7 : vnNow.getDay();
+              const daysFromMonday = dayOfWeek - 1;
+              
+              const monday = new Date(vnNow);
+              monday.setDate(vnNow.getDate() - daysFromMonday);
+              monday.setUTCHours(0, 0, 0, 0);
+              
+              const startOfWeekUTC = new Date(monday.getTime() - (7 * 60 * 60 * 1000));
+              startTime = startOfWeekUTC.toISOString();
             } else if (update.periodType === 'month') {
-              const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 7, 0, 0, 0);
-              startTime = startOfMonth.toISOString();
+              // Calculate first day of month at 7 AM GMT+7
+              const vnNow = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+              const firstDay = new Date(vnNow.getFullYear(), vnNow.getMonth(), 1, 7, 0, 0);
+              const firstDayUTC = new Date(firstDay.getTime() - (7 * 60 * 60 * 1000));
+              startTime = firstDayUTC.toISOString();
             } else {
               startTime = '1970-01-01T00:00:00Z';
             }
             
-            // Get current log count
-            let logCount = 0;
-            if (endTime) {
-              const { count } = await (supabase as any)
-                .from('view_logs2')
-                .select('*', { count: 'exact', head: true })
-                .gte('viewed_at', startTime)
-                .lt('viewed_at', endTime);
-              logCount = count || 0;
-            } else {
-              const { count } = await (supabase as any)
-                .from('view_logs2')
-                .select('*', { count: 'exact', head: true })
-                .gte('viewed_at', startTime);
-              logCount = count || 0;
-            }
-            
-            // Calculate base value: base = desired - logs
-            newBaseValue = update.value - logCount;
-            
-            // If setting to 0 or less, also delete the logs to fully reset
-            if (update.value <= 0 && logCount > 0) {
-              console.log(`Deleting logs from ${startTime} to ${endTime || 'now'}`);
+            // For "yesterday", get_view2_stats() only returns base_value (no logs added)
+            // So we need to delete all logs in this period and set base_value to desired value
+            if (update.periodType === 'yesterday') {
+              // Delete all logs in yesterday period
               if (endTime) {
-                await (supabase as any)
+                const { error: deleteError } = await (supabase as any)
                   .from('view_logs2')
                   .delete()
                   .gte('viewed_at', startTime)
                   .lt('viewed_at', endTime);
-              } else {
-                await (supabase as any)
-                  .from('view_logs2')
-                  .delete()
-                  .gte('viewed_at', startTime);
+                if (deleteError) {
+                  console.error('Error deleting yesterday logs:', deleteError);
+                }
               }
-              // Reset base to 0 since we deleted the logs
+              // Set base_value directly to desired value (no need to subtract logs)
               newBaseValue = update.value;
+            } else {
+              // For other periods (today, week, month), calculate base = desired - logs
+              let logCount = 0;
+              if (endTime) {
+                const { count } = await (supabase as any)
+                  .from('view_logs2')
+                  .select('*', { count: 'exact', head: true })
+                  .gte('viewed_at', startTime)
+                  .lt('viewed_at', endTime);
+                logCount = count || 0;
+              } else {
+                const { count } = await (supabase as any)
+                  .from('view_logs2')
+                  .select('*', { count: 'exact', head: true })
+                  .gte('viewed_at', startTime);
+                logCount = count || 0;
+              }
+              
+              // Calculate base value: base = desired - logs
+              newBaseValue = update.value - logCount;
+              
+              // If setting to 0 or less, also delete the logs to fully reset
+              if (update.value <= 0 && logCount > 0) {
+                console.log(`Deleting logs from ${startTime} to ${endTime || 'now'}`);
+                if (endTime) {
+                  await (supabase as any)
+                    .from('view_logs2')
+                    .delete()
+                    .gte('viewed_at', startTime)
+                    .lt('viewed_at', endTime);
+                } else {
+                  await (supabase as any)
+                    .from('view_logs2')
+                    .delete()
+                    .gte('viewed_at', startTime);
+                }
+                // Reset base to 0 since we deleted the logs
+                newBaseValue = update.value;
+              }
             }
           }
           
@@ -401,6 +443,7 @@ const ViewManagement2 = () => {
       toast.error(`Lỗi: ${error.message}`);
     }
   };
+
 
   const handleAddViews = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -517,6 +560,7 @@ const ViewManagement2 = () => {
             </div>
           </CardContent>
         </Card>
+
 
         {/* Tabs */}
         <Tabs defaultValue="edit" className="space-y-4">
