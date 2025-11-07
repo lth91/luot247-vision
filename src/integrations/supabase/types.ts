@@ -43,6 +43,30 @@ export type Database = {
           },
         ]
       }
+      daily_view_stats2: {
+        Row: {
+          created_at: string | null
+          id: string
+          updated_at: string | null
+          view_count: number
+          view_date: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          view_count?: number
+          view_date: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          view_count?: number
+          view_date?: string
+        }
+        Relationships: []
+      }
       favorites: {
         Row: {
           created_at: string | null
@@ -304,6 +328,13 @@ export type Database = {
     }
     Functions: {
       add_view2_logs: { Args: { count: number }; Returns: undefined }
+      backfill_daily_view_stats: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          processed_date: string
+          view_count: number
+        }[]
+      }
       call_daily_auto_views: { Args: never; Returns: undefined }
       get_current_stats: {
         Args: never
@@ -315,6 +346,18 @@ export type Database = {
           yesterday: number
         }[]
       }
+      get_monthly_stats_from_daily: {
+        Args: never
+        Returns: {
+          day: number
+          view_count: number
+          view_date: string
+        }[]
+      }
+      get_or_create_daily_stat: {
+        Args: { p_view_date: string }
+        Returns: string
+      }
       get_view2_stats: {
         Args: never
         Returns: {
@@ -323,6 +366,14 @@ export type Database = {
           today: number
           total: number
           yesterday: number
+        }[]
+      }
+      get_weekly_stats_from_daily: {
+        Args: never
+        Returns: {
+          day_name: string
+          view_count: number
+          view_date: string
         }[]
       }
       has_role: {
@@ -337,6 +388,7 @@ export type Database = {
         Returns: undefined
       }
       reset_daily_view_stats2: { Args: never; Returns: undefined }
+      update_daily_view_stats: { Args: { p_date?: string }; Returns: undefined }
       vietnam_time: { Args: never; Returns: string }
     }
     Enums: {
