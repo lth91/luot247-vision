@@ -50,6 +50,11 @@ const ViewManagement2 = () => {
   const [totalViews, setTotalViews] = useState("");
   const [durationHours, setDurationHours] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Test reset
+  const [testResetLoading, setTestResetLoading] = useState(false);
+  const [beforeResetStats, setBeforeResetStats] = useState<any>(null);
+  const [afterResetStats, setAfterResetStats] = useState<any>(null);
 
 
   useEffect(() => {
@@ -494,6 +499,79 @@ const ViewManagement2 = () => {
     }
   };
 
+  const handleTestReset = async () => {
+    if (!session?.user || (userRole !== "admin" && session.user.email !== 'longth91@gmail.com')) {
+      toast.error("Bạn không có quyền");
+      return;
+    }
+
+    setTestResetLoading(true);
+    setBeforeResetStats(null);
+    setAfterResetStats(null);
+
+    try {
+      // Get stats BEFORE reset
+      const { data: beforeData, error: beforeError } = await supabase.rpc('get_view2_stats');
+      if (beforeError) throw beforeError;
+      
+      // Get raw stat_value from view_stats2
+      const { data: rawStats, error: rawError } = await supabase
+        .from('view_stats2')
+        .select('stat_key, stat_value')
+        .in('stat_key', ['yesterday', 'today']);
+      if (rawError) throw rawError;
+      
+      const beforeRaw = {
+        yesterday: rawStats?.find(s => s.stat_key === 'yesterday')?.stat_value || 0,
+        today: rawStats?.find(s => s.stat_key === 'today')?.stat_value || 0,
+      };
+      
+      setBeforeResetStats({
+        calculated: beforeData?.[0] || {},
+        raw: beforeRaw
+      });
+
+      // Call reset function
+      const { error: resetError } = await supabase.rpc('reset_daily_view_stats2');
+      if (resetError) throw resetError;
+
+      toast.success("✅ Đã chạy reset function!");
+
+      // Wait a bit for the database to update
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Get stats AFTER reset
+      const { data: afterData, error: afterError } = await supabase.rpc('get_view2_stats');
+      if (afterError) throw afterError;
+      
+      // Get raw stat_value from view_stats2 after reset
+      const { data: rawStatsAfter, error: rawErrorAfter } = await supabase
+        .from('view_stats2')
+        .select('stat_key, stat_value')
+        .in('stat_key', ['yesterday', 'today']);
+      if (rawErrorAfter) throw rawErrorAfter;
+      
+      const afterRaw = {
+        yesterday: rawStatsAfter?.find(s => s.stat_key === 'yesterday')?.stat_value || 0,
+        today: rawStatsAfter?.find(s => s.stat_key === 'today')?.stat_value || 0,
+      };
+      
+      setAfterResetStats({
+        calculated: afterData?.[0] || {},
+        raw: afterRaw
+      });
+
+      // Refresh current stats
+      await fetchCurrentStats();
+
+    } catch (error: any) {
+      console.error('Error testing reset:', error);
+      toast.error(`Lỗi: ${error.message}`);
+    } finally {
+      setTestResetLoading(false);
+    }
+  };
+
   if (isLoading || (userRole !== "admin" && session?.user?.email !== 'longth91@gmail.com')) {
     return (
       <div className="min-h-screen bg-background">
@@ -567,6 +645,7 @@ const ViewManagement2 = () => {
           <TabsList>
             <TabsTrigger value="edit">Sửa View Thủ Công</TabsTrigger>
             <TabsTrigger value="auto">Thêm View Tự Động</TabsTrigger>
+            <TabsTrigger value="test">Test Reset Function</TabsTrigger>
           </TabsList>
 
           {/* Tab 1: Direct Edit */}
@@ -700,6 +779,123 @@ const ViewManagement2 = () => {
                     Views sẽ được thêm tự động theo thời gian đã cài đặt trên server.
                   </p>
                 </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tab 3: Test Reset */}
+          <TabsContent value="test">
+            <Card>
+              <CardHeader>
+                <CardTitle>Test Reset Function</CardTitle>
+                <CardDescription>
+                  Kiểm tra xem function reset có hoạt động đúng không (chuyển "today" → "yesterday")
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <Button 
+                    onClick={handleTestReset} 
+                    disabled={testResetLoading}
+                    className="w-full"
+                  >
+                    {testResetLoading ? "Đang test..." : "🧪 Chạy Test Reset"}
+                  </Button>
+                  
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800 font-semibold mb-2">⚠️ Lưu ý:</p>
+                    <ul className="text-sm text-yellow-700 space-y-1 list-disc list-inside">
+                      <li>Test này sẽ THỰC SỰ chạy function reset</li>
+                      <li>Giá trị "Hôm nay" hiện tại sẽ được chuyển thành "Hôm qua"</li>
+                      <li>"Hôm nay" sẽ reset về 0</li>
+                      <li>Bạn có thể xem kết quả trước/sau để chắc chắn</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {beforeResetStats && (
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-lg">📊 TRƯỚC KHI RESET:</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">Yesterday (Calculated)</p>
+                        <p className="text-xl font-bold text-blue-700">
+                          {beforeResetStats.calculated.yesterday?.toLocaleString("vi-VN")}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">Raw stat_value:</p>
+                        <p className="text-sm font-semibold text-blue-600">
+                          {beforeResetStats.raw.yesterday?.toLocaleString("vi-VN")}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">Today (Calculated)</p>
+                        <p className="text-xl font-bold text-green-700">
+                          {beforeResetStats.calculated.today?.toLocaleString("vi-VN")}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">Raw stat_value:</p>
+                        <p className="text-sm font-semibold text-green-600">
+                          {beforeResetStats.raw.today?.toLocaleString("vi-VN")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {afterResetStats && (
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-lg">✅ SAU KHI RESET:</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 bg-blue-100 border-2 border-blue-400 rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">Yesterday (Calculated)</p>
+                        <p className="text-xl font-bold text-blue-800">
+                          {afterResetStats.calculated.yesterday?.toLocaleString("vi-VN")}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">Raw stat_value:</p>
+                        <p className="text-sm font-semibold text-blue-700">
+                          {afterResetStats.raw.yesterday?.toLocaleString("vi-VN")}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-green-100 border-2 border-green-400 rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">Today (Calculated)</p>
+                        <p className="text-xl font-bold text-green-800">
+                          {afterResetStats.calculated.today?.toLocaleString("vi-VN")}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">Raw stat_value:</p>
+                        <p className="text-sm font-semibold text-green-700">
+                          {afterResetStats.raw.today?.toLocaleString("vi-VN")}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {beforeResetStats && (
+                      <div className="p-4 bg-green-50 border border-green-300 rounded-lg">
+                        <p className="text-sm font-semibold text-green-800 mb-2">🎯 Kết quả:</p>
+                        <ul className="text-sm text-green-700 space-y-1">
+                          <li>
+                            ✅ Yesterday stat_value: {beforeResetStats.raw.yesterday?.toLocaleString("vi-VN")} 
+                            → <strong>{afterResetStats.raw.yesterday?.toLocaleString("vi-VN")}</strong>
+                            {afterResetStats.raw.yesterday === beforeResetStats.raw.today && 
+                              <span className="ml-2 text-green-600 font-bold">✓ Đúng!</span>
+                            }
+                          </li>
+                          <li>
+                            ✅ Today stat_value: {beforeResetStats.raw.today?.toLocaleString("vi-VN")} 
+                            → <strong>{afterResetStats.raw.today?.toLocaleString("vi-VN")}</strong>
+                            {afterResetStats.raw.today === 0 && 
+                              <span className="ml-2 text-green-600 font-bold">✓ Reset về 0!</span>
+                            }
+                          </li>
+                        </ul>
+                        {afterResetStats.raw.yesterday === beforeResetStats.raw.today && 
+                         afterResetStats.raw.today === 0 && (
+                          <p className="mt-3 text-sm font-bold text-green-800">
+                            🎉 Function hoạt động HOÀN HẢO! Ngày mai "Hôm qua" sẽ hiển thị đúng giá trị {afterResetStats.raw.yesterday?.toLocaleString("vi-VN")}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
