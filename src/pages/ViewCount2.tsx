@@ -193,6 +193,7 @@ const ViewCount2 = () => {
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "8px"
                 }}
+                formatter={(value: number) => value.toLocaleString("vi-VN")}
               />
               <Line 
                 type="monotone" 
@@ -227,6 +228,7 @@ const ViewCount2 = () => {
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "8px"
                 }}
+                formatter={(value: number) => value.toLocaleString("vi-VN")}
               />
               <Line 
                 type="monotone" 
