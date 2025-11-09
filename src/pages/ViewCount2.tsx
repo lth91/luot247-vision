@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 const ViewCount2 = () => {
   const navigate = useNavigate();
@@ -17,6 +19,8 @@ const ViewCount2 = () => {
     thisMonth: 0,
     total: 0
   });
+  const [weeklyData, setWeeklyData] = useState<any[]>([]);
+  const [monthlyData, setMonthlyData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -46,6 +50,8 @@ const ViewCount2 = () => {
 
   useEffect(() => {
     fetchStats();
+    fetchWeeklyData();
+    fetchMonthlyData();
     setIsLoading(false);
   }, []);
 
@@ -53,6 +59,8 @@ const ViewCount2 = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       fetchStats();
+      fetchWeeklyData();
+      fetchMonthlyData();
     }, 30000);
 
     return () => clearInterval(interval);
@@ -77,6 +85,34 @@ const ViewCount2 = () => {
         thisMonth: statsData.this_month || 0,
         total: statsData.total || 0
       });
+    }
+  };
+
+  const fetchWeeklyData = async () => {
+    // @ts-ignore
+    const { data, error } = await supabase.rpc('get_weekly_stats_from_daily');
+    
+    if (error) {
+      console.error('Error fetching weekly data:', error);
+      return;
+    }
+    
+    if (data) {
+      setWeeklyData(data);
+    }
+  };
+
+  const fetchMonthlyData = async () => {
+    // @ts-ignore
+    const { data, error } = await supabase.rpc('get_monthly_stats_from_daily');
+    
+    if (error) {
+      console.error('Error fetching monthly data:', error);
+      return;
+    }
+    
+    if (data) {
+      setMonthlyData(data);
     }
   };
 
@@ -135,6 +171,74 @@ const ViewCount2 = () => {
             </p>
           </Card>
         </div>
+
+        {/* Weekly Chart */}
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-4">View tuần này</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={weeklyData}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis 
+                dataKey="day_name" 
+                className="text-xs"
+                stroke="hsl(var(--muted-foreground))"
+              />
+              <YAxis 
+                className="text-xs"
+                stroke="hsl(var(--muted-foreground))"
+              />
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: "hsl(var(--background))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "8px"
+                }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="view_count" 
+                stroke="hsl(var(--primary))" 
+                strokeWidth={2}
+                dot={{ fill: "hsl(var(--primary))", r: 4 }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+
+        {/* Monthly Chart */}
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-4">View tháng này</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={monthlyData}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <XAxis 
+                dataKey="day" 
+                className="text-xs"
+                stroke="hsl(var(--muted-foreground))"
+              />
+              <YAxis 
+                className="text-xs"
+                stroke="hsl(var(--muted-foreground))"
+              />
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: "hsl(var(--background))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "8px"
+                }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="view_count" 
+                stroke="hsl(var(--primary))" 
+                strokeWidth={2}
+                dot={{ fill: "hsl(var(--primary))", r: 4 }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
 
       </main>
     </div>
