@@ -6,7 +6,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+
+// Custom Tooltip Component
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+        <p className="font-semibold mb-1">{label}</p>
+        <p className="text-primary font-bold text-lg">
+          {payload[0].value.toLocaleString("vi-VN")}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
 const ViewCount2 = () => {
   const navigate = useNavigate();
@@ -187,14 +201,7 @@ const ViewCount2 = () => {
                 className="text-xs"
                 stroke="hsl(var(--muted-foreground))"
               />
-              <Tooltip 
-                contentStyle={{
-                  backgroundColor: "hsl(var(--background))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px"
-                }}
-                formatter={(value: number) => value.toLocaleString("vi-VN")}
-              />
+              <Tooltip content={<CustomTooltip />} />
               <Line 
                 type="monotone" 
                 dataKey="view_count" 
@@ -222,14 +229,7 @@ const ViewCount2 = () => {
                 className="text-xs"
                 stroke="hsl(var(--muted-foreground))"
               />
-              <Tooltip 
-                contentStyle={{
-                  backgroundColor: "hsl(var(--background))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px"
-                }}
-                formatter={(value: number) => value.toLocaleString("vi-VN")}
-              />
+              <Tooltip content={<CustomTooltip />} />
               <Line 
                 type="monotone" 
                 dataKey="view_count" 
