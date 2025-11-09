@@ -5,8 +5,6 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
-import { ViewChartsWeekly } from "@/components/ViewChartsWeekly";
-import { ViewChartsMonthly } from "@/components/ViewChartsMonthly";
 
 const ViewCount2 = () => {
   const navigate = useNavigate();
@@ -136,12 +134,6 @@ const ViewCount2 = () => {
               {stats.total.toLocaleString("vi-VN")}
             </p>
           </Card>
-        </div>
-
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ViewChartsWeekly />
-          <ViewChartsMonthly />
         </div>
 
       </main>

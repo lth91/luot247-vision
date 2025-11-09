@@ -10,8 +10,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
 import { TrendingUp, Settings } from "lucide-react";
-import { ViewChartsWeekly } from "@/components/ViewChartsWeekly";
-import { ViewChartsMonthly } from "@/components/ViewChartsMonthly";
 
 const ViewManagement2 = () => {
   const navigate = useNavigate();
@@ -57,7 +55,6 @@ const ViewManagement2 = () => {
   const [testResetLoading, setTestResetLoading] = useState(false);
   const [beforeResetStats, setBeforeResetStats] = useState<any>(null);
   const [afterResetStats, setAfterResetStats] = useState<any>(null);
-  const [backfillLoading, setBackfillLoading] = useState(false);
 
 
   useEffect(() => {
@@ -575,39 +572,6 @@ const ViewManagement2 = () => {
     }
   };
 
-  const handleBackfillDailyStats = async () => {
-    if (!session?.user || (userRole !== "admin" && session.user.email !== 'longth91@gmail.com')) {
-      toast.error("Bạn không có quyền");
-      return;
-    }
-
-    setBackfillLoading(true);
-
-    try {
-      // Backfill from Nov 1 to today
-      // @ts-ignore
-      const { data, error } = await supabase.rpc('backfill_daily_view_stats', {
-        p_start_date: '2025-11-01',
-        p_end_date: '2025-11-09'
-      });
-
-      if (error) throw error;
-
-      toast.success(`✅ Đã backfill dữ liệu cho ${data?.length || 0} ngày!`);
-      
-      // Reload page to see charts
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-
-    } catch (error: any) {
-      console.error('Error backfilling:', error);
-      toast.error(`Lỗi backfill: ${error.message}`);
-    } finally {
-      setBackfillLoading(false);
-    }
-  };
-
   if (isLoading || (userRole !== "admin" && session?.user?.email !== 'longth91@gmail.com')) {
     return (
       <div className="min-h-screen bg-background">
@@ -672,27 +636,6 @@ const ViewManagement2 = () => {
                 </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Backfill Daily Stats Button */}
-        <Card className="border-2 border-dashed border-primary/30 bg-primary/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              📊 Populate dữ liệu cho biểu đồ
-            </CardTitle>
-            <CardDescription>
-              Nếu biểu đồ tuần/tháng không hiển thị, nhấn nút này để populate dữ liệu từ view_logs2 vào daily_view_stats2
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              onClick={handleBackfillDailyStats}
-              disabled={backfillLoading}
-              variant="default"
-            >
-              {backfillLoading ? "Đang backfill..." : "🔄 Backfill dữ liệu từ 1/11 đến 9/11"}
-            </Button>
           </CardContent>
         </Card>
 
@@ -957,12 +900,6 @@ const ViewManagement2 = () => {
             </Card>
           </TabsContent>
         </Tabs>
-
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ViewChartsWeekly />
-          <ViewChartsMonthly />
-        </div>
       </main>
     </div>
   );
