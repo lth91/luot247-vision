@@ -19,8 +19,17 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Call the update_daily_view_stats function with today's date
-    const { error: updateError } = await supabase.rpc('update_daily_view_stats');
+    // Calculate yesterday's date in GMT+7
+    const now = new Date();
+    const vietnamTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
+    const yesterday = new Date(vietnamTime);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayDate = yesterday.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
+    // Call the update_daily_view_stats function with yesterday's date
+    const { error: updateError } = await supabase.rpc('update_daily_view_stats', {
+      p_date: yesterdayDate
+    });
 
     if (updateError) {
       console.error('Error updating daily stats:', updateError);
