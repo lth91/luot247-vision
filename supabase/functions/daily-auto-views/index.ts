@@ -42,6 +42,19 @@ serve(async (req) => {
       )
     }
 
+    // CRITICAL: Reset daily stats at 7:00 AM (first interval of the day)
+    if (currentHour === 7 && currentMinute < 30) {
+      console.log('🔄 It\'s 7:00-7:30 AM - Running daily reset...')
+      
+      const { error: resetError } = await supabaseClient.rpc('reset_daily_view_stats2')
+      
+      if (resetError) {
+        console.error('❌ Error running daily reset:', resetError)
+      } else {
+        console.log('✅ Daily reset completed successfully - yesterday updated, today reset to 0')
+      }
+    }
+
     // Tổng view mục tiêu cho cả ngày: 600-800
     // Chia đều cho 30 khoảng 30 phút (7AM-10PM = 15h = 30 khoảng)
     const dailyTarget = 700 // Trung bình
