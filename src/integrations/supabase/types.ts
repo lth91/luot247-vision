@@ -364,6 +364,14 @@ export type Database = {
     }
     Functions: {
       add_view2_logs: { Args: { count: number }; Returns: undefined }
+      backfill_current_stats_distributed: {
+        Args: never
+        Returns: {
+          processed_date: string
+          source: string
+          view_count: number
+        }[]
+      }
       backfill_daily_view_stats: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
