@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
 import { TrendingUp, Settings } from "lucide-react";
+import { ViewChartsWeekly } from "@/components/ViewChartsWeekly";
+import { ViewChartsMonthly } from "@/components/ViewChartsMonthly";
 
 const ViewManagement2 = () => {
   const navigate = useNavigate();
@@ -900,6 +902,12 @@ const ViewManagement2 = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ViewChartsWeekly />
+          <ViewChartsMonthly />
+        </div>
       </main>
     </div>
   );
