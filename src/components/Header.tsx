@@ -225,6 +225,16 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                               className="justify-start"
                               onClick={() => {
                                 setOpen(false);
+                                navigate("/lich-su-reset");
+                              }}
+                            >
+                              📜 Lịch sử reset
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              className="justify-start"
+                              onClick={() => {
+                                setOpen(false);
                                 navigate("/admin");
                               }}
                             >

@@ -12,6 +12,7 @@ import Classification from "./pages/Classification";
 import DataManagement from "./pages/DataManagement";
 import ViewCount2 from "./pages/ViewCount2";
 import ViewManagement2 from "./pages/ViewManagement2";
+import ResetHistory from "./pages/ResetHistory";
 import Home2 from "./pages/Home2";
 import About from "./pages/About";
 import Favorites from "./pages/Favorites";
@@ -57,6 +58,7 @@ const App = () => {
                 <Route path="/viewcount2" element={<ViewCount2 />} />
                 <Route path="/quan-ly-view" element={<ViewManagement2 />} />
                 <Route path="/quan-ly-view2" element={<ViewManagement2 />} />
+                <Route path="/lich-su-reset" element={<ResetHistory />} />
                 <Route path="/home2" element={<Home2 />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/favorites" element={<Favorites />} />

@@ -180,6 +180,42 @@ export type Database = {
         }
         Relationships: []
       }
+      reset_history: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          month_reset: boolean | null
+          reset_at: string
+          status: string | null
+          today_value_before_reset: number
+          week_reset: boolean | null
+          yesterday_value: number
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          month_reset?: boolean | null
+          reset_at?: string
+          status?: string | null
+          today_value_before_reset: number
+          week_reset?: boolean | null
+          yesterday_value: number
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          month_reset?: boolean | null
+          reset_at?: string
+          status?: string | null
+          today_value_before_reset?: number
+          week_reset?: boolean | null
+          yesterday_value?: number
+        }
+        Relationships: []
+      }
       user_read_news: {
         Row: {
           id: string
