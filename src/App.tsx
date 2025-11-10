@@ -11,6 +11,7 @@ import NewsDetail from "./pages/NewsDetail";
 import Classification from "./pages/Classification";
 import DataManagement from "./pages/DataManagement";
 import ViewCount2 from "./pages/ViewCount2";
+import Charts from "./pages/Charts";
 import ViewManagement2 from "./pages/ViewManagement2";
 import ResetHistory from "./pages/ResetHistory";
 import Home2 from "./pages/Home2";
@@ -56,6 +57,7 @@ const App = () => {
                 <Route path="/data-management" element={<DataManagement />} />
                 <Route path="/viewcount" element={<ViewCount2 />} />
                 <Route path="/viewcount2" element={<ViewCount2 />} />
+                <Route path="/charts" element={<Charts />} />
                 <Route path="/quan-ly-view" element={<ViewManagement2 />} />
                 <Route path="/quan-ly-view2" element={<ViewManagement2 />} />
                 <Route path="/lich-su-reset" element={<ResetHistory />} />
