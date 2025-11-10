@@ -1,1 +1,19 @@
 project_id = "gklpvaindbfkcmuuuffz"
+
+[functions.update-daily-stats]
+verify_jwt = false
+
+[functions.daily-auto-views]
+verify_jwt = false
+
+[functions.add-views-background]
+verify_jwt = false
+
+[functions.add-views2-background]
+verify_jwt = false
+
+[functions.backfill-november-views]
+verify_jwt = false
+
+[functions.import-google-sheet]
+verify_jwt = false

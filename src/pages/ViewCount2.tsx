@@ -66,6 +66,10 @@ const ViewCount2 = () => {
     fetchStats();
     fetchWeeklyData();
     fetchMonthlyData();
+    
+    // Call update-daily-stats on page load to ensure yesterday's data is updated
+    updateDailyStats();
+    
     setIsLoading(false);
   }, []);
 
@@ -127,6 +131,20 @@ const ViewCount2 = () => {
     
     if (data) {
       setMonthlyData(data);
+    }
+  };
+
+  const updateDailyStats = async () => {
+    try {
+      const { error } = await supabase.functions.invoke('update-daily-stats');
+      
+      if (error) {
+        console.error('Error calling update-daily-stats:', error);
+      } else {
+        console.log('Successfully called update-daily-stats');
+      }
+    } catch (error) {
+      console.error('Error invoking update-daily-stats:', error);
     }
   };
 
