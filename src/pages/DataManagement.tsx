@@ -35,6 +35,8 @@ const DataManagement = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [importHistory, setImportHistory] = useState<ImportHistory[]>([]);
   const [isDeletingDuplicates, setIsDeletingDuplicates] = useState(false);
+  const [duplicateCount, setDuplicateCount] = useState<number>(0);
+  const [deletingHistoryId, setDeletingHistoryId] = useState<string | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -76,6 +78,7 @@ const DataManagement = () => {
     if (session && (userRole === "admin" || userRole === "moderator")) {
       setIsLoading(false);
       fetchImportHistory();
+      fetchDuplicateCount();
     }
   }, [session, userRole]);
 
@@ -88,6 +91,33 @@ const DataManagement = () => {
 
     if (!error && data) {
       setImportHistory(data);
+    }
+  };
+
+  const fetchDuplicateCount = async () => {
+    try {
+      const { data: allNews, error } = await supabase
+        .from("news")
+        .select("title");
+
+      if (error) throw error;
+
+      // Count duplicates
+      const titleMap = new Map<string, number>();
+      allNews?.forEach(news => {
+        titleMap.set(news.title, (titleMap.get(news.title) || 0) + 1);
+      });
+
+      let count = 0;
+      titleMap.forEach((occurrences) => {
+        if (occurrences > 1) {
+          count += occurrences - 1; // Count extras only
+        }
+      });
+
+      setDuplicateCount(count);
+    } catch (error) {
+      console.error('Error counting duplicates:', error);
     }
   };
 
@@ -220,12 +250,67 @@ const DataManagement = () => {
       if (deleteError) throw deleteError;
 
       toast.success(`Đã xóa ${duplicateIds.length} tin trùng`);
-      fetchImportHistory(); // Refresh history
+      fetchImportHistory();
+      fetchDuplicateCount();
     } catch (error) {
       console.error('Delete duplicates error:', error);
       toast.error("Lỗi khi xóa tin trùng");
     } finally {
       setIsDeletingDuplicates(false);
+    }
+  };
+
+  const handleDeleteImportHistory = async (historyId: string, userEmail: string, importedAt: string) => {
+    if (!confirm(`Bạn có chắc chắn muốn xóa lần import này?\nTất cả tin tức từ lần import sẽ bị xóa vĩnh viễn.`)) {
+      return;
+    }
+
+    setDeletingHistoryId(historyId);
+    toast.info("Đang xóa tin tức...");
+
+    try {
+      // Get all news imported in this batch
+      // We need to identify news by matching user_id and time window
+      const { data: user } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", userEmail)
+        .maybeSingle();
+
+      if (!user) {
+        toast.error("Không tìm thấy người dùng");
+        return;
+      }
+
+      // Delete news created by this user around the import time (±5 minutes window)
+      const importTime = new Date(importedAt);
+      const timeStart = new Date(importTime.getTime() - 5 * 60 * 1000).toISOString();
+      const timeEnd = new Date(importTime.getTime() + 5 * 60 * 1000).toISOString();
+
+      const { error: deleteError } = await supabase
+        .from("news")
+        .delete()
+        .gte("created_at", timeStart)
+        .lte("created_at", timeEnd);
+
+      if (deleteError) throw deleteError;
+
+      // Delete import history record
+      const { error: historyError } = await supabase
+        .from("import_history")
+        .delete()
+        .eq("id", historyId);
+
+      if (historyError) throw historyError;
+
+      toast.success("Đã xóa lần import thành công");
+      fetchImportHistory();
+      fetchDuplicateCount();
+    } catch (error) {
+      console.error('Delete import history error:', error);
+      toast.error("Lỗi khi xóa lần import");
+    } finally {
+      setDeletingHistoryId(null);
     }
   };
 
@@ -303,14 +388,21 @@ const DataManagement = () => {
         {importHistory.length > 0 && (
           <Card className="p-6 mt-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold">Lịch sử upload</h3>
+              <div>
+                <h3 className="text-xl font-semibold">Lịch sử upload</h3>
+                {duplicateCount > 0 && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Có <span className="font-semibold text-destructive">{duplicateCount} tin trùng</span> trong database
+                  </p>
+                )}
+              </div>
               <Button 
                 variant="destructive" 
                 onClick={handleDeleteDuplicates}
-                disabled={isDeletingDuplicates}
+                disabled={isDeletingDuplicates || duplicateCount === 0}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                {isDeletingDuplicates ? "Đang xóa..." : "Xóa tin trùng"}
+                {isDeletingDuplicates ? "Đang xóa..." : `Xóa ${duplicateCount} tin trùng`}
               </Button>
             </div>
             <div className="border rounded-lg overflow-hidden">
@@ -320,6 +412,7 @@ const DataManagement = () => {
                     <TableHead>Tài khoản</TableHead>
                     <TableHead>Thời gian</TableHead>
                     <TableHead>Số lượng tin</TableHead>
+                    <TableHead className="w-[100px]">Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -340,6 +433,16 @@ const DataManagement = () => {
                         <span className="px-2 py-1 bg-secondary rounded text-sm">
                           {history.news_count} tin
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteImportHistory(history.id, history.user_email, history.imported_at)}
+                          disabled={deletingHistoryId === history.id}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
