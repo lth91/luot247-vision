@@ -250,8 +250,8 @@ const DataManagement = () => {
       if (deleteError) throw deleteError;
 
       toast.success(`Đã xóa ${duplicateIds.length} tin trùng`);
-      fetchImportHistory();
-      fetchDuplicateCount();
+      await fetchImportHistory();
+      await fetchDuplicateCount();
     } catch (error) {
       console.error('Delete duplicates error:', error);
       toast.error("Lỗi khi xóa tin trùng");
@@ -304,8 +304,8 @@ const DataManagement = () => {
       if (historyError) throw historyError;
 
       toast.success("Đã xóa lần import thành công");
-      fetchImportHistory();
-      fetchDuplicateCount();
+      await fetchImportHistory();
+      await fetchDuplicateCount();
     } catch (error) {
       console.error('Delete import history error:', error);
       toast.error("Lỗi khi xóa lần import");
