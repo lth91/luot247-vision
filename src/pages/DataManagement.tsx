@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
-import { Download, LogOut, KeyRound, Upload, Clock } from "lucide-react";
+import { Download, LogOut, KeyRound, Upload, Clock, Trash2 } from "lucide-react";
 import { toVietnamTime } from "@/lib/dateUtils";
 
 interface NewsPreview {
@@ -34,6 +34,7 @@ const DataManagement = () => {
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importHistory, setImportHistory] = useState<ImportHistory[]>([]);
+  const [isDeletingDuplicates, setIsDeletingDuplicates] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -166,6 +167,68 @@ const DataManagement = () => {
     toast.info("Chức năng đổi mật khẩu đang được phát triển");
   };
 
+  const handleDeleteDuplicates = async () => {
+    if (!confirm("Bạn có chắc chắn muốn xóa tất cả tin trùng? Tin trùng sẽ bị xóa hoàn toàn khỏi database, kể cả tin đã được duyệt.")) {
+      return;
+    }
+
+    setIsDeletingDuplicates(true);
+    toast.info("Đang tìm và xóa tin trùng...");
+
+    try {
+      // Find duplicates based on title
+      const { data: allNews, error: fetchError } = await supabase
+        .from("news")
+        .select("id, title, created_at")
+        .order("created_at", { ascending: true });
+
+      if (fetchError) throw fetchError;
+
+      // Group by title and find duplicates
+      const titleMap = new Map<string, typeof allNews>();
+      allNews?.forEach(news => {
+        const existing = titleMap.get(news.title);
+        if (existing) {
+          existing.push(news);
+        } else {
+          titleMap.set(news.title, [news]);
+        }
+      });
+
+      // Get IDs of duplicates (keep the first one, delete the rest)
+      const duplicateIds: string[] = [];
+      titleMap.forEach((newsArray) => {
+        if (newsArray.length > 1) {
+          // Keep the first (oldest), delete the rest
+          newsArray.slice(1).forEach(news => {
+            duplicateIds.push(news.id);
+          });
+        }
+      });
+
+      if (duplicateIds.length === 0) {
+        toast.success("Không tìm thấy tin trùng");
+        return;
+      }
+
+      // Delete duplicates
+      const { error: deleteError } = await supabase
+        .from("news")
+        .delete()
+        .in("id", duplicateIds);
+
+      if (deleteError) throw deleteError;
+
+      toast.success(`Đã xóa ${duplicateIds.length} tin trùng`);
+      fetchImportHistory(); // Refresh history
+    } catch (error) {
+      console.error('Delete duplicates error:', error);
+      toast.error("Lỗi khi xóa tin trùng");
+    } finally {
+      setIsDeletingDuplicates(false);
+    }
+  };
+
   if (isLoading || (userRole !== "admin" && userRole !== "moderator")) {
     return (
       <div className="min-h-screen bg-background">
@@ -239,7 +302,17 @@ const DataManagement = () => {
         {/* Import History - Moved to top */}
         {importHistory.length > 0 && (
           <Card className="p-6 mt-6">
-            <h3 className="text-xl font-semibold mb-4">Lịch sử upload</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold">Lịch sử upload</h3>
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteDuplicates}
+                disabled={isDeletingDuplicates}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {isDeletingDuplicates ? "Đang xóa..." : "Xóa tin trùng"}
+              </Button>
+            </div>
             <div className="border rounded-lg overflow-hidden">
               <Table>
                 <TableHeader>
