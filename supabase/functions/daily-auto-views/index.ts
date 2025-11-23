@@ -55,9 +55,9 @@ serve(async (req) => {
       }
     }
 
-    // Tổng view mục tiêu cho cả ngày: 600-800
+    // Tổng view mục tiêu cho cả ngày: 1000-1500 (random mỗi ngày)
     // Chia đều cho 30 khoảng 30 phút (7AM-10PM = 15h = 30 khoảng)
-    const dailyTarget = 700 // Trung bình
+    const dailyTarget = 1000 + Math.floor(Math.random() * 501) // Random từ 1000-1500
     const totalIntervals = 30 // 15 giờ * 2 (mỗi giờ có 2 khoảng 30 phút)
     
     // Phân bố theo giờ (peak hours)
