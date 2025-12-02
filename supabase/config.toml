@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.import-google-sheet]
 verify_jwt = false
+
+[functions.get-view-stats]
+verify_jwt = false
