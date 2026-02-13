@@ -420,13 +420,14 @@ const DataManagement = () => {
                     <TableRow key={history.id}>
                       <TableCell className="font-medium">{history.user_email}</TableCell>
                       <TableCell>
-                        {toVietnamTime(history.imported_at).toLocaleString('vi-VN', {
+                        {new Date(history.imported_at).toLocaleString('vi-VN', {
                           year: 'numeric',
                           month: '2-digit',
                           day: '2-digit',
                           hour: '2-digit',
                           minute: '2-digit',
-                          second: '2-digit'
+                          second: '2-digit',
+                          timeZone: 'Asia/Ho_Chi_Minh'
                         })}
                       </TableCell>
                       <TableCell>
