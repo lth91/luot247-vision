@@ -427,7 +427,7 @@ const Index = () => {
       });
       
       // Also save on scroll to ensure we capture the position
-      let scrollSaveTimeout: NodeJS.Timeout;
+      let scrollSaveTimeout: ReturnType<typeof setTimeout>;
       const saveOnScroll = () => {
         clearTimeout(scrollSaveTimeout);
         scrollSaveTimeout = setTimeout(() => {
@@ -473,7 +473,7 @@ const Index = () => {
       console.log('🖥️ Desktop detected: Using scroll detection');
       
       // Desktop scroll detection (simplified)
-      let scrollTimeout: NodeJS.Timeout;
+      let scrollTimeout: ReturnType<typeof setTimeout>;
       let isProcessing = false;
       
       const handleScroll = () => {
