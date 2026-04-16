@@ -243,14 +243,9 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                   <div className="border-t pt-4">
                     <div className="flex items-center justify-between px-2 py-2">
                       <Label htmlFor="reading-mode" className="text-sm">
-                        📄 Bật chế độ đọc lật trang
+                        📄 Bật chế độ lật trang
                       </Label>
                       <Switch id="reading-mode" checked={readingMode} onCheckedChange={handleReadingModeToggle} />
-                    </div>
-                    <div className="px-2 py-1">
-                      <p className="text-xs text-muted-foreground">
-                        ⌨️ Phím tắt: <kbd className="px-1 py-0.5 text-xs bg-muted rounded">Ctrl</kbd> + <kbd className="px-1 py-0.5 text-xs bg-muted rounded">M</kbd>
-                      </p>
                     </div>
                   </div>
 
@@ -298,14 +293,9 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                   <div className="border-t pt-4 mt-4">
                     <div className="flex items-center justify-between px-2 py-2">
                       <Label htmlFor="reading-mode-guest" className="text-sm">
-                        📄 Bật chế độ đọc lật trang
+                        📄 Bật chế độ lật trang
                       </Label>
                       <Switch id="reading-mode-guest" checked={readingMode} onCheckedChange={handleReadingModeToggle} />
-                    </div>
-                    <div className="px-2 py-1">
-                      <p className="text-xs text-muted-foreground">
-                        ⌨️ Phím tắt: <kbd className="px-1 py-0.5 text-xs bg-muted rounded">Ctrl</kbd> + <kbd className="px-1 py-0.5 text-xs bg-muted rounded">M</kbd>
-                      </p>
                     </div>
                   </div>
 
