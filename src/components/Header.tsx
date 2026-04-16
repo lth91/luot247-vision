@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -122,15 +122,9 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
 
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <div className="absolute right-0 flex items-center gap-2">
-              <div className="flex items-center gap-1 text-sm text-muted-foreground animate-pulse">
-                <span className="font-medium">Menu</span>
-                <span className="text-xl">→</span>
-              </div>
-              <Button variant="ghost" size="icon">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </div>
+            <Button variant="ghost" className="absolute right-0 text-sm font-medium">
+              Menu
+            </Button>
           </SheetTrigger>
           <SheetContent side="right" className="w-[280px]">
             <div className="flex flex-col gap-4 mt-8">
