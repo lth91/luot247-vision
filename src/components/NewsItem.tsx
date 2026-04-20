@@ -4,8 +4,8 @@ import { ThumbsUp, ThumbsDown, Share2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { useReadingContext } from "@/contexts/ReadingContext";
-import { useFavorites } from "@/contexts/FavoritesContext";
+import { useReadingContext } from "@/contexts/useReadingContext";
+import { useFavorites } from "@/contexts/useFavorites";
 import { ShareDialog } from "@/components/ShareDialog";
 import { getRelativeTime } from "@/lib/dateUtils";
 

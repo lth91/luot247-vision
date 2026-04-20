@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,8 +53,12 @@ const ViewManagement2 = () => {
   
   // Test reset
   const [testResetLoading, setTestResetLoading] = useState(false);
-  const [beforeResetStats, setBeforeResetStats] = useState<any>(null);
-  const [afterResetStats, setAfterResetStats] = useState<any>(null);
+  interface ResetStatsSnapshot {
+    calculated: Record<string, number>;
+    raw: { yesterday: number; today: number };
+  }
+  const [beforeResetStats, setBeforeResetStats] = useState<ResetStatsSnapshot | null>(null);
+  const [afterResetStats, setAfterResetStats] = useState<ResetStatsSnapshot | null>(null);
 
 
   useEffect(() => {
@@ -71,35 +75,7 @@ const ViewManagement2 = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (session?.user) {
-      checkAdminRole();
-    } else {
-      setUserRole(null);
-      setRoleChecked(true);
-    }
-  }, [session]);
-
-
-  useEffect(() => {
-    if (!sessionChecked || !roleChecked) return;
-    
-    const isAdminByRole = session?.user && userRole === "admin";
-    const isAdminByEmail = session?.user?.email === 'longth91@gmail.com';
-    const isAdmin = isAdminByRole || isAdminByEmail;
-    
-    if (session?.user && isAdmin) {
-      fetchCurrentStats();
-      setIsLoading(false);
-    } else if (session?.user && !isAdmin) {
-      toast.error("Bạn không có quyền truy cập trang này");
-      navigate("/");
-    } else if (!session) {
-      navigate("/auth");
-    }
-  }, [session, userRole, sessionChecked, roleChecked, navigate]);
-
-  const checkAdminRole = async () => {
+  const checkAdminRole = useCallback(async () => {
     if (!session?.user) return;
 
     try {
@@ -122,7 +98,35 @@ const ViewManagement2 = () => {
     } finally {
       setRoleChecked(true);
     }
-  };
+  }, [session?.user]);
+
+  useEffect(() => {
+    if (session?.user) {
+      checkAdminRole();
+    } else {
+      setUserRole(null);
+      setRoleChecked(true);
+    }
+  }, [session, checkAdminRole]);
+
+
+  useEffect(() => {
+    if (!sessionChecked || !roleChecked) return;
+    
+    const isAdminByRole = session?.user && userRole === "admin";
+    const isAdminByEmail = session?.user?.email === 'longth91@gmail.com';
+    const isAdmin = isAdminByRole || isAdminByEmail;
+    
+    if (session?.user && isAdmin) {
+      fetchCurrentStats();
+      setIsLoading(false);
+    } else if (session?.user && !isAdmin) {
+      toast.error("Bạn không có quyền truy cập trang này");
+      navigate("/");
+    } else if (!session) {
+      navigate("/auth");
+    }
+  }, [session, userRole, sessionChecked, roleChecked, navigate]);
 
   // Handler functions for auto-updating related values
   // These handlers calculate delta from current value to new value
@@ -179,7 +183,7 @@ const ViewManagement2 = () => {
 
   const fetchCurrentStats = async () => {
     try {
-      // @ts-ignore
+      // @ts-expect-error RPC function name is not in generated types yet
       const { data, error } = await supabase.rpc('get_view2_stats');
       
       if (error) {
@@ -345,7 +349,7 @@ const ViewManagement2 = () => {
             if (update.periodType === 'yesterday') {
               // Delete all logs in yesterday period
               if (endTime) {
-                const { error: deleteError } = await (supabase as any)
+                const { error: deleteError } = await supabase
                   .from('view_logs2')
                   .delete()
                   .gte('viewed_at', startTime)
@@ -360,14 +364,14 @@ const ViewManagement2 = () => {
               // For other periods (today, week, month), calculate base = desired - logs
               let logCount = 0;
               if (endTime) {
-                const { count } = await (supabase as any)
+                const { count } = await supabase
                   .from('view_logs2')
                   .select('*', { count: 'exact', head: true })
                   .gte('viewed_at', startTime)
                   .lt('viewed_at', endTime);
                 logCount = count || 0;
               } else {
-                const { count } = await (supabase as any)
+                const { count } = await supabase
                   .from('view_logs2')
                   .select('*', { count: 'exact', head: true })
                   .gte('viewed_at', startTime);
@@ -381,13 +385,13 @@ const ViewManagement2 = () => {
               if (update.value <= 0 && logCount > 0) {
                 console.log(`Deleting logs from ${startTime} to ${endTime || 'now'}`);
                 if (endTime) {
-                  await (supabase as any)
+                  await supabase
                     .from('view_logs2')
                     .delete()
                     .gte('viewed_at', startTime)
                     .lt('viewed_at', endTime);
                 } else {
-                  await (supabase as any)
+                  await supabase
                     .from('view_logs2')
                     .delete()
                     .gte('viewed_at', startTime);
@@ -399,7 +403,7 @@ const ViewManagement2 = () => {
           }
           
           // Update base value (records should already exist from migration)
-          const { error } = await (supabase as any)
+          const { error } = await supabase
             .from('view_stats2')
             .update({ 
               stat_value: newBaseValue, 
@@ -413,7 +417,7 @@ const ViewManagement2 = () => {
             // If record doesn't exist, insert it (bypassing RLS with upsert)
             if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
               console.log(`Record not found for ${update.key}, attempting insert...`);
-              const { error: insertError } = await (supabase as any)
+              const { error: insertError } = await supabase
                 .from('view_stats2')
                 .insert({ 
                   stat_key: update.key,
@@ -443,9 +447,9 @@ const ViewManagement2 = () => {
           total: editValues.total
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error updating stats:', error);
-      toast.error(`Lỗi: ${error.message}`);
+      toast.error(`Lỗi: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -476,7 +480,7 @@ const ViewManagement2 = () => {
 
       if (error) {
         console.error('Error calling Edge Function:', error);
-        toast.error("Có lỗi xảy ra khi thêm view: " + error.message);
+        toast.error("Có lỗi xảy ra khi thêm view: " + (error.message ?? String(error)));
         setIsProcessing(false);
         return;
       }
@@ -491,7 +495,7 @@ const ViewManagement2 = () => {
       setTotalViews("");
       setDurationHours("");
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error calling Edge Function:', error);
       toast.error("Có lỗi xảy ra khi thêm view");
     } finally {
@@ -564,9 +568,9 @@ const ViewManagement2 = () => {
       // Refresh current stats
       await fetchCurrentStats();
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error testing reset:', error);
-      toast.error(`Lỗi: ${error.message}`);
+      toast.error(`Lỗi: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setTestResetLoading(false);
     }

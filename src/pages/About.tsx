@@ -1,11 +1,12 @@
 import { Header } from "@/components/Header";
 import { useState, useEffect } from "react";
+import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Mail, MapPin } from "lucide-react";
 
 const About = () => {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {

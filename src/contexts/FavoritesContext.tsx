@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-interface FavoritesContextType {
+export interface FavoritesContextType {
   favoriteIds: Set<string>;
   favoriteData: Array<{news_id: string, created_at: string}>;
   isLoading: boolean;
@@ -11,7 +11,8 @@ interface FavoritesContextType {
   loadFavorites: () => Promise<void>;
 }
 
-const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
+// eslint-disable-next-line react-refresh/only-export-components
+export const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
 
 interface FavoritesProviderProps {
   children: ReactNode;
@@ -23,7 +24,7 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children, 
   const [favoriteData, setFavoriteData] = useState<Array<{news_id: string, created_at: string}>>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const loadFavorites = async () => {
+  const loadFavorites = useCallback(async () => {
     if (!userId) {
       setFavoriteIds(new Set());
       setFavoriteData([]);
@@ -48,7 +49,7 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children, 
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [userId]);
 
   const toggleFavorite = async (newsId: string) => {
     if (!userId) {
@@ -57,7 +58,7 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children, 
     }
 
     const isCurrentlyFavorite = favoriteIds.has(newsId);
-    
+
     try {
       if (isCurrentlyFavorite) {
         // Remove from favorites
@@ -74,7 +75,7 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children, 
           updated.delete(newsId);
           return updated;
         });
-        
+
         setFavoriteData(prev => prev.filter(item => item.news_id !== newsId));
         toast.success('Đã xóa khỏi danh sách yêu thích');
       } else {
@@ -88,7 +89,7 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children, 
         }
 
         setFavoriteIds(prev => new Set([...prev, newsId]));
-        
+
         // Add to favoriteData with current timestamp
         const newFavoriteData = {
           news_id: newsId,
@@ -110,7 +111,7 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children, 
   // Load favorites when userId changes
   useEffect(() => {
     loadFavorites();
-  }, [userId]);
+  }, [loadFavorites]);
 
   const value: FavoritesContextType = {
     favoriteIds,
@@ -126,12 +127,4 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children, 
       {children}
     </FavoritesContext.Provider>
   );
-};
-
-export const useFavorites = (): FavoritesContextType => {
-  const context = useContext(FavoritesContext);
-  if (context === undefined) {
-    throw new Error('useFavorites must be used within a FavoritesProvider');
-  }
-  return context;
 };

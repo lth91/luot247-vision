@@ -5,15 +5,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import type { TooltipProps } from "recharts";
+
+interface StatsRow {
+  day_name?: string;
+  day?: string;
+  view_count: number;
+}
 
 // Custom Tooltip Component
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
         <p className="font-semibold mb-1">{label}</p>
         <p className="text-primary font-bold text-lg">
-          {payload[0].value.toLocaleString("vi-VN")}
+          {(payload[0].value as number).toLocaleString("vi-VN")}
         </p>
       </div>
     );
@@ -24,8 +31,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 const Charts = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [weeklyData, setWeeklyData] = useState<any[]>([]);
-  const [monthlyData, setMonthlyData] = useState<any[]>([]);
+  const [weeklyData, setWeeklyData] = useState<StatsRow[]>([]);
+  const [monthlyData, setMonthlyData] = useState<StatsRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -70,7 +77,7 @@ const Charts = () => {
   }, []);
 
   const fetchWeeklyData = async () => {
-    // @ts-ignore
+    // @ts-expect-error RPC function name is not in generated types yet
     const { data, error } = await supabase.rpc('get_weekly_stats_from_daily');
     
     if (error) {
@@ -85,7 +92,7 @@ const Charts = () => {
   };
 
   const fetchMonthlyData = async () => {
-    // @ts-ignore
+    // @ts-expect-error RPC function name is not in generated types yet
     const { data, error } = await supabase.rpc('get_monthly_stats_from_daily');
     
     if (error) {

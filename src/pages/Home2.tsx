@@ -1,12 +1,12 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { Header } from "@/components/Header";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ThumbsUp, ThumbsDown, Share2, Search, ChevronLeft, ChevronRight } from "lucide-react";
-import { useReadingContext } from "@/contexts/ReadingContext";
-import { useFavorites } from "@/contexts/FavoritesContext";
+import { useReadingContext } from "@/contexts/useReadingContext";
+import { useFavorites } from "@/contexts/useFavorites";
 import { ShareDialog } from "@/components/ShareDialog";
 import { getRelativeTime } from "@/lib/dateUtils";
 
@@ -63,18 +63,69 @@ const Home2 = () => {
     }
   }, [session]);
 
+  const fetchNews = useCallback(async () => {
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from("news")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      toast.error("Không thể tải tin tức");
+      console.error(error);
+    } else {
+      setNews(data || []);
+    }
+    setIsLoading(false);
+  }, [setNews]);
+
+  const handleNext = useCallback(() => {
+    if (currentNewsIndex < filteredNews.length - 1) {
+      // Mark current news as read before moving to next
+      if (currentNews) {
+        markNewsAsRead(currentNews.id);
+      }
+
+      const newIndex = currentNewsIndex + 1;
+      setCurrentNewsIndex(newIndex);
+      setDisliked(false);
+
+      // Save the NEW current news as last visible for mobile sync
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+      if (isMobile && filteredNews[newIndex]) {
+        localStorage.setItem('luot247_last_visible_news', filteredNews[newIndex].id);
+        console.log(`📱 Mobile: Saved ${filteredNews[newIndex].id} as last visible news (next)`);
+      }
+    }
+  }, [currentNewsIndex, filteredNews, currentNews, markNewsAsRead, setCurrentNewsIndex]);
+
+  const handlePrevious = useCallback(() => {
+    if (currentNewsIndex > 0) {
+      const newIndex = currentNewsIndex - 1;
+      setCurrentNewsIndex(newIndex);
+      setDisliked(false);
+
+      // Save the NEW current news as last visible for mobile sync
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+      if (isMobile && filteredNews[newIndex]) {
+        localStorage.setItem('luot247_last_visible_news', filteredNews[newIndex].id);
+        console.log(`📱 Mobile: Saved ${filteredNews[newIndex].id} as last visible news (previous)`);
+      }
+    }
+  }, [currentNewsIndex, filteredNews, setCurrentNewsIndex]);
+
   useEffect(() => {
     fetchNews();
-    
+
     // Check if hints have been shown before
     const hintsShown = localStorage.getItem('luot247_flip_mode_hints_shown');
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-    
+
     if (isMobile && !hintsShown) {
       console.log('📱 Mobile: First time entering Flip mode, showing hints');
       setShowArrows(true);
       setHasShownHints(true);
-      
+
       // Hide arrows after 2 seconds
       const hideArrowsTimer = setTimeout(() => {
         setShowArrows(false);
@@ -82,13 +133,13 @@ const Home2 = () => {
         localStorage.setItem('luot247_flip_mode_hints_shown', 'true');
         console.log('📱 Mobile: Hints hidden and marked as shown');
       }, 2000);
-      
+
       return () => clearTimeout(hideArrowsTimer);
     } else if (isMobile && hintsShown) {
       console.log('📱 Mobile: Hints already shown before, not showing again');
       setHasShownHints(true);
     }
-  }, []);
+  }, [fetchNews]);
 
   // Setup touch navigation immediately on mount - Mobile only
   useEffect(() => {
@@ -152,7 +203,7 @@ const Home2 = () => {
       // If not available, try multiple times with increasing delays
       const retryDelays = [100, 300, 500, 1000];
       let retryIndex = 0;
-      
+
       const retrySetup = () => {
         if (retryIndex < retryDelays.length) {
           setTimeout(() => {
@@ -163,26 +214,10 @@ const Home2 = () => {
           }, retryDelays[retryIndex]);
         }
       };
-      
+
       retrySetup();
     }
-  }, []);
-
-  const fetchNews = async () => {
-    setIsLoading(true);
-    const { data, error } = await supabase
-      .from("news")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      toast.error("Không thể tải tin tức");
-      console.error(error);
-    } else {
-      setNews(data || []);
-    }
-    setIsLoading(false);
-  };
+  }, [handleNext, handlePrevious]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -195,7 +230,7 @@ const Home2 = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentNewsIndex, filteredNews.length]);
+  }, [handleNext, handlePrevious]);
 
   // Touch gesture handling for mobile navigation - Mobile only (backup)
   useEffect(() => {
@@ -263,42 +298,7 @@ const Home2 = () => {
     } else {
       console.log('📱 Main content ref not available for backup setup');
     }
-  }, [currentNewsIndex, filteredNews.length]);
-
-  const handleNext = () => {
-    if (currentNewsIndex < filteredNews.length - 1) {
-      // Mark current news as read before moving to next
-      if (currentNews) {
-        markNewsAsRead(currentNews.id);
-      }
-      
-      const newIndex = currentNewsIndex + 1;
-      setCurrentNewsIndex(newIndex);
-      setDisliked(false);
-      
-      // Save the NEW current news as last visible for mobile sync
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-      if (isMobile && filteredNews[newIndex]) {
-        localStorage.setItem('luot247_last_visible_news', filteredNews[newIndex].id);
-        console.log(`📱 Mobile: Saved ${filteredNews[newIndex].id} as last visible news (next)`);
-      }
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentNewsIndex > 0) {
-      const newIndex = currentNewsIndex - 1;
-      setCurrentNewsIndex(newIndex);
-      setDisliked(false);
-      
-      // Save the NEW current news as last visible for mobile sync
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-      if (isMobile && filteredNews[newIndex]) {
-        localStorage.setItem('luot247_last_visible_news', filteredNews[newIndex].id);
-        console.log(`📱 Mobile: Saved ${filteredNews[newIndex].id} as last visible news (previous)`);
-      }
-    }
-  };
+  }, [handleNext, handlePrevious]);
 
   const handleLike = async () => {
     if (!session) {

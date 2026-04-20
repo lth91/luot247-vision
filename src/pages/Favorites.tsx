@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { NewsItem } from "@/components/NewsItem";
@@ -7,8 +7,8 @@ import { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Trash2, ArrowUpDown } from "lucide-react";
-import { useFavorites } from "@/contexts/FavoritesContext";
-import { useReadingContext } from "@/contexts/ReadingContext";
+import { useFavorites } from "@/contexts/useFavorites";
+import { useReadingContext } from "@/contexts/useReadingContext";
 import {
   Select,
   SelectContent,
@@ -81,40 +81,7 @@ const Favorites = () => {
     };
   }, [setShouldHideReadNews]);
 
-  useEffect(() => {
-    // Only redirect after session has been checked
-    if (!sessionChecked) return;
-    
-    if (!session) {
-      navigate("/auth");
-      return;
-    }
-
-    if (session?.user) {
-      supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .maybeSingle()
-        .then(({ data }) => {
-          setUserRole(data?.role || null);
-        });
-
-      fetchFavorites();
-    }
-  }, [session, sessionChecked, navigate]);
-
-  // Fetch favorites when favoriteIds or favoriteData change
-  useEffect(() => {
-    if (favoriteIds.size > 0 && favoriteData.length > 0) {
-      fetchFavorites();
-    } else {
-      setFavorites([]);
-      setIsLoading(false);
-    }
-  }, [favoriteIds, favoriteData]);
-
-  const fetchFavorites = async () => {
+  const fetchFavorites = useCallback(async () => {
     if (!session?.user || favoriteIds.size === 0) {
       setFavorites([]);
       setIsLoading(false);
@@ -138,7 +105,7 @@ const Favorites = () => {
         return {
           ...news,
           liked_at: favoriteInfo?.created_at
-        };
+        } as NewsData;
       });
 
       setFavorites(mergedData);
@@ -148,7 +115,40 @@ const Favorites = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [session?.user, favoriteIds, favoriteData]);
+
+  useEffect(() => {
+    // Only redirect after session has been checked
+    if (!sessionChecked) return;
+
+    if (!session) {
+      navigate("/auth");
+      return;
+    }
+
+    if (session?.user) {
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          setUserRole(data?.role || null);
+        });
+
+      fetchFavorites();
+    }
+  }, [session, sessionChecked, navigate, fetchFavorites]);
+
+  // Fetch favorites when favoriteIds or favoriteData change
+  useEffect(() => {
+    if (favoriteIds.size > 0 && favoriteData.length > 0) {
+      fetchFavorites();
+    } else {
+      setFavorites([]);
+      setIsLoading(false);
+    }
+  }, [favoriteIds, favoriteData, fetchFavorites]);
 
   // Sort favorites based on selected option
   const sortedFavorites = [...favorites].sort((a, b) => {

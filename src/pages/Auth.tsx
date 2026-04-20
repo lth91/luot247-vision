@@ -55,7 +55,7 @@ const Auth = () => {
       const loginPassword = isAdmin ? password : `auto_${trimmedEmail}_pass`;
       
       // Sign in flow
-      let { error: signInError } = await supabase.auth.signInWithPassword({
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
         password: loginPassword,
       });
