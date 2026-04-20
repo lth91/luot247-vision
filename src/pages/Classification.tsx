@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Card } from "@/components/ui/card";
@@ -10,6 +10,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
 import { ChevronLeft, ChevronRight, Edit } from "lucide-react";
+import type { News } from "@/types/news";
+import type { Database } from "@/integrations/supabase/types";
+
+type NewsCategory = Database["public"]["Enums"]["news_category"];
 
 const categoryButtons = [
   { value: "kinh-te", label: "Kinh tế" },
@@ -23,7 +27,7 @@ const Classification = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [news, setNews] = useState<any[]>([]);
+  const [news, setNews] = useState<News[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -85,31 +89,7 @@ const Classification = () => {
     }
   }, [session, navigate]);
 
-  useEffect(() => {
-    if (session && (userRole === "admin" || userRole === "moderator")) {
-      fetchNews();
-      fetchStats();
-    }
-  }, [session, userRole]);
-
-  const fetchNews = async () => {
-    setIsLoading(true);
-    const { data, error } = await supabase
-      .from("news")
-      .select("*")
-      .eq("category", "khac")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      toast.error("Không thể tải tin tức");
-      console.error(error);
-    } else {
-      setNews(data || []);
-    }
-    setIsLoading(false);
-  };
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     if (!session?.user) return;
 
     const now = new Date();
@@ -168,7 +148,31 @@ const Classification = () => {
       lifetime: lifetimeRes.count || 0,
       pending: pendingRes.count || 0
     });
+  }, [session?.user]);
+
+  const fetchNews = async () => {
+    setIsLoading(true);
+    const { data, error } = await supabase
+      .from("news")
+      .select("*")
+      .eq("category", "khac")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      toast.error("Không thể tải tin tức");
+      console.error(error);
+    } else {
+      setNews(data || []);
+    }
+    setIsLoading(false);
   };
+
+  useEffect(() => {
+    if (session && (userRole === "admin" || userRole === "moderator")) {
+      fetchNews();
+      fetchStats();
+    }
+  }, [session, userRole, fetchStats]);
 
   const handleCategoryChange = async (category: string) => {
     if (!news[currentIndex] || !session?.user) return;
@@ -176,7 +180,7 @@ const Classification = () => {
     const { error } = await supabase
       .from("news")
       .update({ 
-        category: category as any,
+        category: category as NewsCategory,
         is_approved: true  // Approve the news when category is assigned
       })
       .eq("id", news[currentIndex].id);

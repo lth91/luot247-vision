@@ -59,7 +59,7 @@ const ViewCount2 = () => {
   }, []);
 
   const fetchStats = async () => {
-    // @ts-ignore
+    // @ts-expect-error RPC function name is not in generated types yet
     const { data, error } = await supabase.rpc('get_view2_stats');
     
     if (error) {

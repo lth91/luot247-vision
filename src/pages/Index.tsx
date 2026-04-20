@@ -1,11 +1,17 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { Header } from "@/components/Header";
 import { NewsItem } from "@/components/NewsItem";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
-import { useReadingContext } from "@/contexts/ReadingContext";
-import { useFavorites } from "@/contexts/FavoritesContext";
+import { useReadingContext } from "@/contexts/useReadingContext";
+import { useFavorites } from "@/contexts/useFavorites";
+
+declare global {
+  interface Window {
+    clearReadNews?: () => void;
+  }
+}
 
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -66,25 +72,27 @@ const Index = () => {
   useEffect(() => {
     fetchNews();
     loadReadNewsFromStorage();
-    
+
     // Record a view when user visits the website
     recordPageView();
-    
+
     // Mark as no longer initial load
     setIsInitialLoad(false);
     console.log('🚀 Page load complete - isInitialLoad = false');
-    
+
     // Expose clear function to window for debugging
-    (window as any).clearReadNews = clearReadNews;
+    window.clearReadNews = clearReadNews;
 
     // Handle deep link to specific news
     handleDeepLink();
+    // Run once on mount - dependencies are intentionally empty
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const recordPageView = async () => {
     try {
       // Insert a view log record using server time to avoid timezone issues
-      await (supabase as any).from("view_logs2").insert({});
+      await supabase.from("view_logs2").insert({});
       console.log('✅ Page view recorded to view_logs2');
     } catch (error) {
       console.error('❌ Error recording page view:', error);
@@ -540,12 +548,14 @@ const Index = () => {
     };
     
     window.addEventListener('scroll', handleScroll, { passive: true });
-      
+
       return () => {
         window.removeEventListener('scroll', handleScroll);
         clearTimeout(scrollTimeout);
       };
     }
+    // Scroll handler uses markNewsAsRead/syncCurrentIndex via closure; mount-once effect
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchNews = async () => {

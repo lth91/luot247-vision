@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { formatVietnamDateShort } from "@/lib/dateUtils";
@@ -50,35 +50,7 @@ const Admin = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (session?.user) {
-      checkAdminRole();
-    } else {
-      setUserRole(null);
-      setRoleChecked(true);
-    }
-  }, [session]);
-
-  useEffect(() => {
-    // Only check after both session and role have been checked
-    if (!sessionChecked || !roleChecked) return;
-    
-    // Check if user is admin (either by role or by email)
-    const isAdminByRole = session?.user && userRole === "admin";
-    const isAdminByEmail = session?.user?.email === 'longth91@gmail.com';
-    const isAdmin = isAdminByRole || isAdminByEmail;
-    
-    if (session?.user && isAdmin) {
-      setIsLoading(false);
-    } else if (session?.user && !isAdmin) {
-      toast.error("Bạn không có quyền truy cập trang này");
-      navigate("/");
-    } else if (!session) {
-      navigate("/auth");
-    }
-  }, [session, userRole, sessionChecked, roleChecked, navigate]);
-
-  const checkAdminRole = async () => {
+  const checkAdminRole = useCallback(async () => {
     if (!session?.user) return;
 
     try {
@@ -102,7 +74,35 @@ const Admin = () => {
     } finally {
       setRoleChecked(true);
     }
-  };
+  }, [session?.user]);
+
+  useEffect(() => {
+    if (session?.user) {
+      checkAdminRole();
+    } else {
+      setUserRole(null);
+      setRoleChecked(true);
+    }
+  }, [session, checkAdminRole]);
+
+  useEffect(() => {
+    // Only check after both session and role have been checked
+    if (!sessionChecked || !roleChecked) return;
+    
+    // Check if user is admin (either by role or by email)
+    const isAdminByRole = session?.user && userRole === "admin";
+    const isAdminByEmail = session?.user?.email === 'longth91@gmail.com';
+    const isAdmin = isAdminByRole || isAdminByEmail;
+    
+    if (session?.user && isAdmin) {
+      setIsLoading(false);
+    } else if (session?.user && !isAdmin) {
+      toast.error("Bạn không có quyền truy cập trang này");
+      navigate("/");
+    } else if (!session) {
+      navigate("/auth");
+    }
+  }, [session, userRole, sessionChecked, roleChecked, navigate]);
 
   const fetchUsers = async () => {
     try {

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import type { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,10 +8,10 @@ import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useReadingContext } from "@/contexts/ReadingContext";
+import { useReadingContext } from "@/contexts/useReadingContext";
 
 interface HeaderProps {
-  user: any;
+  user: User | null;
   userRole: string | null;
   showReadNews?: boolean;
   onToggleReadNews?: () => void;
@@ -30,27 +30,12 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
     setReadingMode(location.pathname === "/home2");
   }, [location.pathname]);
 
-  // Keyboard shortcut for mode switching
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Ctrl/Cmd + M to toggle between modes
-      if ((event.ctrlKey || event.metaKey) && event.key === 'm') {
-        event.preventDefault();
-        handleReadingModeToggle(!readingMode);
-        console.log('⌨️ Keyboard shortcut: Toggling reading mode');
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [readingMode, syncToFlipMode, syncToScrollMode]);
-
-  const handleReadingModeToggle = (checked: boolean) => {
+  const handleReadingModeToggle = useCallback((checked: boolean) => {
     setReadingMode(checked);
-    
+
     // Detect if user is on mobile for appropriate timing
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-    
+
     if (checked) {
       // Switching to Flip mode - sync to show first unread news
       setOpen(false);
@@ -65,19 +50,16 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
       // Switching to Scroll mode - sync to scroll to current news
       setOpen(false);
       navigate("/");
-      
-      // Detect if user is on mobile for appropriate timing
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-      
+
       // Use longer timeout for desktop to ensure DOM is fully rendered
       const scrollDelay = isMobile ? 1000 : 800;
-      
+
       // Additional retry logic for desktop to ensure sync works
       const attemptSync = (attempt = 1) => {
         setTimeout(() => {
           console.log(`🔄 Executing Scroll mode sync attempt ${attempt}`);
           syncToScrollMode();
-          
+
           // If this is desktop and first attempt, try again after a longer delay
           if (!isMobile && attempt === 1) {
             setTimeout(() => {
@@ -87,10 +69,25 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
           }
         }, scrollDelay);
       };
-      
+
       attemptSync();
     }
-  };
+  }, [navigate, syncToFlipMode, syncToScrollMode]);
+
+  // Keyboard shortcut for mode switching
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ctrl/Cmd + M to toggle between modes
+      if ((event.ctrlKey || event.metaKey) && event.key === 'm') {
+        event.preventDefault();
+        handleReadingModeToggle(!readingMode);
+        console.log('⌨️ Keyboard shortcut: Toggling reading mode');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [readingMode, handleReadingModeToggle]);
 
   const handleLogout = async () => {
     try {

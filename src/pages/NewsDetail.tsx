@@ -7,11 +7,12 @@ import { ThumbsUp, ThumbsDown, Share2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Session } from "@supabase/supabase-js";
 import { getRelativeTime } from "@/lib/dateUtils";
+import type { News } from "@/types/news";
 
 const NewsDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [news, setNews] = useState<any>(null);
+  const [news, setNews] = useState<News | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [liked, setLiked] = useState(false);

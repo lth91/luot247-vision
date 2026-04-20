@@ -1,51 +1,45 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import type { News } from '@/types/news';
 
-interface ReadingContextType {
+export interface ReadingContextType {
   // Current reading position
   currentNewsIndex: number;
   setCurrentNewsIndex: (index: number) => void;
-  
+
   // Read news tracking
   readNewsIds: Set<string>;
   markNewsAsRead: (newsId: string) => void;
   clearReadNews: () => void;
-  
+
   // Hide read news state
   shouldHideReadNews: boolean;
   setShouldHideReadNews: (hide: boolean) => void;
-  
+
   // News data
-  news: any[];
-  setNews: (news: any[]) => void;
-  
+  news: News[];
+  setNews: (news: News[]) => void;
+
   // Filtered news (excluding read ones if shouldHideReadNews is true)
-  filteredNews: any[];
-  
+  filteredNews: News[];
+
   // Current news based on index
-  currentNews: any | null;
-  
+  currentNews: News | null;
+
   // Highlight effect for sync
   highlightedNewsId: string | null;
   setHighlightedNewsId: (newsId: string | null) => void;
-  
+
   // Mode synchronization
   syncToFlipMode: () => void;
   syncToScrollMode: () => void;
-  
+
   // Deep link handling
   isFromSharedLink: boolean;
   setIsFromSharedLink: (value: boolean) => void;
 }
 
-const ReadingContext = createContext<ReadingContextType | undefined>(undefined);
-
-export const useReadingContext = () => {
-  const context = useContext(ReadingContext);
-  if (context === undefined) {
-    throw new Error('useReadingContext must be used within a ReadingProvider');
-  }
-  return context;
-};
+// eslint-disable-next-line react-refresh/only-export-components
+export const ReadingContext = createContext<ReadingContextType | undefined>(undefined);
 
 interface ReadingProviderProps {
   children: ReactNode;
@@ -55,7 +49,7 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
   const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
   const [readNewsIds, setReadNewsIds] = useState<Set<string>>(new Set());
   const [shouldHideReadNews, setShouldHideReadNews] = useState(false);
-  const [news, setNews] = useState<any[]>([]);
+  const [news, setNews] = useState<News[]>([]);
   const [highlightedNewsId, setHighlightedNewsId] = useState<string | null>(null);
   const [isFromSharedLink, setIsFromSharedLink] = useState(false);
 
@@ -70,7 +64,7 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
           const readIds = JSON.parse(storedReadNews);
           setReadNewsIds(new Set(readIds));
           console.log('📚 ReadingContext - Loaded read news IDs:', readIds);
-          
+
           // Set shouldHideReadNews if there are read news
           if (readIds.length > 0) {
             console.log('🚀 ReadingContext - Setting shouldHideReadNews = true');
@@ -124,20 +118,20 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
       console.log('🔗 ReadingContext - Skipping mark as read (from shared link)');
       return;
     }
-    
+
     console.log('📖 ReadingContext - Marking news as read:', newsId);
     setReadNewsIds(prev => {
       const newSet = new Set(prev);
       newSet.add(newsId);
       console.log('📖 ReadingContext - Updated read news set:', [...newSet]);
       saveReadNewsToStorage(newSet);
-      
+
       // Automatically enable hide read news when marking news as read
       if (!shouldHideReadNews) {
         console.log('🚀 ReadingContext - Auto-enabling shouldHideReadNews');
         setShouldHideReadNews(true);
       }
-      
+
       return newSet;
     });
   };
@@ -154,10 +148,10 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
   };
 
   // Wrapper function to set current index and save to localStorage
-  const updateCurrentNewsIndex = (index: number) => {
+  const updateCurrentNewsIndex = useCallback((index: number) => {
     setCurrentNewsIndex(index);
     saveCurrentIndexToStorage(index);
-  };
+  }, []);
 
   // Filter news based on read status (don't filter if from shared link)
   const filteredNews = (shouldHideReadNews && !isFromSharedLink)
@@ -173,12 +167,12 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
       // If current index is out of bounds, reset to 0
       updateCurrentNewsIndex(0);
     }
-  }, [filteredNews.length, currentNewsIndex]);
+  }, [filteredNews.length, currentNewsIndex, updateCurrentNewsIndex]);
 
   // Sync to Flip mode: Find the first unread news or current position
   const syncToFlipMode = () => {
     console.log('🔄 Syncing to Flip mode...');
-    
+
     if (filteredNews.length === 0) {
       console.log('📰 No filtered news available');
       return;
@@ -186,10 +180,10 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
 
     // Detect if user is on mobile
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-    
+
     if (isMobile) {
       console.log('📱 Mobile detected for Flip mode sync');
-      
+
       // On mobile, try to find the news that was last visible in scroll mode
       const lastVisibleNewsId = localStorage.getItem('luot247_last_visible_news');
       if (lastVisibleNewsId) {
@@ -232,45 +226,45 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
       currentNews: currentNews,
       currentNewsId: currentNews?.id
     });
-    
+
     if (currentNews && typeof window !== 'undefined') {
       // Set highlight for the current news
       setHighlightedNewsId(currentNews.id);
       console.log(`✨ Highlighting news ${currentNews.id}`);
-      
+
       // Detect if user is on mobile
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-      
+
       // More robust scroll function with multiple retries
       const scrollToElement = (attempt = 1) => {
         const newsElement = document.querySelector(`[data-news-id="${currentNews.id}"]`);
         if (newsElement) {
           console.log(`📰 Found news element ${currentNews.id} (attempt ${attempt})`);
-          
+
           // Calculate position to place element at top of viewport
           const elementRect = newsElement.getBoundingClientRect();
           const headerHeight = 60; // Approximate header height
           const currentScrollTop = window.pageYOffset;
           const targetScrollTop = currentScrollTop + elementRect.top - headerHeight;
-          
+
           // Immediate scroll to position (no smooth behavior for reliability)
           window.scrollTo(0, Math.max(0, targetScrollTop));
-          
+
           console.log(`📰 Scrolled to position: ${targetScrollTop}`);
-          
+
           // On mobile, also save this as the last visible news
           if (isMobile) {
             localStorage.setItem('luot247_last_visible_news', currentNews.id);
             console.log(`📱 Mobile: Saved ${currentNews.id} as last visible news`);
           }
-          
+
           return true; // Success
         } else {
           console.log(`📰 News element not found for ${currentNews.id} (attempt ${attempt})`);
           return false; // Failed
         }
       };
-      
+
       // Try multiple times with increasing delays - longer delays for mobile
       const baseDelay = isMobile ? 200 : 100;
       const tryScroll = () => {
@@ -288,10 +282,10 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
           }, baseDelay);
         }
       };
-      
+
       // Start trying immediately
       tryScroll();
-      
+
       // Remove highlight after 3 seconds
       setTimeout(() => {
         setHighlightedNewsId(null);
