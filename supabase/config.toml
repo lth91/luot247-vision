@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.get-view-stats]
 verify_jwt = false
+
+[functions.crawl-electricity-news]
+verify_jwt = false
