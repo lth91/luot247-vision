@@ -170,7 +170,7 @@ VÍ DỤ MẪU:
     },
     body: JSON.stringify({
       model: ANTHROPIC_MODEL,
-      max_tokens: 400,
+      max_tokens: 700,
       system: systemPrompt,
       messages: [{ role: "user", content: userMsg }],
     }),
