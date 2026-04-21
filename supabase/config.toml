@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.crawl-electricity-news]
 verify_jwt = false
+
+[functions.cleanup-electricity-news]
+verify_jwt = false
