@@ -18,7 +18,6 @@ import Home2 from "./pages/Home2";
 import About from "./pages/About";
 import Favorites from "./pages/Favorites";
 import Admin from "./pages/Admin";
-import IranDashboard from "./pages/IranDashboard";
 import NotFound from "./pages/NotFound";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,7 +64,6 @@ const App = () => {
                 <Route path="/about" element={<About />} />
                 <Route path="/favorites" element={<Favorites />} />
                 <Route path="/admin" element={<Admin />} />
-                <Route path="/iran" element={<IranDashboard />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
