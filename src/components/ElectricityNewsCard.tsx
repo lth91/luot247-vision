@@ -52,7 +52,7 @@ export const ElectricityNewsCard = ({
         </span>
       </div>
 
-      <h3 className="font-semibold text-base leading-snug line-clamp-2">{title}</h3>
+      <h3 className="font-semibold text-base leading-snug">{title}</h3>
 
       <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">
         {summary}
