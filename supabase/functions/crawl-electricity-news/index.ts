@@ -213,6 +213,28 @@ function parseRssDate(s: string | null): string | null {
   return isNaN(d.getTime()) ? null : d.toISOString();
 }
 
+// Parse ngày xuất bản từ HTML meta tags theo chuẩn Open Graph / Schema.org / JSON-LD.
+// VnExpress, CafeF, EVN, Bộ Công Thương… đều có ít nhất 1 trong các tag sau.
+function extractPublishedDateFromHtml(html: string): string | null {
+  const patterns: RegExp[] = [
+    /<meta[^>]+property=["']article:published_time["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']article:published_time["']/i,
+    /<meta[^>]+itemprop=["']datePublished["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+itemprop=["']datePublished["']/i,
+    /<meta[^>]+name=["'](?:pubdate|publishdate|publish_date|date|DC\.date\.issued)["'][^>]+content=["']([^"']+)["']/i,
+    /"datePublished"\s*:\s*"([^"]+)"/,
+    /<time[^>]+datetime=["']([^"']+)["']/i,
+  ];
+  for (const p of patterns) {
+    const m = html.match(p);
+    if (m && m[1]) {
+      const d = new Date(m[1]);
+      if (!isNaN(d.getTime())) return d.toISOString();
+    }
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -292,25 +314,42 @@ Deno.serve(async (req) => {
             continue;
           }
           const finalTitle = (c.title || title || "").trim() || "(Không có tiêu đề)";
+
+          // Xác định ngày xuất bản trước khi tốn token Claude.
+          // Ưu tiên: meta tag HTML > RSS pubDate. Nếu cả hai đều không có, sẽ
+          // hỏi Claude ở bước tóm tắt và dùng kết quả đó. Nếu vẫn null → skip.
+          const metaDate = extractPublishedDateFromHtml(artHtml);
+          const rssDate = parseRssDate(c.pubDate ?? null);
+          let preSummaryDate = metaDate ?? rssDate;
+          const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+
+          // Nếu đã xác định được ngày ở đây và quá cũ, bỏ qua LUÔN, tiết kiệm token Claude.
+          if (preSummaryDate) {
+            const ageMs = Date.now() - new Date(preSummaryDate).getTime();
+            if (ageMs > threeDaysMs) {
+              stats.errors.push(`${src.name}: bài cũ (${preSummaryDate.slice(0, 10)}), bỏ qua`);
+              continue;
+            }
+          }
+
           const { summary, publishedDate } = await summarizeWithClaude(finalTitle, content, anthropicKey);
           if (!summary) {
             stats.errors.push(`${src.name}: Claude trả về rỗng`);
             continue;
           }
           const wc = wordCount(summary);
-          const rssDate = parseRssDate(c.pubDate ?? null);
           const llmDateIso = publishedDate ? `${publishedDate}T00:00:00Z` : null;
-          const publishedAt = rssDate ?? llmDateIso;
+          const publishedAt = preSummaryDate ?? llmDateIso;
 
-          // Chỉ nhận tin ≤ 3 ngày tính theo published_at nếu xác định được;
-          // nếu không xác định (null), để ngoài filter này và cho qua — tin sẽ dùng crawled_at ở UI.
-          if (publishedAt) {
-            const ageMs = Date.now() - new Date(publishedAt).getTime();
-            const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
-            if (ageMs > threeDaysMs) {
-              stats.errors.push(`${src.name}: bài cũ (${publishedAt.slice(0, 10)}), bỏ qua`);
-              continue;
-            }
+          // STRICT: bắt buộc phải xác định được ngày. Nếu không, skip.
+          if (!publishedAt) {
+            stats.errors.push(`${src.name}: không xác định được ngày xuất bản, bỏ qua`);
+            continue;
+          }
+          const ageMs = Date.now() - new Date(publishedAt).getTime();
+          if (ageMs > threeDaysMs) {
+            stats.errors.push(`${src.name}: bài cũ (${publishedAt.slice(0, 10)}), bỏ qua`);
+            continue;
           }
 
           const { error: insErr } = await supabase.from("electricity_news").insert({
