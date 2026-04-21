@@ -33,10 +33,14 @@ const CATEGORY_OPTIONS = [
   { key: "bao-chi", label: "Báo chí" },
 ] as const;
 
+const RECENT_DAYS = 3;
+
 const fetchNews = async (limit: number): Promise<ElectricityNewsRow[]> => {
+  const threshold = new Date(Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase
     .from("electricity_news" as never)
     .select("id, source_name, source_category, title, summary, original_url, published_at, crawled_at, summary_word_count")
+    .or(`published_at.gte.${threshold},and(published_at.is.null,crawled_at.gte.${threshold})`)
     .order("published_at", { ascending: false, nullsFirst: false })
     .order("crawled_at", { ascending: false })
     .limit(limit);
@@ -135,7 +139,7 @@ const ElectricityNews = () => {
             <h1 className="text-2xl md:text-3xl font-bold">Tin ngành điện Việt Nam</h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            AI agent tổng hợp và tóm tắt tin tức ngành điện từ 27 nguồn. Cập nhật mỗi giờ.
+            AI agent tổng hợp và tóm tắt tin tức ngành điện từ 27 nguồn — chỉ tin trong {RECENT_DAYS} ngày gần nhất. Cập nhật mỗi giờ.
             {lastCrawled && <> Cập nhật gần nhất: <strong>{getRelativeTime(lastCrawled)}</strong>.</>}
           </p>
         </section>

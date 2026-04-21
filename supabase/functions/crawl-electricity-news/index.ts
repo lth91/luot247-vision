@@ -144,20 +144,28 @@ function extractArticleContent(html: string, selectorList: string | null): { tit
   return { title: stripHtml(title), content };
 }
 
-async function summarizeWithClaude(title: string, content: string, apiKey: string): Promise<string> {
-  const systemPrompt = `Bạn là biên tập viên tin tức chuyên ngành điện Việt Nam. Nhiệm vụ: tóm tắt bài báo dưới 150 từ bằng tiếng Việt.
+async function summarizeWithClaude(
+  title: string,
+  content: string,
+  apiKey: string,
+): Promise<{ summary: string; publishedDate: string | null }> {
+  const systemPrompt = `Bạn là biên tập viên tin tức chuyên ngành điện Việt Nam. Nhiệm vụ: đọc bài báo và trả về JSON gồm ngày xuất bản + tóm tắt.
 
-YÊU CẦU BẮT BUỘC:
-- Văn phong tin tức chuyên ngành, khách quan, trang trọng
-- Phải nêu rõ: ngày (dd/mm/yyyy nếu có), chủ thể chính (cơ quan/doanh nghiệp/người), sự kiện/hành động, kết quả hoặc ý nghĩa
-- Không dùng câu mở đầu như "Bài báo nói về…"
-- Không lặp lại tiêu đề
-- Trả về DUY NHẤT đoạn tóm tắt, không kèm tiêu đề, không giải thích, không markdown
+ĐỊNH DẠNG ĐẦU RA BẮT BUỘC (JSON thuần, không markdown, không giải thích):
+{"published_date": "YYYY-MM-DD hoặc null", "summary": "..."}
+
+QUY TẮC:
+- published_date: ngày xuất bản bài (nếu rõ ràng nêu trong bài hoặc tiêu đề). Dạng YYYY-MM-DD. Nếu không xác định được thì trả null. KHÔNG được đoán hoặc dùng ngày hiện tại.
+- summary: tóm tắt bài báo dưới 150 từ bằng tiếng Việt
+  + Văn phong tin tức chuyên ngành, khách quan, trang trọng
+  + Phải nêu rõ: ngày (dd/mm/yyyy nếu có), chủ thể chính, sự kiện/hành động, kết quả/ý nghĩa
+  + Không dùng câu mở đầu như "Bài báo nói về…"
+  + Không lặp lại tiêu đề
 
 VÍ DỤ MẪU:
-"Sáng 17/04/2026, Bộ Công Thương họp tổ soạn thảo dự án Luật Điện lực sửa đổi dưới sự chủ trì của Thứ trưởng Nguyễn Hoàng Long. Dự án được tách thành nhiệm vụ lập pháp riêng, đã lấy ý kiến từ đầu tháng 2/2026 và công khai hồ sơ trên các cổng thông tin."
+{"published_date":"2026-04-17","summary":"Sáng 17/04/2026, Bộ Công Thương họp tổ soạn thảo dự án Luật Điện lực sửa đổi dưới sự chủ trì của Thứ trưởng Nguyễn Hoàng Long. Dự án được tách thành nhiệm vụ lập pháp riêng, đã lấy ý kiến từ đầu tháng 2/2026 và công khai hồ sơ trên các cổng thông tin."}
 
-"Ngày 17/04/2026, EVNGENCO2 đẩy nhanh dự án điện gió Hướng Phùng 1, đã giải phóng 65.755 m² mặt bằng và triển khai nhiều hạng mục như trạm 110kV, tua bin và đường dây. Dự án phấn đấu hoàn tất giải phóng mặt bằng vào tháng 6/2026 để đảm bảo tiến độ thi công."`;
+{"published_date":"2026-04-17","summary":"Ngày 17/04/2026, EVNGENCO2 đẩy nhanh dự án điện gió Hướng Phùng 1, đã giải phóng 65.755 m² mặt bằng và triển khai nhiều hạng mục như trạm 110kV, tua bin và đường dây. Dự án phấn đấu hoàn tất giải phóng mặt bằng vào tháng 6/2026 để đảm bảo tiến độ thi công."}`;
 
   const userMsg = `Tiêu đề: ${title}\n\nNội dung:\n${content}`;
 
@@ -181,8 +189,18 @@ VÍ DỤ MẪU:
     throw new Error(`Anthropic ${res.status}: ${txt.slice(0, 200)}`);
   }
   const data = await res.json();
-  const summary: string = data?.content?.[0]?.text ?? "";
-  return summary.trim();
+  const raw: string = (data?.content?.[0]?.text ?? "").trim();
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return { summary: raw, publishedDate: null };
+  try {
+    const parsed = JSON.parse(jsonMatch[0]);
+    const summary = String(parsed.summary ?? "").trim();
+    const pd = parsed.published_date;
+    const publishedDate = typeof pd === "string" && /^\d{4}-\d{2}-\d{2}$/.test(pd) ? pd : null;
+    return { summary, publishedDate };
+  } catch {
+    return { summary: raw, publishedDate: null };
+  }
 }
 
 function wordCount(s: string): number {
@@ -274,13 +292,26 @@ Deno.serve(async (req) => {
             continue;
           }
           const finalTitle = (c.title || title || "").trim() || "(Không có tiêu đề)";
-          const summary = await summarizeWithClaude(finalTitle, content, anthropicKey);
+          const { summary, publishedDate } = await summarizeWithClaude(finalTitle, content, anthropicKey);
           if (!summary) {
             stats.errors.push(`${src.name}: Claude trả về rỗng`);
             continue;
           }
           const wc = wordCount(summary);
-          const publishedAt = parseRssDate(c.pubDate ?? null);
+          const rssDate = parseRssDate(c.pubDate ?? null);
+          const llmDateIso = publishedDate ? `${publishedDate}T00:00:00Z` : null;
+          const publishedAt = rssDate ?? llmDateIso;
+
+          // Chỉ nhận tin ≤ 3 ngày tính theo published_at nếu xác định được;
+          // nếu không xác định (null), để ngoài filter này và cho qua — tin sẽ dùng crawled_at ở UI.
+          if (publishedAt) {
+            const ageMs = Date.now() - new Date(publishedAt).getTime();
+            const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+            if (ageMs > threeDaysMs) {
+              stats.errors.push(`${src.name}: bài cũ (${publishedAt.slice(0, 10)}), bỏ qua`);
+              continue;
+            }
+          }
 
           const { error: insErr } = await supabase.from("electricity_news").insert({
             source_id: src.id,
