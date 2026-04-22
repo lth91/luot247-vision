@@ -12,7 +12,9 @@ const corsHeaders = {
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 const SOURCE_CONCURRENCY = 3;
-const MAX_ARTICLES_PER_SOURCE = 15;
+const MAX_ARTICLES_PER_SOURCE = 6;
+const SOURCES_PER_RUN = 15;
+const TIME_BUDGET_MS = 120000;
 const FETCH_TIMEOUT_MS = 30000;
 const MAX_CONTENT_CHARS = 8000;
 
@@ -273,8 +275,9 @@ async function handleCrawl(req: Request): Promise<Response> {
     // không có body, cron call sẽ trống
   }
 
-  // Pick sources: TẤT CẢ nguồn active, sắp xếp theo last_crawled_at cũ nhất.
-  let query = supabase.from("electricity_sources").select("*").eq("is_active", true).order("last_crawled_at", { ascending: true, nullsFirst: true });
+  // Pick sources: chỉ SOURCES_PER_RUN nguồn mỗi lần (oldest first), tránh vượt resource limit
+  // Các run cron 15min tiếp theo sẽ pick tiếp các nguồn còn lại.
+  let query = supabase.from("electricity_sources").select("*").eq("is_active", true).order("last_crawled_at", { ascending: true, nullsFirst: true }).limit(SOURCES_PER_RUN);
   if (forcedSourceId) {
     query = supabase.from("electricity_sources").select("*").eq("id", forcedSourceId);
   }
@@ -417,6 +420,10 @@ async function handleCrawl(req: Request): Promise<Response> {
   const startTime = Date.now();
   try {
     for (let i = 0; i < srcList.length; i += SOURCE_CONCURRENCY) {
+      if (Date.now() - startTime > TIME_BUDGET_MS) {
+        stats.errors.push(`time budget ${TIME_BUDGET_MS}ms reached, stopped at source ${i}/${srcList.length}`);
+        break;
+      }
       const batch = srcList.slice(i, i + SOURCE_CONCURRENCY);
       await Promise.all(batch.map(processSource));
     }
