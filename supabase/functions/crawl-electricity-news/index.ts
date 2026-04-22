@@ -12,7 +12,7 @@ const corsHeaders = {
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 const SOURCE_CONCURRENCY = 3;
-const MAX_ARTICLES_PER_SOURCE = 5;
+const MAX_ARTICLES_PER_SOURCE = 15;
 const FETCH_TIMEOUT_MS = 30000;
 const MAX_CONTENT_CHARS = 8000;
 
