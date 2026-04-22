@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Search, Zap } from "lucide-react";
-import { getRelativeTime } from "@/lib/dateUtils";
 
 type ElectricityNewsRow = {
   id: string;
@@ -92,8 +91,6 @@ const ElectricityNews = () => {
     });
   }, [data, category, search]);
 
-  const lastCrawled = data && data.length > 0 ? data[0].crawled_at : null;
-
   const stats = useMemo(() => {
     if (!data) return { total: 0, today: 0, week: 0 };
     const now = Date.now();
@@ -113,17 +110,6 @@ const ElectricityNews = () => {
       <Header user={session?.user} userRole={userRole} />
 
       <main className="container mx-auto px-4 py-6 max-w-6xl">
-        <section className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <Zap className="h-7 w-7 text-yellow-500" />
-            <h1 className="text-2xl md:text-3xl font-bold">Tin ngành điện Việt Nam</h1>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            AI agent tổng hợp và tóm tắt tin tức ngành điện từ 27 nguồn — chỉ tin trong {RECENT_DAYS} ngày gần nhất. Cập nhật mỗi giờ.
-            {lastCrawled && <> Cập nhật gần nhất: <strong>{getRelativeTime(lastCrawled)}</strong>.</>}
-          </p>
-        </section>
-
         <section className="mb-6 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
           <div className="flex flex-wrap gap-2">
             {CATEGORY_OPTIONS.map((opt) => (
