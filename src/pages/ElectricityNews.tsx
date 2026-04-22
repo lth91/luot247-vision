@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { Header } from "@/components/Header";
@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { RefreshCw, Search, Zap } from "lucide-react";
-import { toast } from "sonner";
+import { Search, Zap } from "lucide-react";
 import { getRelativeTime } from "@/lib/dateUtils";
 
 type ElectricityNewsRow = {
@@ -49,13 +48,11 @@ const fetchNews = async (limit: number): Promise<ElectricityNewsRow[]> => {
 };
 
 const ElectricityNews = () => {
-  const qc = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [category, setCategory] = useState<(typeof CATEGORY_OPTIONS)[number]["key"]>("all");
   const [search, setSearch] = useState("");
-  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
@@ -96,23 +93,6 @@ const ElectricityNews = () => {
   }, [data, category, search]);
 
   const lastCrawled = data && data.length > 0 ? data[0].crawled_at : null;
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      const { error } = await supabase.functions.invoke("crawl-electricity-news");
-      if (error) {
-        toast.error(`Lỗi: ${error.message}`);
-      } else {
-        toast.success("Đã kích hoạt crawl. Đợi ~30 giây rồi tải lại.");
-        setTimeout(() => qc.invalidateQueries({ queryKey: ["electricity-news"] }), 5000);
-      }
-    } catch (e) {
-      toast.error(`Lỗi: ${(e as Error).message}`);
-    } finally {
-      setRefreshing(false);
-    }
-  };
 
   const stats = useMemo(() => {
     if (!data) return { total: 0, today: 0, week: 0 };
@@ -157,25 +137,14 @@ const ElectricityNews = () => {
               </Badge>
             ))}
           </div>
-          <div className="flex gap-2 items-center">
-            <div className="relative flex-1 md:w-64">
-              <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Tìm theo tiêu đề, nội dung, nguồn..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleRefresh}
-              disabled={refreshing}
-              title="Crawl thủ công"
-            >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-            </Button>
+          <div className="relative flex-1 md:w-64">
+            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Tìm theo tiêu đề, nội dung, nguồn..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
           </div>
         </section>
 
