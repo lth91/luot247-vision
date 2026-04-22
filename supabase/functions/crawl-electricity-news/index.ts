@@ -11,7 +11,7 @@ const corsHeaders = {
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
-const SOURCE_CONCURRENCY = 5;
+const SOURCE_CONCURRENCY = 3;
 const MAX_ARTICLES_PER_SOURCE = 5;
 const FETCH_TIMEOUT_MS = 15000;
 const MAX_CONTENT_CHARS = 8000;
@@ -238,6 +238,19 @@ function extractPublishedDateFromHtml(html: string): string | null {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  try {
+    return await handleCrawl(req);
+  } catch (e) {
+    const msg = (e as Error)?.message ?? String(e);
+    console.error("uncaught:", msg, (e as Error)?.stack);
+    return new Response(JSON.stringify({ error: msg, stack: (e as Error)?.stack }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
+
+async function handleCrawl(req: Request): Promise<Response> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
@@ -401,12 +414,28 @@ Deno.serve(async (req) => {
 
   // Xử lý SOURCE_CONCURRENCY nguồn song song mỗi batch.
   // Batch chờ xong mới chạy batch tiếp → tôn trọng rate limit Anthropic + không tràn kết nối DB.
-  for (let i = 0; i < srcList.length; i += SOURCE_CONCURRENCY) {
-    const batch = srcList.slice(i, i + SOURCE_CONCURRENCY);
-    await Promise.all(batch.map(processSource));
+  const startTime = Date.now();
+  try {
+    for (let i = 0; i < srcList.length; i += SOURCE_CONCURRENCY) {
+      const batch = srcList.slice(i, i + SOURCE_CONCURRENCY);
+      await Promise.all(batch.map(processSource));
+    }
+  } catch (e) {
+    const msg = (e as Error)?.message ?? String(e);
+    console.error("crawl batch error:", msg, (e as Error)?.stack);
+    stats.errors.push(`batch crash: ${msg}`);
   }
+  const runMs = Date.now() - startTime;
+  console.log(JSON.stringify({
+    run_ms: runMs,
+    sources: stats.sources,
+    articles_found: stats.articlesFound,
+    articles_inserted: stats.articlesInserted,
+    errors_count: stats.errors.length,
+    first_errors: stats.errors.slice(0, 3),
+  }));
 
-  return new Response(JSON.stringify({ ok: true, ...stats }), {
+  return new Response(JSON.stringify({ ok: true, run_ms: runMs, ...stats }), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
-});
+}
