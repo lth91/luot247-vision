@@ -1,5 +1,5 @@
 // Crawl 27 nguồn tin ngành điện VN, tóm tắt ≤150 từ bằng Claude Haiku 4.5, lưu vào electricity_news.
-// Giới hạn 3 nguồn/lần (rotate theo last_crawled_at ASC) để tránh timeout 60s của edge function.
+// Quét TẤT CẢ nguồn mỗi lần chạy; song song SOURCE_CONCURRENCY nguồn cùng lúc để tôn trọng rate limit.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 import { DOMParser, Element } from "https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts";
@@ -11,7 +11,7 @@ const corsHeaders = {
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
-const MAX_SOURCES_PER_RUN = 3;
+const SOURCE_CONCURRENCY = 5;
 const MAX_ARTICLES_PER_SOURCE = 5;
 const FETCH_TIMEOUT_MS = 15000;
 const MAX_CONTENT_CHARS = 8000;
@@ -260,12 +260,10 @@ Deno.serve(async (req) => {
     // không có body, cron call sẽ trống
   }
 
-  // Pick sources
+  // Pick sources: TẤT CẢ nguồn active, sắp xếp theo last_crawled_at cũ nhất.
   let query = supabase.from("electricity_sources").select("*").eq("is_active", true).order("last_crawled_at", { ascending: true, nullsFirst: true });
   if (forcedSourceId) {
     query = supabase.from("electricity_sources").select("*").eq("id", forcedSourceId);
-  } else {
-    query = query.limit(MAX_SOURCES_PER_RUN);
   }
   const { data: sources, error: sErr } = await query;
   if (sErr) {
@@ -274,7 +272,8 @@ Deno.serve(async (req) => {
 
   const stats = { sources: 0, articlesFound: 0, articlesInserted: 0, errors: [] as string[] };
 
-  for (const src of (sources as Source[]) ?? []) {
+  const srcList = (sources as Source[]) ?? [];
+  const processSource = async (src: Source) => {
     stats.sources++;
     try {
       const listRes = await fetchWithTimeout(src.list_url);
@@ -398,6 +397,13 @@ Deno.serve(async (req) => {
         })
         .eq("id", src.id);
     }
+  };
+
+  // Xử lý SOURCE_CONCURRENCY nguồn song song mỗi batch.
+  // Batch chờ xong mới chạy batch tiếp → tôn trọng rate limit Anthropic + không tràn kết nối DB.
+  for (let i = 0; i < srcList.length; i += SOURCE_CONCURRENCY) {
+    const batch = srcList.slice(i, i + SOURCE_CONCURRENCY);
+    await Promise.all(batch.map(processSource));
   }
 
   return new Response(JSON.stringify({ ok: true, ...stats }), {
