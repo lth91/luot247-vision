@@ -81,11 +81,35 @@ const ElectricityDashboard = () => {
     refetchInterval: 60 * 1000,
   });
 
+  const lastCrawled = useMemo(() => {
+    return sources?.reduce<string | null>((acc, s) => {
+      if (!s.last_crawled_at) return acc;
+      return !acc || s.last_crawled_at > acc ? s.last_crawled_at : acc;
+    }, null) ?? null;
+  }, [sources]);
+
+  // Cửa sổ 10 phút lùi từ lần crawl gần nhất, gom trọn 1 batch cron.
+  const lastBatchCutoffMs = useMemo(() => {
+    if (!lastCrawled) return null;
+    return new Date(lastCrawled).getTime() - 10 * 60 * 1000;
+  }, [lastCrawled]);
+
   const newsBySource = useMemo(() => {
     const m = new Map<string, number>();
     for (const n of news ?? []) m.set(n.source_name, (m.get(n.source_name) ?? 0) + 1);
     return m;
   }, [news]);
+
+  const lastBatchBySource = useMemo(() => {
+    const m = new Map<string, number>();
+    if (lastBatchCutoffMs == null) return m;
+    for (const n of news ?? []) {
+      if (new Date(n.crawled_at).getTime() >= lastBatchCutoffMs) {
+        m.set(n.source_name, (m.get(n.source_name) ?? 0) + 1);
+      }
+    }
+    return m;
+  }, [news, lastBatchCutoffMs]);
 
   const overview = useMemo(() => {
     const total = sources?.length ?? 0;
@@ -97,12 +121,11 @@ const ElectricityDashboard = () => {
     const totalNews = news?.length ?? 0;
     const news24h = news?.filter((n) => now - new Date(n.published_at ?? n.crawled_at).getTime() < day).length ?? 0;
     const news7d = news?.filter((n) => now - new Date(n.published_at ?? n.crawled_at).getTime() < 7 * day).length ?? 0;
-    const lastCrawled = sources?.reduce<string | null>((acc, s) => {
-      if (!s.last_crawled_at) return acc;
-      return !acc || s.last_crawled_at > acc ? s.last_crawled_at : acc;
-    }, null);
-    return { total, active, failing, inactive, totalNews, news24h, news7d, lastCrawled };
-  }, [sources, news]);
+    const lastBatchNews = lastBatchCutoffMs == null
+      ? 0
+      : (news?.filter((n) => new Date(n.crawled_at).getTime() >= lastBatchCutoffMs).length ?? 0);
+    return { total, active, failing, inactive, totalNews, news24h, news7d, lastCrawled, lastBatchNews };
+  }, [sources, news, lastCrawled, lastBatchCutoffMs]);
 
   const sortedSources = useMemo(() => {
     if (!sources) return [];
@@ -130,7 +153,12 @@ const ElectricityDashboard = () => {
             <h1 className="text-2xl md:text-3xl font-bold">Dashboard /d</h1>
             <p className="text-sm text-muted-foreground">
               Theo dõi hoạt động crawl tin ngành điện. Tự refresh mỗi 60 giây.
-              {overview.lastCrawled && <> Lần crawl gần nhất: <strong>{getRelativeTime(overview.lastCrawled)}</strong>.</>}
+              {overview.lastCrawled && (
+                <>
+                  {" "}Lần crawl gần nhất: <strong>{getRelativeTime(overview.lastCrawled)}</strong>
+                  {" "}· <strong className="text-green-700">+{overview.lastBatchNews}</strong> tin mới.
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -175,6 +203,7 @@ const ElectricityDashboard = () => {
                     <th className="px-3 py-2 font-medium">Nguồn</th>
                     <th className="px-3 py-2 font-medium">Nhóm</th>
                     <th className="px-3 py-2 font-medium text-right">Tin</th>
+                    <th className="px-3 py-2 font-medium text-right">Mới</th>
                     <th className="px-3 py-2 font-medium">Crawl gần nhất</th>
                     <th className="px-3 py-2 font-medium">Lỗi</th>
                   </tr>
@@ -182,6 +211,7 @@ const ElectricityDashboard = () => {
                 <tbody>
                   {sortedSources.map((s) => {
                     const count = newsBySource.get(s.name) ?? 0;
+                    const lastBatchCount = lastBatchBySource.get(s.name) ?? 0;
                     const status = !s.is_active
                       ? { icon: <XCircle className="h-4 w-4 text-red-500" />, label: "Disabled", cls: "text-red-600" }
                       : s.consecutive_failures > 0
@@ -199,6 +229,13 @@ const ElectricityDashboard = () => {
                           <Badge variant="outline" className="font-normal">{CATEGORY_LABEL[s.category] ?? s.category}</Badge>
                         </td>
                         <td className="px-3 py-2 text-right font-mono">{count}</td>
+                        <td className="px-3 py-2 text-right font-mono">
+                          {lastBatchCount > 0 ? (
+                            <span className="text-green-700 font-semibold">+{lastBatchCount}</span>
+                          ) : (
+                            <span className="text-muted-foreground">0</span>
+                          )}
+                        </td>
                         <td className="px-3 py-2 text-muted-foreground">
                           {s.last_crawled_at ? getRelativeTime(s.last_crawled_at) : "—"}
                         </td>
