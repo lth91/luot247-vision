@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.discovery-rss-news]
 verify_jwt = false
+
+[functions.backfill-summaries]
+verify_jwt = false

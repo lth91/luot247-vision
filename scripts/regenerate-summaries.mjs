@@ -138,8 +138,12 @@ function stripHtmlKeepText(s) {
     .trim();
 }
 
-async function summarize(title, content) {
-  const userMsg = `Tiêu đề: ${title}\n\nNội dung:\n${content}`;
+async function summarize(title, content, knownPublishedDate = null) {
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const dateHint = knownPublishedDate
+    ? `\n\nNgày xuất bản đã xác định từ metadata: ${knownPublishedDate}. Dùng đúng ngày/tháng/NĂM này khi nhắc mốc thời gian trong summary, KHÔNG đoán năm khác.`
+    : `\n\nKhông có ngày từ metadata. Nếu bài chỉ ghi "ngày 20/4" không kèm năm, mặc định là năm ${todayIso.slice(0, 4)} (hôm nay là ${todayIso}).`;
+  const userMsg = `Tiêu đề: ${title}\n\nNội dung:\n${content}${dateHint}`;
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -208,7 +212,8 @@ async function main() {
         skipped++;
         return;
       }
-      const result = await summarize(r.title, content);
+      const pubIso = r.published_at ? r.published_at.slice(0, 10) : null;
+      const result = await summarize(r.title, content, pubIso);
       if (!result || !result.summary) {
         console.log(`  [${i + 1}/${rows.length}] SKIP (no summary) — ${r.title.slice(0, 60)}`);
         skipped++;
