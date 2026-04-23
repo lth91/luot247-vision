@@ -158,16 +158,22 @@ async function summarizeWithClaude(
 
 QUY TẮC:
 - published_date: ngày xuất bản bài (nếu rõ ràng nêu trong bài hoặc tiêu đề). Dạng YYYY-MM-DD. Nếu không xác định được thì trả null. KHÔNG được đoán hoặc dùng ngày hiện tại.
-- summary: tóm tắt bài báo dưới 150 từ bằng tiếng Việt
-  + Văn phong tin tức chuyên ngành, khách quan, trang trọng
-  + Phải nêu rõ: ngày (dd/mm/yyyy nếu có), chủ thể chính, sự kiện/hành động, kết quả/ý nghĩa
-  + Không dùng câu mở đầu như "Bài báo nói về…"
-  + Không lặp lại tiêu đề
+- summary: tóm tắt bài báo dưới 150 từ bằng tiếng Việt, văn phong tin tức chuyên ngành, khách quan, trang trọng.
+
+QUAN TRỌNG — MỞ ĐẦU SUMMARY BẰNG MỐC THỜI GIAN TỰ NHIÊN:
+  + Nếu bài nêu rõ buổi/ngày cụ thể: dùng "Sáng 22/4", "Chiều 22/4", "Tối 22/4", "Trưa 22/4", "Đêm 22/4". KHÔNG kèm năm trừ khi là sự kiện quá khứ xa hoặc kế hoạch tương lai.
+  + Nếu chỉ có ngày (không có buổi): dùng "Ngày 22/4" hoặc "22/4".
+  + Nếu là xu hướng/thống kê cả kỳ: dùng "Năm 2025", "Quý I/2026", "Tuần qua", "Đầu tháng 4/2026".
+  + Nếu là dự kiến: dùng "Dự kiến tháng 6/2026", "Đến 2030".
+  + TUYỆT ĐỐI không dùng định dạng khô cứng "Ngày 22/04/2026" hay "Vào ngày 22/4/2026".
+  + Không lặp lại tiêu đề, không mở đầu "Bài báo nói về…", "Theo bài viết…".
 
 VÍ DỤ MẪU:
-{"published_date":"2026-04-17","summary":"Sáng 17/04/2026, Bộ Công Thương họp tổ soạn thảo dự án Luật Điện lực sửa đổi dưới sự chủ trì của Thứ trưởng Nguyễn Hoàng Long. Dự án được tách thành nhiệm vụ lập pháp riêng, đã lấy ý kiến từ đầu tháng 2/2026 và công khai hồ sơ trên các cổng thông tin."}
+{"published_date":"2026-04-17","summary":"Sáng 17/4, Bộ Công Thương họp tổ soạn thảo dự án Luật Điện lực sửa đổi dưới sự chủ trì của Thứ trưởng Nguyễn Hoàng Long. Dự án được tách thành nhiệm vụ lập pháp riêng, đã lấy ý kiến từ đầu tháng 2/2026 và công khai hồ sơ trên các cổng thông tin."}
 
-{"published_date":"2026-04-17","summary":"Ngày 17/04/2026, EVNGENCO2 đẩy nhanh dự án điện gió Hướng Phùng 1, đã giải phóng 65.755 m² mặt bằng và triển khai nhiều hạng mục như trạm 110kV, tua bin và đường dây. Dự án phấn đấu hoàn tất giải phóng mặt bằng vào tháng 6/2026 để đảm bảo tiến độ thi công."}`;
+{"published_date":"2026-04-17","summary":"Ngày 17/4, EVNGENCO2 đẩy nhanh dự án điện gió Hướng Phùng 1, đã giải phóng 65.755 m² mặt bằng và triển khai nhiều hạng mục như trạm 110kV, tua bin và đường dây. Dự kiến hoàn tất giải phóng mặt bằng vào tháng 6/2026 để đảm bảo tiến độ thi công."}
+
+{"published_date":"2026-04-20","summary":"Năm 2025, năng lượng tái tạo lần đầu chiếm 34% sản lượng điện toàn cầu, vượt than đá (33%), đánh dấu bước ngoặt trong chuyển dịch năng lượng. Toàn bộ tăng trưởng nhu cầu điện được đáp ứng bởi năng lượng sạch, trong đó điện mặt trời tăng 30%, đóng vai trò chủ đạo."}`;
 
   const userMsg = `Tiêu đề: ${title}\n\nNội dung:\n${content}`;
 
