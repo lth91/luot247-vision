@@ -366,8 +366,13 @@ async function summarizeWithClaude(
   title: string,
   content: string,
   apiKey: string,
+  knownPublishedDate: string | null = null,
 ): Promise<{ summary: string; publishedDate: string | null }> {
-  const userMsg = `Tiêu đề: ${title}\n\nNội dung:\n${content}`;
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const dateHint = knownPublishedDate
+    ? `\n\nNgày xuất bản đã xác định từ metadata: ${knownPublishedDate}. Dùng đúng ngày/tháng/NĂM này khi nhắc mốc thời gian trong summary, KHÔNG đoán năm khác.`
+    : `\n\nKhông có ngày từ metadata. Nếu bài chỉ ghi "ngày 20/4" không kèm năm, mặc định là năm ${todayIso.slice(0, 4)} (hôm nay là ${todayIso}).`;
+  const userMsg = `Tiêu đề: ${title}\n\nNội dung:\n${content}${dateHint}`;
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
@@ -559,7 +564,8 @@ async function handle(): Promise<Response> {
         }
       }
 
-      const { summary, publishedDate } = await summarizeWithClaude(title, content, anthropicKey);
+      const preDateIso = preDate ? preDate.slice(0, 10) : null;
+      const { summary, publishedDate } = await summarizeWithClaude(title, content, anthropicKey, preDateIso);
       if (!summary) {
         stats.errors.push(`${it.feedName}: Claude empty summary`);
         return;

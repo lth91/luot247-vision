@@ -170,6 +170,7 @@ async function summarizeWithClaude(
   title: string,
   content: string,
   apiKey: string,
+  knownPublishedDate: string | null = null,
 ): Promise<{ summary: string; publishedDate: string | null }> {
   const systemPrompt = `Bạn là biên tập viên tin tức chuyên ngành điện Việt Nam. Nhiệm vụ: đọc bài báo và trả về JSON gồm ngày xuất bản + tóm tắt.
 
@@ -195,7 +196,11 @@ VÍ DỤ MẪU:
 
 {"published_date":"2026-04-20","summary":"Năm 2025, năng lượng tái tạo lần đầu chiếm 34% sản lượng điện toàn cầu, vượt than đá (33%), đánh dấu bước ngoặt trong chuyển dịch năng lượng. Toàn bộ tăng trưởng nhu cầu điện được đáp ứng bởi năng lượng sạch, trong đó điện mặt trời tăng 30%, đóng vai trò chủ đạo."}`;
 
-  const userMsg = `Tiêu đề: ${title}\n\nNội dung:\n${content}`;
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const dateHint = knownPublishedDate
+    ? `\n\nNgày xuất bản đã xác định từ metadata: ${knownPublishedDate}. Dùng đúng ngày/tháng/NĂM này khi nhắc mốc thời gian trong summary, KHÔNG đoán năm khác.`
+    : `\n\nKhông có ngày từ metadata. Nếu bài chỉ ghi "ngày 20/4" không kèm năm, mặc định là năm ${todayIso.slice(0, 4)} (hôm nay là ${todayIso}).`;
+  const userMsg = `Tiêu đề: ${title}\n\nNội dung:\n${content}${dateHint}`;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -373,7 +378,8 @@ async function handleCrawl(req: Request): Promise<Response> {
             }
           }
 
-          const { summary, publishedDate } = await summarizeWithClaude(finalTitle, content, anthropicKey);
+          const preSummaryDateIso = preSummaryDate ? preSummaryDate.slice(0, 10) : null;
+          const { summary, publishedDate } = await summarizeWithClaude(finalTitle, content, anthropicKey, preSummaryDateIso);
           if (!summary) {
             stats.errors.push(`${src.name}: Claude trả về rỗng`);
             continue;
