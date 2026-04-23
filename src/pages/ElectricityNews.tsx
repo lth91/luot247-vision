@@ -1,43 +1,31 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { Header } from "@/components/Header";
 import { ElectricityNewsCard } from "@/components/ElectricityNewsCard";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Search, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
 
 type ElectricityNewsRow = {
   id: string;
-  source_name: string;
-  source_category: string | null;
   title: string;
   summary: string;
   original_url: string;
   published_at: string | null;
   crawled_at: string;
-  summary_word_count: number | null;
 };
 
 const PAGE_SIZE = 30;
-const CATEGORY_OPTIONS = [
-  { key: "all", label: "Tất cả" },
-  { key: "co-quan", label: "Cơ quan" },
-  { key: "doanh-nghiep", label: "Doanh nghiệp" },
-  { key: "bao-chi", label: "Báo chí" },
-] as const;
-
 const RECENT_DAYS = 3;
 
 const fetchNews = async (limit: number): Promise<ElectricityNewsRow[]> => {
   const threshold = new Date(Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase
     .from("electricity_news" as never)
-    .select("id, source_name, source_category, title, summary, original_url, published_at, crawled_at, summary_word_count")
+    .select("id, title, summary, original_url, published_at, crawled_at")
     .or(`published_at.gte.${threshold},and(published_at.is.null,crawled_at.gte.${threshold})`)
     .order("published_at", { ascending: false, nullsFirst: false })
     .order("crawled_at", { ascending: false })
@@ -50,8 +38,6 @@ const ElectricityNews = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [limit, setLimit] = useState(PAGE_SIZE);
-  const [category, setCategory] = useState<(typeof CATEGORY_OPTIONS)[number]["key"]>("all");
-  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
@@ -78,71 +64,11 @@ const ElectricityNews = () => {
     refetchInterval: 5 * 60 * 1000,
   });
 
-  const filtered = useMemo(() => {
-    if (!data) return [];
-    const q = search.trim().toLowerCase();
-    return data.filter((item) => {
-      if (category !== "all" && item.source_category !== category) return false;
-      if (q) {
-        const hay = `${item.title} ${item.summary} ${item.source_name}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [data, category, search]);
-
-  const stats = useMemo(() => {
-    if (!data) return { total: 0, today: 0, week: 0 };
-    const now = Date.now();
-    const dayMs = 24 * 60 * 60 * 1000;
-    let today = 0;
-    let week = 0;
-    for (const n of data) {
-      const t = new Date(n.published_at ?? n.crawled_at).getTime();
-      if (now - t < dayMs) today++;
-      if (now - t < 7 * dayMs) week++;
-    }
-    return { total: data.length, today, week };
-  }, [data]);
-
   return (
     <div className="min-h-screen bg-background">
       <Header user={session?.user} userRole={userRole} />
 
       <main className="container mx-auto px-4 py-6 max-w-6xl">
-        <section className="mb-6 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-          <div className="flex flex-wrap gap-2">
-            {CATEGORY_OPTIONS.map((opt) => (
-              <Badge
-                key={opt.key}
-                variant={category === opt.key ? "default" : "outline"}
-                className="cursor-pointer px-3 py-1"
-                onClick={() => setCategory(opt.key)}
-              >
-                {opt.label}
-              </Badge>
-            ))}
-          </div>
-          <div className="relative flex-1 md:w-64">
-            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Tìm theo tiêu đề, nội dung, nguồn..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-        </section>
-
-        <section className="mb-4 flex gap-4 text-sm text-muted-foreground">
-          <span>Tổng: <strong className="text-foreground">{stats.total}</strong></span>
-          <span>24h qua: <strong className="text-foreground">{stats.today}</strong></span>
-          <span>7 ngày: <strong className="text-foreground">{stats.week}</strong></span>
-          {filtered.length !== (data?.length ?? 0) && (
-            <span>Lọc: <strong className="text-foreground">{filtered.length}</strong></span>
-          )}
-        </section>
-
         {isError && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>Lỗi tải tin: {(error as Error).message}</AlertDescription>
@@ -155,33 +81,27 @@ const ElectricityNews = () => {
               <Skeleton key={i} className="h-56 w-full" />
             ))}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : !data || data.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
             <Zap className="h-12 w-12 mx-auto mb-3 opacity-40" />
-            <p className="mb-2">Chưa có tin nào khớp.</p>
-            <p className="text-sm">
-              {data && data.length === 0
-                ? "Hệ thống chưa crawl lần nào. Bấm nút làm mới để chạy ngay."
-                : "Thử bỏ bộ lọc hoặc từ khóa khác."}
-            </p>
+            <p className="mb-2">Chưa có tin nào.</p>
+            <p className="text-sm">Hệ thống đang cập nhật, vui lòng quay lại sau.</p>
           </div>
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filtered.map((item) => (
+              {data.map((item) => (
                 <ElectricityNewsCard
                   key={item.id}
                   title={item.title}
                   summary={item.summary}
-                  sourceName={item.source_name}
-                  sourceCategory={item.source_category}
                   originalUrl={item.original_url}
                   publishedAt={item.published_at}
                   crawledAt={item.crawled_at}
                 />
               ))}
             </div>
-            {data && data.length >= limit && (
+            {data.length >= limit && (
               <div className="flex justify-center mt-6">
                 <Button variant="outline" onClick={() => setLimit(limit + PAGE_SIZE)}>
                   Tải thêm
