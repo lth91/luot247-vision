@@ -44,6 +44,17 @@ const FEEDS: { name: string; url: string }[] = [
   { name: "VietnamNet - Kinh doanh",  url: "https://vietnamnet.vn/rss/kinh-doanh.rss" },
 ];
 
+// HTML list-page feeds: các site không có RSS. Mỗi feed có listUrl (trang section)
+// và linkPattern (regex match pathname của bài detail). Pipeline sẽ extract link,
+// đưa qua cùng keyword + LLM filter như RSS.
+const HTML_FEEDS: { name: string; listUrl: string; linkPattern: string }[] = [
+  { name: "Hà Nội Mới - Kinh tế",       listUrl: "https://hanoimoi.vn/kinh-te",             linkPattern: "^/[a-z0-9-]{20,}-\\d{5,}\\.html$" },
+  { name: "Bộ Công Thương - Tin tức",   listUrl: "https://moit.gov.vn/tin-tuc/hoat-dong",   linkPattern: "^/tin-tuc/.*[a-z-]{20,}\\.html$" },
+  { name: "PetroVietnam",               listUrl: "https://petrovietnam.petrotimes.vn/",     linkPattern: "^/[a-z0-9-]{20,}-\\d{5,}\\.html$" },
+  { name: "Người Quan Sát",             listUrl: "https://nguoiquansat.vn/tin-moi-nhat",    linkPattern: "^/[a-z0-9-]{20,}-\\d{5,}\\.html$" },
+  { name: "Doanh nghiệp VN",            listUrl: "https://doanhnghiepvn.vn/948/tin-tuc",    linkPattern: "^/tin-tuc/[^/]+/\\d{14}$" },
+];
+
 // Keyword pre-filter: loại ~94% bài không liên quan trước khi gọi LLM.
 const KEYWORD_RE = /\b(EVN|BESS|điện(?!\s*(thoại|tử|ảnh|máy))|năng\s*lượng|điện\s*lực|điện\s*gió|điện\s*mặt\s*trời|điện\s*hạt\s*nhân|điện\s*sinh\s*khối|thủy\s*điện|nhiệt\s*điện|lưới\s*điện|cung\s*ứng\s*điện|giá\s*điện|tiết\s*kiệm\s*điện|pin\s*lưu\s*trữ|hydro\s*xanh|xe\s*điện|Bộ\s*Công\s*Thương|Cục\s*Điện\s*lực|NLTT)/i;
 
@@ -157,6 +168,45 @@ function parseRss(xml: string, feedName: string): RssItem[] {
     const description = stripHtml(pick("description"));
     if (link && title) items.push({ title, link, pubDate, description, feedName });
   }
+  return items;
+}
+
+// Extract "virtual RSS items" từ trang section HTML: mỗi <a> match linkPattern
+// lấy làm 1 item; title là text của link (hoặc heading gần nhất). Không có pubDate.
+function parseHtmlListPage(html: string, baseUrl: string, linkPattern: RegExp, feedName: string): RssItem[] {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  if (!doc) return [];
+  const seen = new Set<string>();
+  const items: RssItem[] = [];
+  doc.querySelectorAll("a[href]").forEach((a) => {
+    const el = a as Element;
+    const href = el.getAttribute("href");
+    if (!href) return;
+    let abs: URL;
+    try { abs = new URL(href, baseUrl); } catch { return; }
+    if (abs.host.replace(/^www\./, "") !== new URL(baseUrl).host.replace(/^www\./, "")) return;
+    if (!linkPattern.test(abs.pathname)) return;
+    const canonical = abs.toString();
+    if (seen.has(canonical)) return;
+
+    // Title: link text, fallback sang heading gần nhất trong parent
+    let title = (el.textContent || "").replace(/\s+/g, " ").trim();
+    if (title.length < 15) {
+      const parent = el.parentElement;
+      const heading = parent?.querySelector("h1,h2,h3,h4")?.textContent?.trim() || "";
+      if (heading.length > title.length) title = heading.replace(/\s+/g, " ").trim();
+    }
+    if (title.length < 15) return; // bỏ link pagination/tag có text quá ngắn
+
+    seen.add(canonical);
+    items.push({
+      title: title.slice(0, 300),
+      link: canonical,
+      pubDate: null,
+      description: "",
+      feedName,
+    });
+  });
   return items;
 }
 
@@ -356,8 +406,8 @@ async function handle(): Promise<Response> {
     errors: [] as string[],
   };
 
-  // 1. Fetch all RSS feeds in parallel
-  const fetchResults = await Promise.allSettled(
+  // 1a. Fetch RSS feeds in parallel
+  const rssResults = await Promise.allSettled(
     FEEDS.map(async (f) => {
       const r = await fetchWithTimeout(f.url, FEED_FETCH_TIMEOUT_MS);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -366,13 +416,32 @@ async function handle(): Promise<Response> {
   );
   const allItems: RssItem[] = [];
   for (let i = 0; i < FEEDS.length; i++) {
-    const res = fetchResults[i];
+    const res = rssResults[i];
     if (res.status === "fulfilled") {
       stats.feedsFetched++;
       allItems.push(...res.value);
     } else {
       stats.feedsFailed++;
-      stats.errors.push(`feed ${FEEDS[i].name}: ${(res.reason as Error)?.message ?? "?"}`);
+      stats.errors.push(`rss ${FEEDS[i].name}: ${(res.reason as Error)?.message ?? "?"}`);
+    }
+  }
+
+  // 1b. Fetch HTML list pages in parallel, extract virtual items
+  const htmlResults = await Promise.allSettled(
+    HTML_FEEDS.map(async (f) => {
+      const r = await fetchWithTimeout(f.listUrl, FEED_FETCH_TIMEOUT_MS);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return parseHtmlListPage(await r.text(), f.listUrl, new RegExp(f.linkPattern), f.name);
+    }),
+  );
+  for (let i = 0; i < HTML_FEEDS.length; i++) {
+    const res = htmlResults[i];
+    if (res.status === "fulfilled") {
+      stats.feedsFetched++;
+      allItems.push(...res.value);
+    } else {
+      stats.feedsFailed++;
+      stats.errors.push(`html ${HTML_FEEDS[i].name}: ${(res.reason as Error)?.message ?? "?"}`);
     }
   }
   stats.totalItems = allItems.length;
