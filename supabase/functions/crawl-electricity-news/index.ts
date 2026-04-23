@@ -131,19 +131,39 @@ function extractArticleContent(html: string, selectorList: string | null): { tit
   }
   let content = "";
   if (contentEl) {
-    contentEl.querySelectorAll("script, style, iframe, .advertisement, .related-news").forEach((n) => (n as Element).remove());
+    contentEl.querySelectorAll("script, style, iframe, nav, footer, aside, .advertisement, .related-news, .box-related, .related-articles, .sidebar").forEach((n) => (n as Element).remove());
     content = contentEl.textContent || "";
   } else {
-    // fallback: concat tất cả <p>
-    const ps: string[] = [];
-    doc.querySelectorAll("p").forEach((p) => {
-      const t = (p.textContent || "").trim();
-      if (t.length > 40) ps.push(t);
-    });
-    content = ps.join("\n");
+    // Fallback 1: meta description (ngắn nhưng chuẩn, tránh sidebar)
+    const ogDesc = doc.querySelector("meta[property='og:description']")?.getAttribute("content") || "";
+    const metaDesc = doc.querySelector("meta[name='description']")?.getAttribute("content") || "";
+    const desc = (ogDesc.length > metaDesc.length ? ogDesc : metaDesc).trim();
+    if (desc.length > 150) content = desc;
+    // Fallback 2: concat <p> chỉ trong <main>/<article>, tránh sidebar global
+    if (content.length < 300) {
+      const mainEl = doc.querySelector("main") || doc.querySelector("article") || doc.body;
+      const ps: string[] = [];
+      mainEl?.querySelectorAll("p").forEach((p) => {
+        const t = (p.textContent || "").trim();
+        if (t.length > 40) ps.push(t);
+      });
+      content = ps.join("\n");
+    }
   }
   content = stripHtml(content).slice(0, MAX_CONTENT_CHARS);
   return { title: stripHtml(title), content };
+}
+
+// Detect summary dạng "xin lỗi, không khớp tiêu đề" → skip insert
+function isInvalidSummary(summary: string): boolean {
+  const badPatterns = [
+    /^nội dung bài (không|chưa)/i,
+    /không (cung cấp|phù hợp|liên quan) (thông tin|với tiêu đề)/i,
+    /^bài (báo|viết) (không|chưa) (cung cấp|đề cập|nói)/i,
+    /^xin lỗi/i,
+    /^tôi (không thể|cần thêm)/i,
+  ];
+  return badPatterns.some((p) => p.test(summary));
 }
 
 async function summarizeWithClaude(
@@ -356,6 +376,10 @@ async function handleCrawl(req: Request): Promise<Response> {
           const { summary, publishedDate } = await summarizeWithClaude(finalTitle, content, anthropicKey);
           if (!summary) {
             stats.errors.push(`${src.name}: Claude trả về rỗng`);
+            continue;
+          }
+          if (isInvalidSummary(summary)) {
+            stats.errors.push(`${src.name}: title-content mismatch, skip`);
             continue;
           }
           const wc = wordCount(summary);

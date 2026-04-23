@@ -242,39 +242,73 @@ function extractArticleContent(html: string): { title: string; content: string }
     doc.querySelector("meta[property='og:title']")?.getAttribute("content") ||
     doc.querySelector("title")?.textContent ||
     doc.querySelector("h1")?.textContent || "";
-  // Generic selectors — thử rộng vì đa nguồn.
+
+  // Selectors từ chặt → lỏng. Ưu tiên chọn element có LONGEST text (tránh chọn wrapper
+  // có cả sidebar). Loại bỏ <main> nếu nó bao cả trang (wrapper quá rộng).
   const selectors = [
-    "article", "main article",
-    "div.article-content", "div.article__body", "div.article-body",
-    "div.news-detail", "div.detail-content", "div.content-detail",
-    "div.fck_detail", "div.detail__content", "div.singular-content",
-    "[class*='article-content']", "[class*='content-detail']",
-    "main", "div.content",
+    "[itemprop='articleBody']",
+    "[class*='article-content']", "[class*='article__body']", "[class*='article-body']",
+    "[class*='detail__content']", "[class*='detail-content']", "[class*='content-detail']",
+    "[class*='news-detail']", "[class*='main-detail']", "[class*='singular-content']",
+    "[class*='fck_detail']", "[class*='post-body']", "[class*='entry-content']",
+    "[class*='zone__content']", "[class*='general-item_content']",
+    "article",
   ];
+
   let contentEl: Element | null = null;
+  let maxLen = 0;
   for (const sel of selectors) {
     try {
-      const el = doc.querySelector(sel) as Element | null;
-      if (el && (el.textContent || "").length > 200) {
-        contentEl = el;
-        break;
-      }
-    } catch { /* bad selector, skip */ }
+      doc.querySelectorAll(sel).forEach((el) => {
+        const len = (el.textContent || "").trim().length;
+        if (len > maxLen && len > 300) {
+          contentEl = el as Element;
+          maxLen = len;
+        }
+      });
+      if (contentEl) break;
+    } catch { /* bad selector */ }
   }
+
   let content = "";
   if (contentEl) {
-    contentEl.querySelectorAll("script, style, iframe, nav, footer, aside, .advertisement, .related-news, .box-tags, .author-info").forEach((n) => (n as Element).remove());
+    contentEl.querySelectorAll("script, style, iframe, nav, footer, aside, .advertisement, .related-news, .box-tags, .author-info, .box-related, .related-articles, .sidebar, .banner").forEach((n) => (n as Element).remove());
     content = contentEl.textContent || "";
-  } else {
+  }
+
+  // Fallback 1: meta description (dùng khi không match selector nào)
+  if (content.length < 300) {
+    const ogDesc = doc.querySelector("meta[property='og:description']")?.getAttribute("content") || "";
+    const metaDesc = doc.querySelector("meta[name='description']")?.getAttribute("content") || "";
+    const desc = (ogDesc.length > metaDesc.length ? ogDesc : metaDesc).trim();
+    if (desc.length > 150) content = desc;
+  }
+
+  // Fallback 2: concat <p> nhưng chỉ trong <main> hoặc <article>, tránh sidebar global
+  if (content.length < 300) {
+    const mainEl = doc.querySelector("main") || doc.querySelector("article") || doc.body;
     const ps: string[] = [];
-    doc.querySelectorAll("p").forEach((p) => {
+    mainEl?.querySelectorAll("p").forEach((p) => {
       const t = (p.textContent || "").trim();
       if (t.length > 40) ps.push(t);
     });
     content = ps.join("\n");
   }
+
   content = content.replace(/\s+/g, " ").trim().slice(0, MAX_CONTENT_CHARS);
   return { title: (title || "").replace(/\s+/g, " ").trim(), content };
+}
+
+// Detect summary mà LLM trả về dạng "xin lỗi, nội dung không khớp" — skip insert
+function isInvalidSummary(summary: string): boolean {
+  const badPatterns = [
+    /^nội dung bài (không|chưa)/i,
+    /không (cung cấp|phù hợp|liên quan) (thông tin|với tiêu đề)/i,
+    /^bài (báo|viết) (không|chưa) (cung cấp|đề cập|nói)/i,
+    /^xin lỗi/i,
+    /^tôi (không thể|cần thêm)/i,
+  ];
+  return badPatterns.some((p) => p.test(summary));
 }
 
 function wordCount(s: string): number {
@@ -528,6 +562,10 @@ async function handle(): Promise<Response> {
       const { summary, publishedDate } = await summarizeWithClaude(title, content, anthropicKey);
       if (!summary) {
         stats.errors.push(`${it.feedName}: Claude empty summary`);
+        return;
+      }
+      if (isInvalidSummary(summary)) {
+        stats.errors.push(`${it.feedName}: title-content mismatch, skip`);
         return;
       }
       const llmIso = publishedDate ? `${publishedDate}T00:00:00Z` : null;
