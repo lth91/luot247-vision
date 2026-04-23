@@ -94,9 +94,19 @@ const ElectricityDashboard = () => {
     return new Date(lastCrawled).getTime() - 10 * 60 * 1000;
   }, [lastCrawled]);
 
+  // Chuẩn hóa source_name: "RSS Discovery (vneconomy.vn)" → "RSS Discovery"
+  // để gom đúng tin về row virtual source "RSS Discovery" trong bảng sources.
+  const normalizeSourceName = (n: string): string => {
+    const m = n.match(/^(RSS Discovery)\s*\(/);
+    return m ? m[1] : n;
+  };
+
   const newsBySource = useMemo(() => {
     const m = new Map<string, number>();
-    for (const n of news ?? []) m.set(n.source_name, (m.get(n.source_name) ?? 0) + 1);
+    for (const n of news ?? []) {
+      const key = normalizeSourceName(n.source_name);
+      m.set(key, (m.get(key) ?? 0) + 1);
+    }
     return m;
   }, [news]);
 
@@ -105,11 +115,22 @@ const ElectricityDashboard = () => {
     if (lastBatchCutoffMs == null) return m;
     for (const n of news ?? []) {
       if (new Date(n.crawled_at).getTime() >= lastBatchCutoffMs) {
-        m.set(n.source_name, (m.get(n.source_name) ?? 0) + 1);
+        const key = normalizeSourceName(n.source_name);
+        m.set(key, (m.get(key) ?? 0) + 1);
       }
     }
     return m;
   }, [news, lastBatchCutoffMs]);
+
+  // Breakdown domain trong RSS Discovery
+  const discoveryBreakdown = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const n of news ?? []) {
+      const match = n.source_name.match(/^RSS Discovery\s*\(([^)]+)\)$/);
+      if (match) m.set(match[1], (m.get(match[1]) ?? 0) + 1);
+    }
+    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+  }, [news]);
 
   const overview = useMemo(() => {
     const total = sources?.length ?? 0;
@@ -250,6 +271,35 @@ const ElectricityDashboard = () => {
             </div>
           )}
         </section>
+
+        {discoveryBreakdown.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-lg font-semibold mb-3">
+              Breakdown RSS Discovery{" "}
+              <span className="text-sm font-normal text-muted-foreground">
+                ({discoveryBreakdown.length} domain · {discoveryBreakdown.reduce((s, [, n]) => s + n, 0)} tin)
+              </span>
+            </h2>
+            <div className="rounded-md border overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50">
+                  <tr className="text-left">
+                    <th className="px-3 py-2 font-medium">Domain</th>
+                    <th className="px-3 py-2 font-medium text-right">Tin</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {discoveryBreakdown.map(([domain, count]) => (
+                    <tr key={domain} className="border-t hover:bg-muted/30">
+                      <td className="px-3 py-2 font-mono text-xs">{domain}</td>
+                      <td className="px-3 py-2 text-right font-mono">{count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );
