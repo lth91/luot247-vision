@@ -26,6 +26,10 @@ const FEEDS = [
   { name: "VnEconomy - Đầu tư",       url: "https://vneconomy.vn/dau-tu.rss" },
   { name: "VOV - Kinh tế",            url: "https://vov.vn/rss/kinh-te.rss" },
   { name: "VTC News - Kinh tế",       url: "https://vtcnews.vn/rss/kinh-te.rss" },
+  { name: "Nhân Dân - Kinh tế",       url: "https://nhandan.vn/rss/kinhte.rss" },
+  { name: "Nhân Dân - Khoa học",      url: "https://nhandan.vn/rss/khoahoc.rss" },
+  { name: "VietnamPlus - Kinh tế",    url: "https://www.vietnamplus.vn/rss/kinhte.rss" },
+  { name: "VietnamNet - Kinh doanh",  url: "https://vietnamnet.vn/rss/kinh-doanh.rss" },
 ];
 
 // Keyword pre-filter: khớp title/description tiếng Việt chủ đề điện/năng lượng.
