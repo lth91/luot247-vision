@@ -308,7 +308,8 @@ async function handleCrawl(req: Request): Promise<Response> {
 
   // Pick sources: chỉ SOURCES_PER_RUN nguồn mỗi lần (oldest first), tránh vượt resource limit
   // Các run cron 15min tiếp theo sẽ pick tiếp các nguồn còn lại.
-  let query = supabase.from("electricity_sources").select("*").eq("is_active", true).order("last_crawled_at", { ascending: true, nullsFirst: true }).limit(SOURCES_PER_RUN);
+  // Loại virtual sources (list_url không phải http URL) — chúng do edge function khác xử lý (vd RSS Discovery).
+  let query = supabase.from("electricity_sources").select("*").eq("is_active", true).like("list_url", "http%").order("last_crawled_at", { ascending: true, nullsFirst: true }).limit(SOURCES_PER_RUN);
   if (forcedSourceId) {
     query = supabase.from("electricity_sources").select("*").eq("id", forcedSourceId);
   }

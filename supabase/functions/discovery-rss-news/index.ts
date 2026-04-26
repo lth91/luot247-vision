@@ -43,6 +43,8 @@ const FEEDS: { name: string; url: string }[] = [
   { name: "Nhân Dân - Khoa học",      url: "https://nhandan.vn/rss/khoahoc.rss" },
   { name: "VietnamPlus - Kinh tế",    url: "https://www.vietnamplus.vn/rss/kinhte.rss" },
   { name: "VietnamNet - Kinh doanh",  url: "https://vietnamnet.vn/rss/kinh-doanh.rss" },
+  { name: "PECC3",                    url: "https://www.pecc3.com.vn/feed" },
+  { name: "Báo Đấu Thầu - Năng lượng",url: "https://baodauthau.vn/rss/nang-luong.rss" },
 ];
 
 // HTML list-page feeds: các site không có RSS. Mỗi feed có listUrl (trang section)
@@ -57,7 +59,7 @@ const HTML_FEEDS: { name: string; listUrl: string; linkPattern: string }[] = [
 ];
 
 // Keyword pre-filter: loại ~94% bài không liên quan trước khi gọi LLM.
-const KEYWORD_RE = /\b(EVN|BESS|điện(?!\s*(thoại|tử|ảnh|máy))|năng\s*lượng|điện\s*lực|điện\s*gió|điện\s*mặt\s*trời|điện\s*hạt\s*nhân|điện\s*sinh\s*khối|thủy\s*điện|nhiệt\s*điện|lưới\s*điện|cung\s*ứng\s*điện|giá\s*điện|tiết\s*kiệm\s*điện|pin\s*lưu\s*trữ|hydro\s*xanh|xe\s*điện|Bộ\s*Công\s*Thương|Cục\s*Điện\s*lực|NLTT)/i;
+const KEYWORD_RE = /\b(EVN|BESS|điện(?!\s*(thoại|tử|ảnh|máy))|năng\s*lượng|điện\s*lực|điện\s*gió|điện\s*mặt\s*trời|điện\s*hạt\s*nhân|điện\s*sinh\s*khối|thủy\s*điện|nhiệt\s*điện|lưới\s*điện|cung\s*ứng\s*điện|giá\s*điện|tiết\s*kiệm\s*điện|pin\s*lưu\s*trữ|lưu\s*trữ\s*điện|pin\s*(natri|lithium|li-?ion)|hydro\s*xanh|xe\s*điện|Bộ\s*Công\s*Thương|Cục\s*Điện\s*lực|NLTT|PPA|DPPA|Quy\s*hoạch\s*điện)/i;
 
 const CLASSIFY_SYSTEM_PROMPT = `Bạn phân loại tin tức cho trang tổng hợp ngành ĐIỆN Việt Nam. Trọng tâm: điện lực, hạ tầng điện, chính sách điện, chuyển đổi năng lượng sạch phục vụ sản xuất điện.
 
