@@ -82,6 +82,7 @@ KHÔNG LIÊN QUAN (reject):
 - Macro VN: CPI, lạm phát, tỷ giá, GDP — trừ khi tập trung vào ngành điện
 - Kinh tế chung không chuyên đề điện: Eurozone PMI, hỗ trợ kinh tế châu Âu, tọa đàm hợp tác kinh tế chung
 - Lifestyle/văn hóa/sinh hoạt: dress code, mẹo gia đình, trải nghiệm tiêu dùng — kể cả khi nhắc tiết kiệm điện như background
+- Bài digest/round-up trộn nhiều chủ đề không liên quan (giveaway: title có ";" hoặc "&" nối lương hưu/BĐS/giáo dục/y tế + điện) — reject ngay cả khi 1 phần là điện, vì nội dung loãng và có thể tìm bài chuyên đề riêng
 - Xe điện cá nhân/ô tô (Tesla, VinFast sản phẩm), trạm sạc xe — trừ khi bàn tác động lên lưới điện
 - Thiết bị điện gia dụng, điện thoại, điện tử tiêu dùng
 - Tài chính doanh nghiệp (ĐHĐCĐ, cổ tức) — trừ khi doanh nghiệp là DN ngành điện và bài bàn về chiến lược điện cụ thể
@@ -101,6 +102,8 @@ VÍ DỤ REJECT rõ ràng:
 - "Công chức Nhật được khuyến khích mặc quần short đi làm" → reject (lifestyle/văn hóa nước ngoài, dù có nhắc tiết kiệm điện)
 - "Mẹo tiết kiệm điện trong gia đình mùa hè" → reject (mẹo vặt tiêu dùng, không phải tin ngành)
 - "Người Trung Quốc đổ xô mua quạt tích điện vì cắt điện" → reject (tin tiêu dùng nước ngoài)
+- "Thay đổi khung giờ tính giá điện, người dân cần chú ý gì; Một phương án tăng lương hưu từ 1-7" → reject (digest trộn 2 chủ đề điện + lương hưu, dù nửa bài là điện)
+- "Tổng hợp tin tuần: tăng lương, BĐS, giá điện" → reject (digest weekly mix)
 
 VÍ DỤ PASS rõ ràng:
 - "EVN thông báo cung ứng điện mùa khô" → pass
