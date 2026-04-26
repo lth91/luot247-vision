@@ -21,6 +21,7 @@ const MAX_CANDIDATES_PER_RUN = 30;        // trần bài gửi LLM classify/run 
 const MAX_INSERTS_PER_RUN = 15;           // trần bài summarize + insert/run
 const MAX_CONTENT_CHARS = 8000;
 const DISCOVERY_SOURCE_NAME = "RSS Discovery";
+const MIN_CLASSIFY_CONFIDENCE = 0.7;      // LLM confidence tối thiểu để pass — tránh tin rìa (dầu, macro, geopolitics)
 
 const FEEDS: { name: string; url: string }[] = [
   { name: "VnExpress - Kinh doanh",   url: "https://vnexpress.net/rss/kinh-doanh.rss" },
@@ -58,28 +59,52 @@ const HTML_FEEDS: { name: string; listUrl: string; linkPattern: string }[] = [
 // Keyword pre-filter: loại ~94% bài không liên quan trước khi gọi LLM.
 const KEYWORD_RE = /\b(EVN|BESS|điện(?!\s*(thoại|tử|ảnh|máy))|năng\s*lượng|điện\s*lực|điện\s*gió|điện\s*mặt\s*trời|điện\s*hạt\s*nhân|điện\s*sinh\s*khối|thủy\s*điện|nhiệt\s*điện|lưới\s*điện|cung\s*ứng\s*điện|giá\s*điện|tiết\s*kiệm\s*điện|pin\s*lưu\s*trữ|hydro\s*xanh|xe\s*điện|Bộ\s*Công\s*Thương|Cục\s*Điện\s*lực|NLTT)/i;
 
-const CLASSIFY_SYSTEM_PROMPT = `Bạn phân loại tin tức cho trang tổng hợp ngành điện/năng lượng Việt Nam. Xác định bài có LIÊN QUAN hay không.
+const CLASSIFY_SYSTEM_PROMPT = `Bạn phân loại tin tức cho trang tổng hợp ngành ĐIỆN Việt Nam. Trọng tâm: điện lực, hạ tầng điện, chính sách điện, chuyển đổi năng lượng sạch phục vụ sản xuất điện.
 
-LIÊN QUAN (pass):
-- Ngành điện VN: EVN, sản xuất/truyền tải/phân phối điện, giá điện, cung ứng điện, lưới điện, tiết kiệm điện, an ninh năng lượng
-- Nguồn điện: điện gió, điện mặt trời, điện hạt nhân, thủy điện, nhiệt điện, sinh khối, LNG, khí
-- Chính sách/pháp lý: luật điện lực, quy hoạch điện, chính sách năng lượng VN
-- Xu hướng ngành toàn cầu ảnh hưởng VN: giá dầu/khí thế giới tác động điện VN, công nghệ BESS/hydrogen, chuỗi cung ứng NLTT quốc tế
-- Hạ tầng năng lượng: LNG terminal, kho cảng, đường dây 500kV, trạm biến áp, nhà máy điện
-- Chuyển đổi năng lượng xanh, giảm phát thải ngành điện
+NGUYÊN TẮC CHUNG: Bài phải có CHỦ ĐỀ CHÍNH là ngành điện/năng lượng điện, không chỉ nhắc lướt. Nếu chủ đề chính là dầu/macro/địa chính trị và chỉ nhắc "năng lượng" thoáng qua → REJECT.
+
+LIÊN QUAN (pass, confidence ≥ 0.7):
+- EVN và các tổng công ty điện (NPC, CPC, HCMC, EVNGENCO...), PC1, Petrovietnam Power, nhà máy điện cụ thể
+- Sản xuất/truyền tải/phân phối điện: lưới điện, đường dây 500kV, trạm biến áp, công suất đặt
+- Giá điện, cung ứng điện, phụ tải, tiết kiệm điện, cắt điện
+- Nguồn điện: điện gió, điện mặt trời, điện hạt nhân, thủy điện, nhiệt điện, điện sinh khối, điện khí LNG, BESS
+- Chính sách/pháp lý VN: Luật Điện lực, Quy hoạch điện 8, cơ chế mua bán điện trực tiếp (DPPA), hợp đồng PPA
+- Bộ Công Thương, Cục Điện lực về vấn đề điện
+- LNG terminal / kho cảng khí phục vụ phát điện
+- Chuyển đổi năng lượng sạch gắn với ngành điện (hydrogen xanh cho phát điện, BESS lưới điện)
+- Hợp tác quốc tế VN về điện/năng lượng (đầu tư, công nghệ điện)
 
 KHÔNG LIÊN QUAN (reject):
-- Xe điện cá nhân/ô tô thương mại (Porsche, Tesla, VinFast sản phẩm), trạm sạc xe
+- Giá dầu thế giới, dầu thô WTI/Brent, OPEC — ngay cả khi nhắc "tác động năng lượng" chung chung
+- Xung đột Trung Đông, địa chính trị (Iran, Israel, Hormuz, Trump) — trừ khi bài tập trung vào tác động CỤ THỂ đến cung ứng điện/LNG cho VN
+- Macro VN: CPI, lạm phát, tỷ giá, GDP — trừ khi tập trung vào ngành điện
+- Kinh tế chung không chuyên đề điện: Eurozone PMI, hỗ trợ kinh tế châu Âu, tọa đàm hợp tác kinh tế chung
+- Xe điện cá nhân/ô tô (Tesla, VinFast sản phẩm), trạm sạc xe — trừ khi bàn tác động lên lưới điện
 - Thiết bị điện gia dụng, điện thoại, điện tử tiêu dùng
-- Tài chính doanh nghiệp không liên quan điện (cổ tức, ĐHĐCĐ chung)
-- Xăng dầu thuần (trừ khi gắn trực tiếp với điện/khí/LNG)
-- Crypto/tiền điện tử, thời tiết thuần túy, showbiz, thể thao
-- Giá USD/vàng, kinh tế vĩ mô không đề cập ngành điện
-- Tin quốc tế không liên quan VN và không phải xu hướng ngành điện toàn cầu
+- Tài chính doanh nghiệp (ĐHĐCĐ, cổ tức) — trừ khi doanh nghiệp là DN ngành điện và bài bàn về chiến lược điện cụ thể
+- Xăng dầu bán lẻ, giá xăng trong nước
+- Tài chính xanh/ESG chung chung (trừ khi dự án cụ thể là điện)
+- Crypto/tiền điện tử, thời tiết, showbiz, thể thao
+- Tin quốc tế không liên quan VN (trừ đột phá công nghệ điện mặt trời/gió/hạt nhân/BESS)
 
-LƯU Ý: Tin quốc tế về điện mặt trời/gió/hạt nhân toàn cầu VẪN pass. Dầu mỏ Trung Đông chỉ pass nếu bài bàn tác động giá điện/năng lượng.
+VÍ DỤ REJECT rõ ràng:
+- "Giá dầu vượt 100 USD/thùng" → reject (dầu, không phải điện)
+- "Xung đột Trung Đông khiến kinh tế Eurozone suy giảm" → reject (macro eurozone)
+- "Iran bắt giữ tàu tại Hormuz, giá dầu tăng" → reject (địa chính trị + dầu)
+- "Nguồn lực tài chính hỗ trợ các dự án xanh chưa đáp ứng" → reject (tài chính xanh chung)
+- "Tọa đàm bàn tròn hợp tác kinh tế VN-Hàn Quốc" → reject (kinh tế chung)
+- "Bảo đảm nguồn cung nhiên liệu trong nước" → reject (nhiên liệu, không riêng điện)
+- "Chủ động kịch bản điều hành giá trước áp lực lạm phát nhập khẩu" → reject (macro)
 
-TRẢ VỀ: MẢNG JSON thuần, không markdown. Mỗi phần tử: {"relevant": bool, "confidence": 0.0-1.0, "reason": "≤12 từ"}`;
+VÍ DỤ PASS rõ ràng:
+- "EVN thông báo cung ứng điện mùa khô" → pass
+- "Phê duyệt nhà máy điện hạt nhân Ninh Thuận" → pass
+- "PC1 mục tiêu doanh thu kỷ lục chiến lược tập trung vào năng lượng" → pass (DN điện, chiến lược điện)
+- "Xuất khẩu thiết bị điện mặt trời Trung Quốc kỷ lục" → pass (công nghệ điện mặt trời)
+- "Petrovietnam đề xuất 3 trụ cột hợp tác năng lượng với Hàn Quốc" → pass (VN DN năng lượng)
+
+TRẢ VỀ: MẢNG JSON thuần, không markdown. Mỗi phần tử: {"relevant": bool, "confidence": 0.0-1.0, "reason": "≤12 từ"}
+confidence < 0.7 sẽ bị coi như reject — chỉ pass với true khi thực sự chắc chắn.`;
 
 const SUMMARIZE_SYSTEM_PROMPT = `Bạn là biên tập viên tin tức chuyên ngành điện Việt Nam. Nhiệm vụ: đọc bài báo và trả về JSON gồm ngày xuất bản + tóm tắt.
 
@@ -532,7 +557,10 @@ async function handle(): Promise<Response> {
   }
   const classifications = await classifyBatch(toClassify, anthropicKey);
   stats.classified = classifications.length;
-  const relevant = toClassify.filter((_, i) => classifications[i].relevant === true);
+  const relevant = toClassify.filter((_, i) => {
+    const c = classifications[i];
+    return c.relevant === true && c.confidence >= MIN_CLASSIFY_CONFIDENCE;
+  });
   stats.relevant = relevant.length;
 
   // 6. Fetch + summarize + insert (parallel 3)
