@@ -81,6 +81,7 @@ KHÔNG LIÊN QUAN (reject):
 - Xung đột Trung Đông, địa chính trị (Iran, Israel, Hormuz, Trump) — trừ khi bài tập trung vào tác động CỤ THỂ đến cung ứng điện/LNG cho VN
 - Macro VN: CPI, lạm phát, tỷ giá, GDP — trừ khi tập trung vào ngành điện
 - Kinh tế chung không chuyên đề điện: Eurozone PMI, hỗ trợ kinh tế châu Âu, tọa đàm hợp tác kinh tế chung
+- Lifestyle/văn hóa/sinh hoạt: dress code, mẹo gia đình, trải nghiệm tiêu dùng — kể cả khi nhắc tiết kiệm điện như background
 - Xe điện cá nhân/ô tô (Tesla, VinFast sản phẩm), trạm sạc xe — trừ khi bàn tác động lên lưới điện
 - Thiết bị điện gia dụng, điện thoại, điện tử tiêu dùng
 - Tài chính doanh nghiệp (ĐHĐCĐ, cổ tức) — trừ khi doanh nghiệp là DN ngành điện và bài bàn về chiến lược điện cụ thể
@@ -97,6 +98,9 @@ VÍ DỤ REJECT rõ ràng:
 - "Tọa đàm bàn tròn hợp tác kinh tế VN-Hàn Quốc" → reject (kinh tế chung)
 - "Bảo đảm nguồn cung nhiên liệu trong nước" → reject (nhiên liệu, không riêng điện)
 - "Chủ động kịch bản điều hành giá trước áp lực lạm phát nhập khẩu" → reject (macro)
+- "Công chức Nhật được khuyến khích mặc quần short đi làm" → reject (lifestyle/văn hóa nước ngoài, dù có nhắc tiết kiệm điện)
+- "Mẹo tiết kiệm điện trong gia đình mùa hè" → reject (mẹo vặt tiêu dùng, không phải tin ngành)
+- "Người Trung Quốc đổ xô mua quạt tích điện vì cắt điện" → reject (tin tiêu dùng nước ngoài)
 
 VÍ DỤ PASS rõ ràng:
 - "EVN thông báo cung ứng điện mùa khô" → pass
