@@ -171,10 +171,35 @@ async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
   }
 }
 
+// HTML entity decoder: handles named entities (amp, oacute, hellip, ...) plus
+// numeric refs &#NNN; and &#xHH;. RSS feeds (Thanh Niên, một số báo) thường gửi
+// title chứa entity như "c&oacute; &aacute;p &#039;..." — decoder cũ chỉ xử lý
+// 6 entity XML chuẩn nên các ký tự có dấu bị giữ nguyên dạng entity.
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
+  oacute: "ó", Oacute: "Ó", aacute: "á", Aacute: "Á",
+  eacute: "é", Eacute: "É", iacute: "í", Iacute: "Í",
+  uacute: "ú", Uacute: "Ú", yacute: "ý", Yacute: "Ý",
+  ograve: "ò", Ograve: "Ò", agrave: "à", Agrave: "À",
+  egrave: "è", Egrave: "È", igrave: "ì", Igrave: "Ì",
+  ugrave: "ù", Ugrave: "Ù",
+  ocirc: "ô", Ocirc: "Ô", acirc: "â", Acirc: "Â",
+  ecirc: "ê", Ecirc: "Ê", icirc: "î", Icirc: "Î",
+  ucirc: "û", Ucirc: "Û",
+  otilde: "õ", Otilde: "Õ", atilde: "ã", Atilde: "Ã",
+  ntilde: "ñ", Ntilde: "Ñ",
+  ouml: "ö", auml: "ä", iuml: "ï", uuml: "ü",
+  hellip: "…", mdash: "—", ndash: "–",
+  lsquo: "‘", rsquo: "’", ldquo: "“", rdquo: "”",
+  bull: "•", middot: "·", copy: "©", reg: "®", trade: "™",
+};
+
 function unescapeXml(s: string): string {
-  return s.replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&").replace(/&quot;/g, '"')
-    .replace(/&apos;|&#39;/g, "'").replace(/&nbsp;/g, " ");
+  if (!s) return s;
+  return s
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+    .replace(/&([a-zA-Z][a-zA-Z0-9]+);/g, (m, name) => NAMED_ENTITIES[name] ?? m);
 }
 
 function stripHtml(s: string): string {
