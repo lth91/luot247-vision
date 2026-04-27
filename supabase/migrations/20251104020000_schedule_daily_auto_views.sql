@@ -33,7 +33,7 @@ BEGIN
   -- IMPORTANT: Replace 'YOUR_SERVICE_ROLE_KEY_HERE' with your actual key
   IF v_service_role_key IS NULL THEN
     -- Paste your service role key here (from Edge Function Secrets > SUPABASE_SERVICE_ROLE_KEY)
-    v_service_role_key := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrbHB2YWluZGJma2NtdXV1ZmZ6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTAzMjA3NCwiZXhwIjoyMDc2NjA4MDc0fQ.2Hye6gnC9ZVVUrD48LvTLpLo-LgDuebbl7CAaqu0rZo';
+    v_service_role_key := 'REDACTED_LEGACY_JWT_ROTATED_2026-04-27';
   END IF;
   
   -- Build headers with or without auth

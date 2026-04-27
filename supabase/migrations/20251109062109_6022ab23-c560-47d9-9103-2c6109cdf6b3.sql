@@ -13,7 +13,7 @@ SELECT cron.schedule(
   SELECT
     net.http_post(
         url:='https://gklpvaindbfkcmuuuffz.supabase.co/functions/v1/update-daily-stats',
-        headers:='{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrbHB2YWluZGJma2NtdXV1ZmZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzIwNzQsImV4cCI6MjA3NjYwODA3NH0.2OhNA8m21dGgc29_ocKwDsb9yerwDadYsnKlWyyvzuI"}'::jsonb,
+        headers:='{"Content-Type": "application/json", "Authorization": "Bearer REDACTED_LEGACY_JWT_ROTATED_2026-04-27"}'::jsonb,
         body:='{}'::jsonb
     ) as request_id;
   $$
