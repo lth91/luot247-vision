@@ -121,11 +121,13 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
         </button>
 
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" className="absolute right-0 text-sm font-medium">
-              Menu
-            </Button>
-          </SheetTrigger>
+          {location.pathname !== "/d" && (
+            <SheetTrigger asChild>
+              <Button variant="ghost" className="absolute right-0 text-sm font-medium">
+                Menu
+              </Button>
+            </SheetTrigger>
+          )}
           <SheetContent side="right" className="w-[280px]">
             <div className="flex flex-col gap-4 mt-8">
               {user ? (
