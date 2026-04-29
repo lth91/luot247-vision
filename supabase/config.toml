@@ -32,3 +32,5 @@ verify_jwt = false
 
 [functions.backfill-summaries]
 verify_jwt = false
+[functions.health-check]
+verify_jwt = false
