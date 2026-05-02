@@ -311,6 +311,8 @@ async function handleCrawl(req: Request): Promise<Response> {
   // Loại virtual sources (list_url không phải http URL) — chúng do edge function khác xử lý (vd RSS Discovery).
   let query = supabase.from("electricity_sources").select("*").eq("is_active", true).like("list_url", "http%").order("last_crawled_at", { ascending: true, nullsFirst: true }).limit(SOURCES_PER_RUN);
   if (forcedSourceId) {
+    // Force-retry 1 source từ UI: bỏ filter is_active để cho phép thử lại nguồn đã auto-disable
+    // (UI là cách duy nhất kích hoạt nhánh này; cron luôn không có body).
     query = supabase.from("electricity_sources").select("*").eq("id", forcedSourceId);
   }
   const { data: sources, error: sErr } = await query;
@@ -367,7 +369,7 @@ async function handleCrawl(req: Request): Promise<Response> {
           // hỏi Claude ở bước tóm tắt và dùng kết quả đó. Nếu vẫn null → skip.
           const metaDate = extractPublishedDateFromHtml(artHtml);
           const rssDate = parseRssDate(c.pubDate ?? null);
-          let preSummaryDate = metaDate ?? rssDate;
+          const preSummaryDate = metaDate ?? rssDate;
           const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
 
           // Nếu đã xác định được ngày ở đây và quá cũ, bỏ qua LUÔN, tiết kiệm token Claude.
@@ -440,13 +442,15 @@ async function handleCrawl(req: Request): Promise<Response> {
       const msg = (e as Error).message;
       stats.errors.push(`${src.name}: ${msg}`);
       const newFails = src.consecutive_failures + 1;
+      // Threshold 10 (cũ là 5): tránh disable nhầm các nguồn flaky tạm down. Cron
+      // reenable_disabled_sources sẽ thử bật lại sau 24h cooldown.
       await supabase
         .from("electricity_sources")
         .update({
           last_crawled_at: new Date().toISOString(),
           consecutive_failures: newFails,
           last_error: msg.slice(0, 500),
-          is_active: newFails < 5,
+          is_active: newFails < 10,
         })
         .eq("id", src.id);
     }

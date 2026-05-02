@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { Header } from "@/components/Header";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Zap } from "lucide-react";
+import { getRelativeTime } from "@/lib/dateUtils";
 
 type ElectricityNewsRow = {
   id: string;
@@ -32,6 +34,19 @@ const fetchNews = async (limit: number): Promise<ElectricityNewsRow[]> => {
     .limit(limit);
   if (error) throw error;
   return (data ?? []) as unknown as ElectricityNewsRow[];
+};
+
+// Khi /d trống, fetch thời điểm crawl gần nhất để user phân biệt "hệ thống chưa kịp"
+// vs "cron đứng nhiều giờ" (signal điều tra ở /ddashboard).
+const fetchLastCrawled = async (): Promise<string | null> => {
+  const { data, error } = await supabase
+    .from("electricity_sources" as never)
+    .select("last_crawled_at")
+    .order("last_crawled_at", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return null;
+  return (data as { last_crawled_at: string | null } | null)?.last_crawled_at ?? null;
 };
 
 const ElectricityNews = () => {
@@ -64,6 +79,16 @@ const ElectricityNews = () => {
     refetchInterval: 5 * 60 * 1000,
   });
 
+  const isEmpty = !isLoading && (!data || data.length === 0);
+  const { data: lastCrawled } = useQuery({
+    queryKey: ["electricity-last-crawled"],
+    queryFn: fetchLastCrawled,
+    enabled: isEmpty,
+    staleTime: 60 * 1000,
+  });
+  const lastCrawledAgeMs = lastCrawled ? Date.now() - new Date(lastCrawled).getTime() : null;
+  const isStale = lastCrawledAgeMs != null && lastCrawledAgeMs > 60 * 60 * 1000; // >1h coi như stuck
+
   return (
     <div className="min-h-screen bg-background">
       <Header user={session?.user} userRole={userRole} />
@@ -81,11 +106,26 @@ const ElectricityNews = () => {
               <Skeleton key={i} className="h-56 w-full" />
             ))}
           </div>
-        ) : !data || data.length === 0 ? (
+        ) : isEmpty ? (
           <div className="text-center py-16 text-muted-foreground">
-            <Zap className="h-12 w-12 mx-auto mb-3 opacity-40" />
-            <p className="mb-2">Chưa có tin nào.</p>
-            <p className="text-sm">Hệ thống đang cập nhật, vui lòng quay lại sau.</p>
+            <Zap className={`h-12 w-12 mx-auto mb-3 ${isStale ? "text-orange-500 opacity-80" : "opacity-40"}`} />
+            <p className="mb-2">Chưa có tin nào trong {RECENT_DAYS} ngày qua.</p>
+            {lastCrawled ? (
+              <p className="text-sm">
+                Lần crawl gần nhất:{" "}
+                <span className={isStale ? "text-orange-600 font-semibold" : ""}>
+                  {getRelativeTime(lastCrawled)}
+                </span>
+                {isStale && " — có thể cron đang đứng."}
+              </p>
+            ) : (
+              <p className="text-sm">Hệ thống đang cập nhật, vui lòng quay lại sau.</p>
+            )}
+            <p className="text-sm mt-2">
+              <Link to="/ddashboard" className="text-primary hover:underline">
+                Xem chi tiết trạng thái nguồn →
+              </Link>
+            </p>
           </div>
         ) : (
           <>

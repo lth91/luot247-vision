@@ -648,14 +648,14 @@ async function handle(): Promise<Response> {
         return;
       }
 
-      // Host làm source_name phụ (để dashboard group theo domain)
+      // Lưu domain ra cột riêng để dashboard group được mà không cần parse source_name.
       let host = "";
       try { host = new URL(it.link).host.replace(/^www\./, ""); } catch { /* ignore */ }
-      const displayName = host ? `${src.name} (${host})` : src.name;
 
       const { error: insErr } = await supabase.from("electricity_news").insert({
         source_id: src.id,
-        source_name: displayName,
+        source_name: src.name,
+        source_domain: host || null,
         source_category: src.category,
         title,
         summary,
