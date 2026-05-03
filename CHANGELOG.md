@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/lth91/luot247-vision/compare/v1.7.1...v1.8.0) (2026-05-03)
+
+
+### Features
+
+* **monitoring:** per-source Telegram events (Phase C) ([#24](https://github.com/lth91/luot247-vision/issues/24)) ([bcc616f](https://github.com/lth91/luot247-vision/commit/bcc616f6428e1d02155979450819d7506a9fed6f))
+
 ## [1.7.1](https://github.com/lth91/luot247-vision/compare/v1.7.0...v1.7.1) (2026-05-03)
 
 
