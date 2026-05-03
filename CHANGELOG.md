@@ -1,3 +1,10 @@
+# [1.14.0](https://github.com/lth91/luot247-vision/compare/v1.13.1...v1.14.0) (2026-05-03)
+
+
+### Features
+
+* **autonomy:** AI auto-fix selector agent (Phase G) ([#33](https://github.com/lth91/luot247-vision/issues/33)) ([66fb232](https://github.com/lth91/luot247-vision/commit/66fb2325ffce6ccff6ff799976e0a2543ca124d3))
+
 ## [1.13.1](https://github.com/lth91/luot247-vision/compare/v1.13.0...v1.13.1) (2026-05-03)
 
 
