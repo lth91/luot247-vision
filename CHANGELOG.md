@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/lth91/luot247-vision/compare/v1.6.1...v1.7.0) (2026-05-03)
+
+
+### Features
+
+* **electricity:** content dedup via title hash (Phase 3) ([#22](https://github.com/lth91/luot247-vision/issues/22)) ([0ea513a](https://github.com/lth91/luot247-vision/commit/0ea513a71419669be6195b595ebf0b3ba1012495))
+
 ## [1.6.1](https://github.com/lth91/luot247-vision/compare/v1.6.0...v1.6.1) (2026-05-03)
 
 
