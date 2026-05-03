@@ -1,6 +1,5 @@
-import { ExternalLink, ShieldCheck, Newspaper } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { formatVietnamDateShort, getRelativeTime } from "@/lib/dateUtils";
 
 interface ElectricityNewsCardProps {
@@ -9,25 +8,7 @@ interface ElectricityNewsCardProps {
   originalUrl: string;
   publishedAt: string | null;
   crawledAt: string;
-  tier?: number | null;
 }
-
-const TIER_BADGE: Record<number, {
-  label: string;
-  Icon: typeof ShieldCheck;
-  cls: string;
-}> = {
-  1: {
-    label: "Chính thức",
-    Icon: ShieldCheck,
-    cls: "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-50",
-  },
-  2: {
-    label: "Chuyên ngành",
-    Icon: Newspaper,
-    cls: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50",
-  },
-};
 
 export const ElectricityNewsCard = ({
   title,
@@ -35,18 +16,10 @@ export const ElectricityNewsCard = ({
   originalUrl,
   publishedAt,
   crawledAt,
-  tier,
 }: ElectricityNewsCardProps) => {
   const displayDate = publishedAt ?? crawledAt;
-  const badge = tier ? TIER_BADGE[tier] : null;
   return (
     <Card className="p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
-      {badge && (
-        <Badge variant="outline" className={`gap-1 w-fit font-normal ${badge.cls}`}>
-          <badge.Icon className="h-3 w-3" />
-          {badge.label}
-        </Badge>
-      )}
       <h3 className="font-semibold text-base leading-snug">{title}</h3>
 
       <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">

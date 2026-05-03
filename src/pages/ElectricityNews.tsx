@@ -140,7 +140,6 @@ const ElectricityNews = () => {
                   originalUrl={item.original_url}
                   publishedAt={item.published_at}
                   crawledAt={item.crawled_at}
-                  tier={item.tier}
                 />
               ))}
             </div>
