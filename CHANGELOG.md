@@ -1,3 +1,10 @@
+# [1.13.0](https://github.com/lth91/luot247-vision/compare/v1.12.0...v1.13.0) (2026-05-03)
+
+
+### Features
+
+* **autonomy:** weekly digest + coverage metric (Phase F) ([#31](https://github.com/lth91/luot247-vision/issues/31)) ([ec741f0](https://github.com/lth91/luot247-vision/commit/ec741f0116ed9fce8277d03dbf8f496914ee7d90))
+
 # [1.12.0](https://github.com/lth91/luot247-vision/compare/v1.11.0...v1.12.0) (2026-05-03)
 
 
