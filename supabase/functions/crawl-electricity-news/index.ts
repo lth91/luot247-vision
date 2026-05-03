@@ -3,6 +3,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 import { DOMParser, Element } from "https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts";
+import { isElectricityTopical } from "../_shared/electricity-keywords.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +28,7 @@ interface Source {
   list_link_pattern: string | null;
   article_content_selector: string | null;
   category: string;
+  tier: number | null;
   consecutive_failures: number;
 }
 
@@ -171,15 +173,17 @@ async function summarizeWithClaude(
   content: string,
   apiKey: string,
   knownPublishedDate: string | null = null,
-): Promise<{ summary: string; publishedDate: string | null }> {
-  const systemPrompt = `Bạn là biên tập viên tin tức chuyên ngành điện Việt Nam. Nhiệm vụ: đọc bài báo và trả về JSON gồm ngày xuất bản + tóm tắt.
+): Promise<{ summary: string; publishedDate: string | null; relevant: boolean }> {
+  const systemPrompt = `Bạn là biên tập viên tin tức chuyên ngành điện Việt Nam. Nhiệm vụ: đọc bài báo, đánh giá có thuộc ngành điện/năng lượng điện không, rồi trả về JSON.
 
 ĐỊNH DẠNG ĐẦU RA BẮT BUỘC (JSON thuần, không markdown, không giải thích):
-{"published_date": "YYYY-MM-DD hoặc null", "summary": "..."}
+{"relevant": true/false, "published_date": "YYYY-MM-DD hoặc null", "summary": "..."}
 
 QUY TẮC:
+- relevant: true CHỈ KHI bài có CHỦ ĐỀ CHÍNH là ngành điện (EVN, lưới điện, nhà máy điện, điện gió/mặt trời/hạt nhân/khí, giá điện, cung ứng điện, tiết kiệm điện, chính sách điện lực, BESS, PPA, Quy hoạch điện…). Nếu chỉ nhắc lướt "điện" hoặc bài về tai nạn/lifestyle/showbiz/giải trí/thể thao/bất động sản/cung hoàng đạo/giao thông/y tế… → relevant: false.
+- Nếu relevant: false → vẫn TRẢ summary ngắn 1 câu giải thích "Bài không thuộc ngành điện: <lý do ngắn>" để debug. published_date có thể null.
 - published_date: ngày xuất bản bài (nếu rõ ràng nêu trong bài hoặc tiêu đề). Dạng YYYY-MM-DD. Nếu không xác định được thì trả null. KHÔNG được đoán hoặc dùng ngày hiện tại.
-- summary: tóm tắt bài báo dưới 150 từ bằng tiếng Việt, văn phong tin tức chuyên ngành, khách quan, trang trọng.
+- summary (khi relevant: true): tóm tắt bài báo dưới 150 từ bằng tiếng Việt, văn phong tin tức chuyên ngành, khách quan, trang trọng.
 
 QUAN TRỌNG — MỞ ĐẦU SUMMARY BẰNG MỐC THỜI GIAN TỰ NHIÊN:
   + Nếu bài nêu rõ buổi/ngày cụ thể: dùng "Sáng 22/4", "Chiều 22/4", "Tối 22/4", "Trưa 22/4", "Đêm 22/4". KHÔNG kèm năm trừ khi là sự kiện quá khứ xa hoặc kế hoạch tương lai.
@@ -224,15 +228,18 @@ VÍ DỤ MẪU:
   const data = await res.json();
   const raw: string = (data?.content?.[0]?.text ?? "").trim();
   const jsonMatch = raw.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) return { summary: raw, publishedDate: null };
+  if (!jsonMatch) return { summary: raw, publishedDate: null, relevant: true };
   try {
     const parsed = JSON.parse(jsonMatch[0]);
     const summary = String(parsed.summary ?? "").trim();
     const pd = parsed.published_date;
     const publishedDate = typeof pd === "string" && /^\d{4}-\d{2}-\d{2}$/.test(pd) ? pd : null;
-    return { summary, publishedDate };
+    // Default to true (no behavior change) if Claude omits the field — the keyword
+    // pre-filter already rejects most off-topic, this is the LLM safety net.
+    const relevant = parsed.relevant === false ? false : true;
+    return { summary, publishedDate, relevant };
   } catch {
-    return { summary: raw, publishedDate: null };
+    return { summary: raw, publishedDate: null, relevant: true };
   }
 }
 
@@ -338,6 +345,21 @@ async function handleCrawl(req: Request): Promise<Response> {
       }
       stats.articlesFound += candidates.length;
 
+      // Topical pre-filter cho tier-3 báo-chí RSS general feeds (vd nld.com.vn/rss/home.rss
+      // trả tin tổng hợp). Chỉ giữ candidates có keyword điện/năng lượng trong title để
+      // tránh tốn token Claude tóm tắt + insert tin off-topic. KHÔNG áp dụng cho:
+      //   - tier 1/2 (DN/EVN/chuyên ngành — title không cần keyword)
+      //   - HTML list (link extraction không có title)
+      //   - sectional báo-chí (nếu category fix sectional, title vẫn match keyword tự nhiên)
+      if (src.tier === 3 && src.category === "bao-chi" && src.feed_type === "rss") {
+        const before = candidates.length;
+        candidates = candidates.filter((c) => isElectricityTopical(c.title || ""));
+        const skipped = before - candidates.length;
+        if (skipped > 0) {
+          stats.errors.push(`${src.name}: lọc ${skipped} bài off-topic (keyword filter tier-3)`);
+        }
+      }
+
       // HTTP 200 nhưng 0 link parse được = selector/RSS pattern hỏng. Treat as failure
       // để consecutive_failures tích lũy, nguồn die sẽ tự bị flag thay vì im lặng "thành công".
       if (candidates.length === 0) {
@@ -399,9 +421,14 @@ async function handleCrawl(req: Request): Promise<Response> {
           }
 
           const preSummaryDateIso = preSummaryDate ? preSummaryDate.slice(0, 10) : null;
-          const { summary, publishedDate } = await summarizeWithClaude(finalTitle, content, anthropicKey, preSummaryDateIso);
+          const { summary, publishedDate, relevant } = await summarizeWithClaude(finalTitle, content, anthropicKey, preSummaryDateIso);
           if (!summary) {
             stats.errors.push(`${src.name}: Claude trả về rỗng`);
+            continue;
+          }
+          if (!relevant) {
+            // LLM safety net: bài lọt qua keyword filter nhưng Claude phán off-topic
+            stats.errors.push(`${src.name}: LLM relevant=false, skip — ${summary.slice(0, 80)}`);
             continue;
           }
           if (isInvalidSummary(summary)) {
