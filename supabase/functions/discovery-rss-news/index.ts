@@ -47,6 +47,11 @@ const FEEDS: { name: string; url: string }[] = [
   { name: "VietnamNet - Kinh doanh",  url: "https://vietnamnet.vn/rss/kinh-doanh.rss" },
   { name: "PECC3",                    url: "https://www.pecc3.com.vn/feed" },
   { name: "Báo Đấu Thầu - Năng lượng",url: "https://baodauthau.vn/rss/nang-luong.rss" },
+  // Phase B1 (audit 03/05): Báo Chính Phủ + SGGP — RSS 50 items/feed, fresh today.
+  // Cả hai cần classifier filter mạnh vì general news, không electricity-specific.
+  // Phase 1 classifier (threshold 0.85 + blacklist) handle false positive.
+  { name: "Báo Chính Phủ",            url: "https://baochinhphu.vn/rss" },
+  { name: "SGGP - Kinh tế",           url: "https://www.sggp.org.vn/rss/kinh-te-3.rss" },
 ];
 
 // HTML list-page feeds: các site không có RSS. Mỗi feed có listUrl (trang section)
