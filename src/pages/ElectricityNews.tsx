@@ -29,6 +29,7 @@ const fetchNews = async (limit: number): Promise<ElectricityNewsRow[]> => {
   const { data, error } = await supabase
     .from("electricity_news" as never)
     .select("id, title, summary, original_url, published_at, crawled_at, tier")
+    .is("is_duplicate_of", null)
     .or(`published_at.gte.${threshold},and(published_at.is.null,crawled_at.gte.${threshold})`)
     .order("tier", { ascending: true, nullsFirst: false })
     .order("published_at", { ascending: false, nullsFirst: false })
