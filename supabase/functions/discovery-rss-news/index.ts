@@ -6,6 +6,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 import { DOMParser, Element } from "https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts";
+import { ELECTRICITY_KEYWORD_RE } from "../_shared/electricity-keywords.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -66,7 +67,8 @@ const HTML_FEEDS: { name: string; listUrl: string; linkPattern: string }[] = [
 ];
 
 // Keyword pre-filter: loại ~94% bài không liên quan trước khi gọi LLM.
-const KEYWORD_RE = /\b(EVN|BESS|điện(?!\s*(thoại|tử|ảnh|máy))|năng\s*lượng|điện\s*lực|điện\s*gió|điện\s*mặt\s*trời|điện\s*hạt\s*nhân|điện\s*sinh\s*khối|thủy\s*điện|nhiệt\s*điện|lưới\s*điện|cung\s*ứng\s*điện|giá\s*điện|tiết\s*kiệm\s*điện|pin\s*lưu\s*trữ|lưu\s*trữ\s*điện|pin\s*(natri|lithium|li-?ion)|hydro\s*xanh|xe\s*điện|Bộ\s*Công\s*Thương|Cục\s*Điện\s*lực|NLTT|PPA|DPPA|Quy\s*hoạch\s*điện)/i;
+// Imported từ _shared để dùng chung với crawl-electricity-news.
+const KEYWORD_RE = ELECTRICITY_KEYWORD_RE;
 
 // Title blacklist: pattern rõ ràng off-topic dù đã pass KEYWORD_RE qua description.
 // Chạy trước LLM để tiết kiệm cost + bắt được case LLM borderline confidence.
