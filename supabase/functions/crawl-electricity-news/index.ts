@@ -338,6 +338,23 @@ async function handleCrawl(req: Request): Promise<Response> {
       }
       stats.articlesFound += candidates.length;
 
+      // HTTP 200 nhưng 0 link parse được = selector/RSS pattern hỏng. Treat as failure
+      // để consecutive_failures tích lũy, nguồn die sẽ tự bị flag thay vì im lặng "thành công".
+      if (candidates.length === 0) {
+        const newFails = src.consecutive_failures + 1;
+        await supabase
+          .from("electricity_sources")
+          .update({
+            last_crawled_at: new Date().toISOString(),
+            consecutive_failures: newFails,
+            last_error: `no candidates parsed from ${src.feed_type} list`,
+            is_active: newFails < 10,
+          })
+          .eq("id", src.id);
+        stats.errors.push(`${src.name}: 0 candidates parsed (fails=${newFails})`);
+        return;
+      }
+
       for (const c of candidates) {
         const canonical = canonicalizeUrl(c.url, src.base_url);
         if (!canonical) continue;
