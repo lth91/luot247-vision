@@ -1,3 +1,10 @@
+## [1.15.2](https://github.com/lth91/luot247-vision/compare/v1.15.1...v1.15.2) (2026-05-03)
+
+
+### Bug Fixes
+
+* **electricity:** /d dùng cùng layout list-of-rows như trang chủ ([2dd9aae](https://github.com/lth91/luot247-vision/commit/2dd9aaebf1c0ca56075af50c1842ecc6d6b99a59))
+
 ## [1.15.1](https://github.com/lth91/luot247-vision/compare/v1.15.0...v1.15.1) (2026-05-03)
 
 
