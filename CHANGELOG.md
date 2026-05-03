@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/lth91/luot247-vision/compare/v1.10.0...v1.11.0) (2026-05-03)
+
+
+### Features
+
+* **autonomy:** source quality score + auto-cleanup (Phase D) ([#29](https://github.com/lth91/luot247-vision/issues/29)) ([3d159fd](https://github.com/lth91/luot247-vision/commit/3d159fd79a1453f39396e29af05a66b3471561f9))
+
 # [1.10.0](https://github.com/lth91/luot247-vision/compare/v1.9.0...v1.10.0) (2026-05-03)
 
 
