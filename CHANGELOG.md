@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/lth91/luot247-vision/compare/v1.6.0...v1.6.1) (2026-05-03)
+
+
+### Bug Fixes
+
+* **electricity:** remove tier badge from /d news cards ([#21](https://github.com/lth91/luot247-vision/issues/21)) ([32f308d](https://github.com/lth91/luot247-vision/commit/32f308d5a936043fcfcc40a6295a3ae730e2bd23))
+
 # [1.6.0](https://github.com/lth91/luot247-vision/compare/v1.5.0...v1.6.0) (2026-05-03)
 
 
