@@ -1,3 +1,10 @@
+## [1.13.1](https://github.com/lth91/luot247-vision/compare/v1.13.0...v1.13.1) (2026-05-03)
+
+
+### Bug Fixes
+
+* **electricity:** disable Tuổi Trẻ per-source (covered by RSS Discovery) ([#32](https://github.com/lth91/luot247-vision/issues/32)) ([444ef00](https://github.com/lth91/luot247-vision/commit/444ef00b719b4bf46b50ad3ab541414459feba78))
+
 # [1.13.0](https://github.com/lth91/luot247-vision/compare/v1.12.0...v1.13.0) (2026-05-03)
 
 
