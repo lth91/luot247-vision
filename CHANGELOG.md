@@ -1,3 +1,10 @@
+# [1.15.0](https://github.com/lth91/luot247-vision/compare/v1.14.1...v1.15.0) (2026-05-03)
+
+
+### Features
+
+* **electricity:** /d chuyển về layout 1 cột giống trang chủ ([#35](https://github.com/lth91/luot247-vision/issues/35)) ([31a2860](https://github.com/lth91/luot247-vision/commit/31a28606d691d96300cc62b75782cda05f0dbce9))
+
 ## [1.14.1](https://github.com/lth91/luot247-vision/compare/v1.14.0...v1.14.1) (2026-05-03)
 
 
