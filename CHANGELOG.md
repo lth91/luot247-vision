@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/lth91/luot247-vision/compare/v1.11.0...v1.12.0) (2026-05-03)
+
+
+### Features
+
+* **autonomy:** auto-discovery candidates via Google News (Phase E) ([#30](https://github.com/lth91/luot247-vision/issues/30)) ([ffae3ce](https://github.com/lth91/luot247-vision/commit/ffae3ce3b880097ee2b9965793f54fde6624b21a))
+
 # [1.11.0](https://github.com/lth91/luot247-vision/compare/v1.10.0...v1.11.0) (2026-05-03)
 
 
