@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/lth91/luot247-vision/compare/v1.9.0...v1.10.0) (2026-05-03)
+
+
+### Features
+
+* **electricity:** add PV Power + Trung Nam Group sources (Phase B2) ([#27](https://github.com/lth91/luot247-vision/issues/27)) ([c032cd7](https://github.com/lth91/luot247-vision/commit/c032cd7158e4e55afa0ab95520ce3f78158f8b67)), closes [#25](https://github.com/lth91/luot247-vision/issues/25)
+
 # [1.9.0](https://github.com/lth91/luot247-vision/compare/v1.8.0...v1.9.0) (2026-05-03)
 
 
