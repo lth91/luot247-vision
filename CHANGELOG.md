@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/lth91/luot247-vision/compare/v1.5.0...v1.6.0) (2026-05-03)
+
+
+### Features
+
+* **electricity:** source tier system (Phase 2) ([#20](https://github.com/lth91/luot247-vision/issues/20)) ([5f5403d](https://github.com/lth91/luot247-vision/commit/5f5403dce6d523fe2c660338315948a11bc91c50))
+
 # [1.5.0](https://github.com/lth91/luot247-vision/compare/v1.4.0...v1.5.0) (2026-05-03)
 
 
