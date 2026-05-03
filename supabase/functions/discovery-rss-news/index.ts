@@ -21,7 +21,9 @@ const MAX_CANDIDATES_PER_RUN = 30;        // trần bài gửi LLM classify/run 
 const MAX_INSERTS_PER_RUN = 15;           // trần bài summarize + insert/run
 const MAX_CONTENT_CHARS = 8000;
 const DISCOVERY_SOURCE_NAME = "RSS Discovery";
-const MIN_CLASSIFY_CONFIDENCE = 0.7;      // LLM confidence tối thiểu để pass — tránh tin rìa (dầu, macro, geopolitics)
+const MIN_CLASSIFY_CONFIDENCE = 0.85;     // Bumped 0.7 → 0.85 (Phase 1 audit 03/05): borderline confidence
+                                          // 0.7-0.85 hay miss off-topic (vd "Triều Tiên hạt nhân", lifestyle có "tiết kiệm điện").
+                                          // Trade-off: giảm recall ~10-15%, tăng precision rõ rệt.
 
 const FEEDS: { name: string; url: string }[] = [
   { name: "VnExpress - Kinh doanh",   url: "https://vnexpress.net/rss/kinh-doanh.rss" },
@@ -60,6 +62,35 @@ const HTML_FEEDS: { name: string; listUrl: string; linkPattern: string }[] = [
 
 // Keyword pre-filter: loại ~94% bài không liên quan trước khi gọi LLM.
 const KEYWORD_RE = /\b(EVN|BESS|điện(?!\s*(thoại|tử|ảnh|máy))|năng\s*lượng|điện\s*lực|điện\s*gió|điện\s*mặt\s*trời|điện\s*hạt\s*nhân|điện\s*sinh\s*khối|thủy\s*điện|nhiệt\s*điện|lưới\s*điện|cung\s*ứng\s*điện|giá\s*điện|tiết\s*kiệm\s*điện|pin\s*lưu\s*trữ|lưu\s*trữ\s*điện|pin\s*(natri|lithium|li-?ion)|hydro\s*xanh|xe\s*điện|Bộ\s*Công\s*Thương|Cục\s*Điện\s*lực|NLTT|PPA|DPPA|Quy\s*hoạch\s*điện)/i;
+
+// Title blacklist: pattern rõ ràng off-topic dù đã pass KEYWORD_RE qua description.
+// Chạy trước LLM để tiết kiệm cost + bắt được case LLM borderline confidence.
+// Nếu title có signal mạnh về electricity (STRONG_ELEC_RE), KHÔNG reject — để LLM xử lý.
+const STRONG_ELEC_RE = /\b(EVN|BESS|PPA|DPPA|điện\s*lực|điện\s*gió|điện\s*mặt\s*trời|điện\s*hạt\s*nhân|thủy\s*điện|nhiệt\s*điện|lưới\s*điện|cung\s*ứng\s*điện|giá\s*điện|Cục\s*Điện\s*lực|Quy\s*hoạch\s*điện|Bộ\s*Công\s*Thương|LNG|điện\s*sinh\s*khối|điện\s*khí)\b/i;
+
+const BLACKLIST_PATTERNS: Array<{ name: string; re: RegExp }> = [
+  // Digest title trộn 2+ chủ đề bằng ; hoặc | — luôn loãng dù 1 phần là điện
+  { name: "digest_mix", re: /[;|]\s*(tăng\s+lương|lương\s+hưu|BĐS|bất\s+động\s+sản|y\s+tế|giáo\s+dục|tỷ\s+giá|chứng\s+khoán|cổ\s+phiếu|vàng|crypto)/i },
+  // Bài tổng hợp tuần/ngày — không có giá trị tin chuyên đề
+  { name: "weekly_digest", re: /^(Tổng\s+hợp\s+tin|Tin\s+(tuần|ngày|tháng)\s+qua|Điểm\s+tin\s+(tuần|sáng|chiều|tối|sớm))/i },
+  // Geopolitics/quân sự standalone — "hạt nhân" ở đây là vũ khí, không phải điện hạt nhân
+  { name: "geopolitics", re: /(Trump|Iran|Israel|Triều\s+Tiên|Bắc\s+Triều\s+Tiên|Hormuz|chiến\s+tranh|xung\s+đột\s+Trung\s+Đông|tên\s+lửa|vũ\s+khí\s+hạt\s+nhân|chương\s+trình\s+hạt\s+nhân)/i },
+  // Lifestyle/tip cá nhân — "tiết kiệm điện" ở đây là mẹo gia đình, không phải tin ngành
+  { name: "lifestyle_tip", re: /^(Mẹo|Cách|Có\s+nên|Có\s+đáng|Có\s+thật|Làm\s+sao|Bí\s+quyết|Hướng\s+dẫn)/i },
+  // Xe điện consumer launch — không liên quan ngành điện
+  { name: "consumer_ev", re: /(Tesla|VinFast|BYD|Xiaomi|Hyundai|Toyota|Kia|Honda)\s+(ra\s+mắt|giới\s+thiệu|công\s+bố|trình\s+làng|thông\s+báo)/i },
+];
+
+function classifyTitleBlacklist(title: string): { blacklisted: boolean; reason?: string } {
+  for (const { name, re } of BLACKLIST_PATTERNS) {
+    if (re.test(title)) {
+      // Cứu trợ: title có signal điện rõ ràng → cho qua, để LLM quyết
+      if (STRONG_ELEC_RE.test(title)) return { blacklisted: false };
+      return { blacklisted: true, reason: name };
+    }
+  }
+  return { blacklisted: false };
+}
 
 const CLASSIFY_SYSTEM_PROMPT = `Bạn phân loại tin tức cho trang tổng hợp ngành ĐIỆN Việt Nam. Trọng tâm: điện lực, hạ tầng điện, chính sách điện, chuyển đổi năng lượng sạch phục vụ sản xuất điện.
 
@@ -503,6 +534,8 @@ async function handle(): Promise<Response> {
     totalItems: 0,
     afterWindow: 0,
     afterKeyword: 0,
+    afterBlacklist: 0,
+    blacklistedSamples: [] as Array<{ title: string; reason: string }>,
     classified: 0,
     relevant: 0,
     inserted: 0,
@@ -561,12 +594,23 @@ async function handle(): Promise<Response> {
   }
   stats.afterWindow = byUrl.size;
 
-  // 3. Keyword pre-filter
+  // 3. Keyword pre-filter + title blacklist
   let keywordPass: RssItem[] = [];
+  let keywordHits = 0;
   for (const it of byUrl.values()) {
-    if (KEYWORD_RE.test(`${it.title} ${it.description}`)) keywordPass.push(it);
+    if (!KEYWORD_RE.test(`${it.title} ${it.description}`)) continue;
+    keywordHits++;
+    const bl = classifyTitleBlacklist(it.title);
+    if (bl.blacklisted) {
+      if (stats.blacklistedSamples.length < 5) {
+        stats.blacklistedSamples.push({ title: it.title.slice(0, 120), reason: bl.reason! });
+      }
+      continue;
+    }
+    keywordPass.push(it);
   }
-  stats.afterKeyword = keywordPass.length;
+  stats.afterKeyword = keywordHits;
+  stats.afterBlacklist = keywordPass.length;
   keywordPass.sort((a, b) => (Date.parse(b.pubDate || "") || 0) - (Date.parse(a.pubDate || "") || 0));
 
   // 4. Dedupe vs DB (url_hash)
