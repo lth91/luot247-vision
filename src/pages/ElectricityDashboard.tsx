@@ -23,6 +23,7 @@ type Source = {
 type News = {
   id: string;
   source_name: string;
+  source_domain: string | null;
   source_category: string | null;
   published_at: string | null;
   crawled_at: string;
@@ -46,7 +47,7 @@ const fetchSources = async (): Promise<Source[]> => {
 const fetchNews = async (): Promise<News[]> => {
   const { data, error } = await supabase
     .from("electricity_news" as never)
-    .select("id, source_name, source_category, published_at, crawled_at")
+    .select("id, source_name, source_domain, source_category, published_at, crawled_at")
     .order("crawled_at", { ascending: false })
     .limit(1000);
   if (error) throw error;
@@ -94,18 +95,10 @@ const ElectricityDashboard = () => {
     return new Date(lastCrawled).getTime() - 10 * 60 * 1000;
   }, [lastCrawled]);
 
-  // Chuẩn hóa source_name: "RSS Discovery (vneconomy.vn)" → "RSS Discovery"
-  // để gom đúng tin về row virtual source "RSS Discovery" trong bảng sources.
-  const normalizeSourceName = (n: string): string => {
-    const m = n.match(/^(RSS Discovery)\s*\(/);
-    return m ? m[1] : n;
-  };
-
   const newsBySource = useMemo(() => {
     const m = new Map<string, number>();
     for (const n of news ?? []) {
-      const key = normalizeSourceName(n.source_name);
-      m.set(key, (m.get(key) ?? 0) + 1);
+      m.set(n.source_name, (m.get(n.source_name) ?? 0) + 1);
     }
     return m;
   }, [news]);
@@ -115,19 +108,18 @@ const ElectricityDashboard = () => {
     if (lastBatchCutoffMs == null) return m;
     for (const n of news ?? []) {
       if (new Date(n.crawled_at).getTime() >= lastBatchCutoffMs) {
-        const key = normalizeSourceName(n.source_name);
-        m.set(key, (m.get(key) ?? 0) + 1);
+        m.set(n.source_name, (m.get(n.source_name) ?? 0) + 1);
       }
     }
     return m;
   }, [news, lastBatchCutoffMs]);
 
-  // Breakdown domain trong RSS Discovery
   const discoveryBreakdown = useMemo(() => {
     const m = new Map<string, number>();
     for (const n of news ?? []) {
-      const match = n.source_name.match(/^RSS Discovery\s*\(([^)]+)\)$/);
-      if (match) m.set(match[1], (m.get(match[1]) ?? 0) + 1);
+      if (n.source_name === "RSS Discovery" && n.source_domain) {
+        m.set(n.source_domain, (m.get(n.source_domain) ?? 0) + 1);
+      }
     }
     return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
   }, [news]);
