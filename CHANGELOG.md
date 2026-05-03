@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/lth91/luot247-vision/compare/v1.4.0...v1.5.0) (2026-05-03)
+
+
+### Features
+
+* **discovery:** tighten RSS classifier (Phase 1) ([#19](https://github.com/lth91/luot247-vision/issues/19)) ([cb56574](https://github.com/lth91/luot247-vision/commit/cb56574e6b1eec7c71c6fa3ffaf3fa818caf8f59))
+
 # [1.4.0](https://github.com/lth91/luot247-vision/compare/v1.3.0...v1.4.0) (2026-05-03)
 
 
