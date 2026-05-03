@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/lth91/luot247-vision/compare/v1.3.0...v1.4.0) (2026-05-03)
+
+
+### Features
+
+* **supabase:** hardening + perf indexes + crawler 0-link fix ([#15](https://github.com/lth91/luot247-vision/issues/15)) ([6c185e9](https://github.com/lth91/luot247-vision/commit/6c185e90752adc6e6ab2dcdb127bae9f391472e0))
+
 # [1.3.0](https://github.com/lth91/luot247-vision/compare/v1.2.0...v1.3.0) (2026-05-03)
 
 
