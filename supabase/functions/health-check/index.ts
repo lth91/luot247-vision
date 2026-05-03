@@ -250,6 +250,20 @@ Deno.serve(async (req) => {
     const autoDisabled = (autoActions24 ?? []).filter((a: { action: string }) => a.action === "auto_disabled");
     const autoDeleted = (autoActions24 ?? []).filter((a: { action: string }) => a.action === "auto_deleted");
 
+    // Discovery 24h từ source_candidate_log (Phase E)
+    const { data: discovery24 } = await supabase
+      .from("source_candidate_log")
+      .select("status, domain")
+      .gt("discovered_at", day)
+      .limit(200);
+    const discoveryStats = (discovery24 ?? []).reduce((acc: Record<string, number>, r: { status: string }) => {
+      acc[r.status] = (acc[r.status] ?? 0) + 1;
+      return acc;
+    }, {});
+    const addedDomains = (discovery24 ?? [])
+      .filter((r: { status: string }) => r.status === "added")
+      .map((r: { domain: string }) => r.domain);
+
     const { data: cronFails24 } = await supabase
       .from("cron_recent_runs")
       .select("jobname,status,start_time")
@@ -315,6 +329,12 @@ Deno.serve(async (req) => {
           ? `  • deleted (${autoDeleted.length}): ${autoDeleted.slice(0, 3).map((a: { source_name: string }) => a.source_name).join(", ")}${autoDeleted.length > 3 ? "…" : ""}\n`
           : "");
 
+    const discoveryBlock = ((discovery24?.length ?? 0) === 0)
+      ? `🔍 Discovery 24h: 0\n`
+      : `🔍 *Discovery 24h (${discovery24?.length ?? 0} candidates):*\n` +
+        `  • added: ${discoveryStats.added ?? 0}${addedDomains.length > 0 ? ` (${addedDomains.slice(0, 3).join(", ")})` : ""}\n` +
+        `  • rejected: ${(discoveryStats.rejected_anti_bot ?? 0) + (discoveryStats.rejected_no_rss ?? 0) + (discoveryStats.rejected_probe_fail ?? 0) + (discoveryStats.rejected_low_count ?? 0) + (discoveryStats.rejected_daily_limit ?? 0)}\n`;
+
     const msg =
 `${status} *luot247.com/d daily report*
 
@@ -331,7 +351,7 @@ ${bottomStr}
 
 ${cronFailLine}
 🛑 Disabled sources: ${disabledCount ?? "?"}
-${autoActionsBlock}${eventsBlock}
+${autoActionsBlock}${discoveryBlock}${eventsBlock}
 [Mở dashboard](https://www.luot247.com/d) | [EMERGENCY.md](https://github.com/lth91/luot247-scraper/blob/main/EMERGENCY.md)`;
 
     await sendTelegram(tgToken, tgChatId, msg);
