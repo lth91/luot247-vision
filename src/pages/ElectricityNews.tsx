@@ -123,7 +123,7 @@ const ElectricityNews = () => {
     <div className="min-h-screen bg-background">
       <Header user={session?.user} userRole={userRole} />
 
-      <main className="container mx-auto px-4 py-6 max-w-6xl">
+      <main className="w-full max-w-2xl mx-auto px-4 py-4">
         {isError && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>Lỗi tải tin: {(error as Error).message}</AlertDescription>
@@ -131,8 +131,8 @@ const ElectricityNews = () => {
         )}
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
+          <div className="grid grid-cols-1 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-56 w-full" />
             ))}
           </div>
@@ -159,7 +159,7 @@ const ElectricityNews = () => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               {allRows.map((item) => (
                 <ElectricityNewsCard
                   key={item.id}
