@@ -1,14 +1,13 @@
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { Header } from "@/components/Header";
 import { ElectricityNewsCard } from "@/components/ElectricityNewsCard";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Zap } from "lucide-react";
+import { Loader2, Zap } from "lucide-react";
 import { getRelativeTime } from "@/lib/dateUtils";
 
 type ElectricityNewsRow = {
@@ -23,8 +22,10 @@ type ElectricityNewsRow = {
 const PAGE_SIZE = 30;
 const RECENT_DAYS = 3;
 
-const fetchNews = async (limit: number): Promise<ElectricityNewsRow[]> => {
+const fetchNewsPage = async (pageIndex: number): Promise<ElectricityNewsRow[]> => {
   const threshold = new Date(Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const from = pageIndex * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
   const { data, error } = await supabase
     .from("electricity_news" as never)
     .select("id, title, summary, original_url, published_at, crawled_at")
@@ -32,7 +33,7 @@ const fetchNews = async (limit: number): Promise<ElectricityNewsRow[]> => {
     .or(`published_at.gte.${threshold},and(published_at.is.null,crawled_at.gte.${threshold})`)
     .order("published_at", { ascending: false, nullsFirst: false })
     .order("crawled_at", { ascending: false })
-    .limit(limit);
+    .range(from, to);
   if (error) throw error;
   return (data ?? []) as unknown as ElectricityNewsRow[];
 };
@@ -53,7 +54,6 @@ const fetchLastCrawled = async (): Promise<string | null> => {
 const ElectricityNews = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [limit, setLimit] = useState(PAGE_SIZE);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
@@ -74,13 +74,42 @@ const ElectricityNews = () => {
     }
   }, [session]);
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["electricity-news", limit],
-    queryFn: () => fetchNews(limit),
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["electricity-news"],
+    queryFn: ({ pageParam }) => fetchNewsPage(pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length < PAGE_SIZE ? undefined : allPages.length,
     refetchInterval: 5 * 60 * 1000,
   });
 
-  const isEmpty = !isLoading && (!data || data.length === 0);
+  const allRows = data?.pages.flat() ?? [];
+  const isEmpty = !isLoading && allRows.length === 0;
+
+  // Sentinel cuối list: vào viewport (rootMargin 600px) → fetchNextPage.
+  // Margin lớn để load trước khi user thực sự chạm đáy, tránh giật.
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasNextPage || isFetchingNextPage) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) fetchNextPage();
+      },
+      { rootMargin: "600px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   const { data: lastCrawled } = useQuery({
     queryKey: ["electricity-last-crawled"],
     queryFn: fetchLastCrawled,
@@ -131,7 +160,7 @@ const ElectricityNews = () => {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {data.map((item) => (
+              {allRows.map((item) => (
                 <ElectricityNewsCard
                   key={item.id}
                   title={item.title}
@@ -142,13 +171,14 @@ const ElectricityNews = () => {
                 />
               ))}
             </div>
-            {data.length >= limit && (
-              <div className="flex justify-center mt-6">
-                <Button variant="outline" onClick={() => setLimit(limit + PAGE_SIZE)}>
-                  Tải thêm
-                </Button>
-              </div>
-            )}
+            <div ref={sentinelRef} className="flex justify-center py-6">
+              {isFetchingNextPage && (
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              )}
+              {!hasNextPage && allRows.length > 0 && (
+                <p className="text-sm text-muted-foreground">Đã hết tin trong {RECENT_DAYS} ngày qua</p>
+              )}
+            </div>
           </>
         )}
       </main>
