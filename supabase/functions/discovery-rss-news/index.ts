@@ -142,6 +142,21 @@ VÍ DỤ REJECT rõ ràng:
 - "Người Trung Quốc đổ xô mua quạt tích điện vì cắt điện" → reject (tin tiêu dùng nước ngoài)
 - "Thay đổi khung giờ tính giá điện, người dân cần chú ý gì; Một phương án tăng lương hưu từ 1-7" → reject (digest trộn 2 chủ đề điện + lương hưu, dù nửa bài là điện)
 - "Tổng hợp tin tuần: tăng lương, BĐS, giá điện" → reject (digest weekly mix)
+- "Bước đột phá trong động cơ đẩy tàu biển không phát thải carbon" → reject (giao thông biển, không phải ngành điện VN)
+- "Caspi nổi lên thành mắt xích an ninh năng lượng Á-Âu" → reject (địa chính trị dầu/khí, không bàn điện cụ thể)
+- "Giảm phụ thuộc nhiên liệu hóa thạch trước cú sốc dầu mỏ toàn cầu" → reject (chiến lược dầu mỏ macro, không nói gì điện)
+- "Hội nghị toàn cầu về lộ trình từ bỏ nhiên liệu hóa thạch" → reject (climate policy chung, không chuyên đề điện VN)
+- "Luật Dầu khí mở sang năng lượng mới: cần thêm bước hoàn thiện" → reject (Luật Dầu khí, chủ đề chính là dầu khí)
+- "Lập mạng lưới quan trắc, cảnh báo phóng xạ môi trường quốc gia" → reject (môi trường/an toàn bức xạ, không phải sản xuất điện hạt nhân)
+- "Nghệ An đẩy nhanh tiến độ thực hiện dự án trọng điểm" → reject (tiêu đề chung, không nêu rõ điện — phải có nội dung điện cụ thể mới pass)
+- "Hồ chứa lớn & bài toán phát triển bền vững" → reject (thủy lợi/môi trường nói chung, không phải vận hành thủy điện)
+- "Tập đoàn Hà Đô nói về 1.000 tỷ đồng bán điện bị treo" → pass (DN bán điện, vướng PPA — bài chuyên đề điện)
+
+NGUYÊN TẮC ĐỊNH HƯỚNG (ĐỌC KỸ):
+1. "Năng lượng" ĐƠN ĐỘC không đủ — phải có "điện", "EVN", "lưới", "PPA", "BESS", hoặc tên nguồn điện cụ thể (gió/mặt trời/hạt nhân/thủy/nhiệt/khí phát điện) trong title HOẶC mô tả.
+2. Bài về "an ninh năng lượng" thuần địa chính trị (dầu/khí thế giới) → REJECT trừ khi nội dung tập trung tác động cụ thể đến cung ứng điện VN.
+3. Bài về "nhiên liệu hóa thạch / chuyển dịch năng lượng" cấp toàn cầu/macro → REJECT trừ khi liên quan trực tiếp đến phát điện VN.
+4. Khi không chắc → REJECT. Ưu tiên precision hơn recall.
 
 VÍ DỤ PASS rõ ràng:
 - "EVN thông báo cung ứng điện mùa khô" → pass
