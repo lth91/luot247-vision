@@ -210,8 +210,45 @@ Deno.serve(async (req) => {
     (bySource ?? []).forEach((r: { source_name: string }) => {
       counts[r.source_name] = (counts[r.source_name] ?? 0) + 1;
     });
-    const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
-    const topStr = top.length ? top.map(([n, c]) => `  • ${n}: ${c}`).join("\n") : "  (không có)";
+
+    // Top 5 active sources by quality_score
+    const { data: topByScore } = await supabase
+      .from("electricity_sources")
+      .select("name, quality_score")
+      .eq("is_active", true)
+      .order("quality_score", { ascending: false })
+      .limit(5);
+    const topStr = (topByScore && topByScore.length > 0)
+      ? topByScore.map((s: { name: string; quality_score: number }) =>
+          `  • ${s.name}: ${s.quality_score} (${counts[s.name] ?? 0} bài 24h)`
+        ).join("\n")
+      : "  (không có)";
+
+    // Bottom 3 active sources by quality_score (problems)
+    const { data: bottomByScore } = await supabase
+      .from("electricity_sources")
+      .select("name, quality_score, last_crawled_at")
+      .eq("is_active", true)
+      .order("quality_score", { ascending: true })
+      .limit(3);
+    const bottomStr = (bottomByScore && bottomByScore.length > 0)
+      ? bottomByScore.map((s: { name: string; quality_score: number; last_crawled_at: string | null }) => {
+          const ageDays = s.last_crawled_at
+            ? Math.floor((Date.now() - new Date(s.last_crawled_at).getTime()) / 86400000)
+            : 999;
+          return `  • ${s.name}: ${s.quality_score} (${ageDays}d ago)`;
+        }).join("\n")
+      : "  (không có)";
+
+    // Auto-actions 24h từ source_cleanup_audit
+    const { data: autoActions24 } = await supabase
+      .from("source_cleanup_audit")
+      .select("action, source_name, detail")
+      .gt("created_at", day)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    const autoDisabled = (autoActions24 ?? []).filter((a: { action: string }) => a.action === "auto_disabled");
+    const autoDeleted = (autoActions24 ?? []).filter((a: { action: string }) => a.action === "auto_deleted");
 
     const { data: cronFails24 } = await supabase
       .from("cron_recent_runs")
@@ -268,6 +305,16 @@ Deno.serve(async (req) => {
     const recent1 = d1.count ?? 0;
     const status = recent24 >= 30 ? "🟢" : recent24 >= 10 ? "🟡" : "🔴";
 
+    const autoActionsBlock = (autoDisabled.length === 0 && autoDeleted.length === 0)
+      ? `\n🤖 Auto-actions 24h: 0\n`
+      : `\n🤖 *Auto-actions 24h:*\n` +
+        (autoDisabled.length > 0
+          ? `  • disabled (${autoDisabled.length}): ${autoDisabled.slice(0, 3).map((a: { source_name: string }) => a.source_name).join(", ")}${autoDisabled.length > 3 ? "…" : ""}\n`
+          : "") +
+        (autoDeleted.length > 0
+          ? `  • deleted (${autoDeleted.length}): ${autoDeleted.slice(0, 3).map((a: { source_name: string }) => a.source_name).join(", ")}${autoDeleted.length > 3 ? "…" : ""}\n`
+          : "");
+
     const msg =
 `${status} *luot247.com/d daily report*
 
@@ -276,12 +323,15 @@ Deno.serve(async (req) => {
   • 6h: ${recent6}
   • 24h: ${recent24}
 
-🏆 *Top nguồn 24h:*
+🏆 *Top score:*
 ${topStr}
+
+📉 *Bottom 3 active:*
+${bottomStr}
 
 ${cronFailLine}
 🛑 Disabled sources: ${disabledCount ?? "?"}
-${eventsBlock}
+${autoActionsBlock}${eventsBlock}
 [Mở dashboard](https://www.luot247.com/d) | [EMERGENCY.md](https://github.com/lth91/luot247-scraper/blob/main/EMERGENCY.md)`;
 
     await sendTelegram(tgToken, tgChatId, msg);
