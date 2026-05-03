@@ -255,6 +255,8 @@ function parseRssDate(s: string | null): string | null {
 
 // Parse ngày xuất bản từ HTML meta tags theo chuẩn Open Graph / Schema.org / JSON-LD.
 // VnExpress, CafeF, EVN, Bộ Công Thương… đều có ít nhất 1 trong các tag sau.
+// Fallback inline: nguồn EVN family (evn.com.vn, cuc-dien-luc) đặt date dạng
+// "DD/MM/YYYY - HH:MM" trong header, không có meta tag chuẩn.
 function extractPublishedDateFromHtml(html: string): string | null {
   const patterns: RegExp[] = [
     /<meta[^>]+property=["']article:published_time["'][^>]+content=["']([^"']+)["']/i,
@@ -269,6 +271,35 @@ function extractPublishedDateFromHtml(html: string): string | null {
     const m = html.match(p);
     if (m && m[1]) {
       const d = new Date(m[1]);
+      if (!isNaN(d.getTime())) return d.toISOString();
+    }
+  }
+
+  // Fallback: tìm cụm DD/MM/YYYY có HH:MM ngay cạnh — header của bài thường
+  // xuất hiện trước list-related-articles, nên match đầu tiên là date của bài.
+  // Yêu cầu phải có HH:MM kèm theo để loại trừ ngày xuất hiện trong nội dung body
+  // (ví dụ "Chỉ thị số 10/CT-TTg ngày 30/3/2026").
+  const dmyHm = /\b(\d{1,2})\/(\d{1,2})\/(\d{4})\s*[-–]\s*(\d{1,2}):(\d{2})\b/;
+  const hmDmy = /\b(\d{1,2}):(\d{2}),?\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\b/;
+  let day: number | null = null;
+  let month: number | null = null;
+  let year: number | null = null;
+  let hour: number | null = null;
+  let minute: number | null = null;
+  const m1 = html.match(dmyHm);
+  if (m1) {
+    day = +m1[1]; month = +m1[2]; year = +m1[3]; hour = +m1[4]; minute = +m1[5];
+  } else {
+    const m2 = html.match(hmDmy);
+    if (m2) {
+      hour = +m2[1]; minute = +m2[2]; day = +m2[3]; month = +m2[4]; year = +m2[5];
+    }
+  }
+  if (year !== null && month !== null && day !== null && hour !== null && minute !== null) {
+    if (year >= 2000 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const iso = `${year}-${pad(month)}-${pad(day)}T${pad(hour)}:${pad(minute)}:00+07:00`;
+      const d = new Date(iso);
       if (!isNaN(d.getTime())) return d.toISOString();
     }
   }
