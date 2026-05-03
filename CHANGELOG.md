@@ -1,3 +1,10 @@
+## [1.14.1](https://github.com/lth91/luot247-vision/compare/v1.14.0...v1.14.1) (2026-05-03)
+
+
+### Bug Fixes
+
+* **electricity:** triple-layer guard chống tin off-topic vào /d ([#34](https://github.com/lth91/luot247-vision/issues/34)) ([f38a78e](https://github.com/lth91/luot247-vision/commit/f38a78edf25fe6ba08127d02576063c56ba0a2f9)), closes [#32](https://github.com/lth91/luot247-vision/issues/32) [#32](https://github.com/lth91/luot247-vision/issues/32)
+
 # [1.14.0](https://github.com/lth91/luot247-vision/compare/v1.13.1...v1.14.0) (2026-05-03)
 
 
