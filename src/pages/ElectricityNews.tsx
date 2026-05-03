@@ -159,7 +159,7 @@ const ElectricityNews = () => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 gap-4">
+            <div className="border rounded-lg overflow-hidden bg-card divide-y divide-gray-200">
               {allRows.map((item) => (
                 <ElectricityNewsCard
                   key={item.id}
