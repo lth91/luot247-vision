@@ -1,3 +1,11 @@
+## [1.15.1](https://github.com/lth91/luot247-vision/compare/v1.15.0...v1.15.1) (2026-05-03)
+
+
+### Bug Fixes
+
+* **discovery:** bổ sung reject rules cho tin năng lượng macro/địa chính trị ([b2b07d7](https://github.com/lth91/luot247-vision/commit/b2b07d7a95cbee29a1ef7c415f09eab52af797c0))
+* **electricity:** fallback parse ngày từ header DD/MM/YYYY HH:MM cho EVN ([c76875c](https://github.com/lth91/luot247-vision/commit/c76875c0e4ce6dc3bcd34c1e951ceaf0ed062a77))
+
 # [1.15.0](https://github.com/lth91/luot247-vision/compare/v1.14.1...v1.15.0) (2026-05-03)
 
 
