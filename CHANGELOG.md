@@ -1,3 +1,10 @@
+## [1.7.1](https://github.com/lth91/luot247-vision/compare/v1.7.0...v1.7.1) (2026-05-03)
+
+
+### Bug Fixes
+
+* **electricity:** sort /d feed by published time, drop tier sort ([#23](https://github.com/lth91/luot247-vision/issues/23)) ([1ff8c43](https://github.com/lth91/luot247-vision/commit/1ff8c43eb9ef54f9d54052c7ffaebebfd0da2263)), closes [#21](https://github.com/lth91/luot247-vision/issues/21)
+
 # [1.7.0](https://github.com/lth91/luot247-vision/compare/v1.6.1...v1.7.0) (2026-05-03)
 
 
