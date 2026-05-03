@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/lth91/luot247-vision/compare/v1.8.0...v1.9.0) (2026-05-03)
+
+
+### Features
+
+* **discovery:** add 2 RSS feeds Báo Chính Phủ + SGGP (Phase B1) ([#26](https://github.com/lth91/luot247-vision/issues/26)) ([337de70](https://github.com/lth91/luot247-vision/commit/337de7080b84b360ae4a699a6d645f38f626ccbd))
+
 # [1.8.0](https://github.com/lth91/luot247-vision/compare/v1.7.1...v1.8.0) (2026-05-03)
 
 
