@@ -18,6 +18,7 @@ type ElectricityNewsRow = {
   original_url: string;
   published_at: string | null;
   crawled_at: string;
+  tier: number | null;
 };
 
 const PAGE_SIZE = 30;
@@ -27,8 +28,9 @@ const fetchNews = async (limit: number): Promise<ElectricityNewsRow[]> => {
   const threshold = new Date(Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase
     .from("electricity_news" as never)
-    .select("id, title, summary, original_url, published_at, crawled_at")
+    .select("id, title, summary, original_url, published_at, crawled_at, tier")
     .or(`published_at.gte.${threshold},and(published_at.is.null,crawled_at.gte.${threshold})`)
+    .order("tier", { ascending: true, nullsFirst: false })
     .order("published_at", { ascending: false, nullsFirst: false })
     .order("crawled_at", { ascending: false })
     .limit(limit);
@@ -138,6 +140,7 @@ const ElectricityNews = () => {
                   originalUrl={item.original_url}
                   publishedAt={item.published_at}
                   crawledAt={item.crawled_at}
+                  tier={item.tier}
                 />
               ))}
             </div>

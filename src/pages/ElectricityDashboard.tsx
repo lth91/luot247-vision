@@ -13,6 +13,7 @@ type Source = {
   id: string;
   name: string;
   category: "co-quan" | "doanh-nghiep" | "bao-chi";
+  tier: number;
   is_active: boolean;
   consecutive_failures: number;
   last_crawled_at: string | null;
@@ -35,10 +36,17 @@ const CATEGORY_LABEL: Record<string, string> = {
   "bao-chi": "Báo chí",
 };
 
+const TIER_LABEL: Record<number, { label: string; cls: string }> = {
+  1: { label: "T1 Chính thức", cls: "border-blue-200 bg-blue-50 text-blue-700" },
+  2: { label: "T2 Chuyên ngành", cls: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+  3: { label: "T3 Báo chí", cls: "border-slate-200 bg-slate-50 text-slate-600" },
+  4: { label: "T4 Tổng hợp", cls: "border-amber-200 bg-amber-50 text-amber-700" },
+};
+
 const fetchSources = async (): Promise<Source[]> => {
   const { data, error } = await supabase
     .from("electricity_sources" as never)
-    .select("id, name, category, is_active, consecutive_failures, last_crawled_at, last_error, list_url")
+    .select("id, name, category, tier, is_active, consecutive_failures, last_crawled_at, last_error, list_url")
     .order("last_crawled_at", { ascending: false, nullsFirst: false });
   if (error) throw error;
   return (data ?? []) as unknown as Source[];
@@ -147,6 +155,7 @@ const ElectricityDashboard = () => {
       if (a.is_active && !b.is_active) return -1;
       if (a.consecutive_failures > 0 && b.consecutive_failures === 0) return -1;
       if (a.consecutive_failures === 0 && b.consecutive_failures > 0) return 1;
+      if (a.tier !== b.tier) return a.tier - b.tier;
       const bn = newsBySource.get(b.name) ?? 0;
       const an = newsBySource.get(a.name) ?? 0;
       return bn - an;
@@ -214,6 +223,7 @@ const ElectricityDashboard = () => {
                   <tr className="text-left">
                     <th className="px-3 py-2 font-medium">Trạng thái</th>
                     <th className="px-3 py-2 font-medium">Nguồn</th>
+                    <th className="px-3 py-2 font-medium">Tier</th>
                     <th className="px-3 py-2 font-medium">Nhóm</th>
                     <th className="px-3 py-2 font-medium text-right">Tin</th>
                     <th className="px-3 py-2 font-medium text-right">Mới</th>
@@ -238,6 +248,13 @@ const ElectricityDashboard = () => {
                           </span>
                         </td>
                         <td className="px-3 py-2 font-medium">{s.name}</td>
+                        <td className="px-3 py-2">
+                          {TIER_LABEL[s.tier] && (
+                            <Badge variant="outline" className={`font-normal text-xs ${TIER_LABEL[s.tier].cls}`}>
+                              {TIER_LABEL[s.tier].label}
+                            </Badge>
+                          )}
+                        </td>
                         <td className="px-3 py-2">
                           <Badge variant="outline" className="font-normal">{CATEGORY_LABEL[s.category] ?? s.category}</Badge>
                         </td>
