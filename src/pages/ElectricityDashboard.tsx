@@ -94,6 +94,28 @@ const fetchSources = async (): Promise<Source[]> => {
   return (data ?? []) as unknown as Source[];
 };
 
+const fetchCandidates = async (): Promise<SourceCandidate[]> => {
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("source_candidate_log" as never)
+    .select("id, domain, status, sample_count, decision_reason, query_seed, discovered_at, inserted_source_id")
+    .gte("discovered_at", since)
+    .order("discovered_at", { ascending: false })
+    .limit(300);
+  if (error) throw error;
+  return (data ?? []) as unknown as SourceCandidate[];
+};
+
+const fetchSelectorFixes = async (): Promise<SelectorFix[]> => {
+  const { data, error } = await supabase
+    .from("selector_fix_log" as never)
+    .select("id, source_name, attempted_at, old_pattern, new_pattern, llm_confidence, llm_reason, test_match_count, applied, result")
+    .order("attempted_at", { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return (data ?? []) as unknown as SelectorFix[];
+};
+
 const fetchNews = async (): Promise<News[]> => {
   // Lấy 30 ngày để đảm bảo Mac Mini hosts produce tuần trước vẫn nằm trong window.
   // Trước đây limit 1500 newest theo crawled_at — Edge crawler chạy hàng giờ tạo
@@ -110,7 +132,49 @@ const fetchNews = async (): Promise<News[]> => {
   return (data ?? []) as unknown as News[];
 };
 
-type TabKey = "edge" | "mac-mini" | "rss-discovery" | "disabled";
+type TabKey = "edge" | "mac-mini" | "rss-discovery" | "disabled" | "ai-agents";
+
+type SourceCandidate = {
+  id: string;
+  domain: string;
+  status: string;
+  sample_count: number;
+  decision_reason: string | null;
+  query_seed: string | null;
+  discovered_at: string;
+  inserted_source_id: string | null;
+};
+
+type SelectorFix = {
+  id: string;
+  source_name: string;
+  attempted_at: string;
+  old_pattern: string | null;
+  new_pattern: string | null;
+  llm_confidence: number | null;
+  llm_reason: string | null;
+  test_match_count: number | null;
+  applied: boolean;
+  result: string | null;
+};
+
+const CANDIDATE_STATUS: Record<string, { label: string; cls: string }> = {
+  added: { label: "Đã add", cls: "bg-green-100 text-green-800 border-green-200" },
+  rejected_existing: { label: "Đã có sẵn", cls: "bg-slate-100 text-slate-700 border-slate-200" },
+  rejected_low_count: { label: "Sample thấp", cls: "bg-slate-100 text-slate-600 border-slate-200" },
+  rejected_no_rss: { label: "Không có RSS", cls: "bg-amber-100 text-amber-800 border-amber-200" },
+  rejected_anti_bot: { label: "Anti-bot", cls: "bg-orange-100 text-orange-800 border-orange-200" },
+  rejected_probe_fail: { label: "Probe fail", cls: "bg-red-100 text-red-800 border-red-200" },
+  rejected_daily_limit: { label: "Hết quota ngày", cls: "bg-blue-100 text-blue-800 border-blue-200" },
+};
+
+const QUERY_SEED_LABEL: Record<string, string> = {
+  utility: "EVN/lưới",
+  renewable: "tái tạo",
+  policy: "chính sách",
+  operations: "vận hành",
+  corporates: "doanh nghiệp",
+};
 
 const ElectricityDashboard = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -156,6 +220,34 @@ const ElectricityDashboard = () => {
     queryFn: fetchNews,
     refetchInterval: 60 * 1000,
   });
+  const { data: candidates } = useQuery({
+    queryKey: ["d-dashboard-candidates"],
+    queryFn: fetchCandidates,
+    refetchInterval: 5 * 60 * 1000,
+  });
+  const { data: selectorFixes } = useQuery({
+    queryKey: ["d-dashboard-selector-fixes"],
+    queryFn: fetchSelectorFixes,
+    refetchInterval: 5 * 60 * 1000,
+  });
+
+  const candidateStats = useMemo(() => {
+    const byStatus = new Map<string, number>();
+    let last7d = 0;
+    let added7d = 0;
+    let latest: string | null = null;
+    const sevenDaysAgo = Date.now() - 7 * DAY;
+    for (const c of candidates ?? []) {
+      byStatus.set(c.status, (byStatus.get(c.status) ?? 0) + 1);
+      const t = new Date(c.discovered_at).getTime();
+      if (t >= sevenDaysAgo) {
+        last7d += 1;
+        if (c.status === "added") added7d += 1;
+      }
+      if (!latest || c.discovered_at > latest) latest = c.discovered_at;
+    }
+    return { byStatus, last7d, added7d, latest };
+  }, [candidates]);
 
   const lastCrawled = useMemo(() => {
     return sources?.reduce<string | null>((acc, s) => {
@@ -568,7 +660,7 @@ const ElectricityDashboard = () => {
         </Card>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-4">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 mb-4">
             <TabsTrigger value="edge">
               Edge ({edgeSources.length})
             </TabsTrigger>
@@ -580,6 +672,9 @@ const ElectricityDashboard = () => {
             </TabsTrigger>
             <TabsTrigger value="disabled">
               Disabled ({(sources?.filter((s) => !s.is_active).length) ?? 0})
+            </TabsTrigger>
+            <TabsTrigger value="ai-agents">
+              🤖 AI Agents ({candidateStats.last7d + (selectorFixes?.length ?? 0)})
             </TabsTrigger>
           </TabsList>
 
@@ -774,6 +869,157 @@ const ElectricityDashboard = () => {
               cls="bg-slate-50/40"
               flashAnchor={flashAnchor}
             />
+          </TabsContent>
+
+          <TabsContent value="ai-agents">
+            <div className="space-y-6">
+              <section className="rounded-md border">
+                <div className="px-4 py-3 border-b bg-muted/30">
+                  <div className="text-base font-semibold flex items-center gap-2">
+                    🔍 Phase E — Auto-discovery sources
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Mỗi 03:00 UTC: quét 5 Google News query (EVN/lưới · tái tạo · chính sách · vận hành · doanh nghiệp) →
+                    group domain → probe top 5 → auto-INSERT max 3/day nếu RSS available.
+                    {candidateStats.latest && (
+                      <> Last run: <strong>{getRelativeTime(candidateStats.latest)}</strong>.</>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="rounded border bg-green-50 p-2 text-center">
+                    <div className="text-xl font-bold text-green-700">{candidateStats.added7d}</div>
+                    <div className="text-xs text-green-800">Đã add (7d)</div>
+                  </div>
+                  <div className="rounded border bg-blue-50 p-2 text-center">
+                    <div className="text-xl font-bold text-blue-700">{candidateStats.last7d}</div>
+                    <div className="text-xs text-blue-800">Tổng probe (7d)</div>
+                  </div>
+                  <div className="rounded border bg-amber-50 p-2 text-center">
+                    <div className="text-xl font-bold text-amber-700">
+                      {(candidateStats.byStatus.get("rejected_anti_bot") ?? 0) +
+                       (candidateStats.byStatus.get("rejected_no_rss") ?? 0)}
+                    </div>
+                    <div className="text-xs text-amber-800">Anti-bot/No RSS (30d)</div>
+                  </div>
+                  <div className="rounded border bg-slate-50 p-2 text-center">
+                    <div className="text-xl font-bold text-slate-700">
+                      {candidateStats.byStatus.get("rejected_low_count") ?? 0}
+                    </div>
+                    <div className="text-xs text-slate-700">Sample thấp (30d)</div>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/30">
+                      <tr className="text-left">
+                        <th className="px-3 py-2 font-medium">Khi</th>
+                        <th className="px-3 py-2 font-medium">Domain</th>
+                        <th className="px-3 py-2 font-medium">Query</th>
+                        <th className="px-3 py-2 font-medium text-right">Sample</th>
+                        <th className="px-3 py-2 font-medium">Decision</th>
+                        <th className="px-3 py-2 font-medium">Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(candidates ?? []).slice(0, 20).map((c) => {
+                        const st = CANDIDATE_STATUS[c.status] ?? { label: c.status, cls: "bg-slate-50 border-slate-200 text-slate-700" };
+                        return (
+                          <tr key={c.id} className="border-t hover:bg-muted/30">
+                            <td className="px-3 py-2 text-xs text-muted-foreground">{getRelativeTime(c.discovered_at)}</td>
+                            <td className="px-3 py-2 font-mono text-xs">{c.domain}</td>
+                            <td className="px-3 py-2 text-xs text-muted-foreground">
+                              {c.query_seed ? (QUERY_SEED_LABEL[c.query_seed] ?? c.query_seed) : "—"}
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono">{c.sample_count}</td>
+                            <td className="px-3 py-2">
+                              <Badge variant="outline" className={`font-normal text-xs ${st.cls}`}>
+                                {st.label}
+                              </Badge>
+                            </td>
+                            <td className="px-3 py-2 text-xs text-muted-foreground max-w-xs truncate" title={c.decision_reason ?? ""}>
+                              {c.decision_reason ?? "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {(candidates?.length ?? 0) === 0 && (
+                        <tr><td colSpan={6} className="px-3 py-4 text-center text-sm text-muted-foreground italic">
+                          Chưa có candidate nào trong 30 ngày.
+                        </td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section className="rounded-md border">
+                <div className="px-4 py-3 border-b bg-muted/30">
+                  <div className="text-base font-semibold flex items-center gap-2">
+                    🤖 Phase G — AI auto-fix selector
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Mỗi 04:00 UTC: source Tier 1/2 có cf≥3 + last_error chứa 'no candidates parsed' →
+                    Claude Haiku đề xuất regex pattern mới → test trên list_url → apply nếu match ≥5 link.
+                  </div>
+                </div>
+
+                {(selectorFixes?.length ?? 0) === 0 ? (
+                  <div className="p-4 text-sm text-muted-foreground italic text-center">
+                    Chưa có lần fix nào. Agent đang chờ trigger: cần source Tier 1/2 fail ≥3 lần với
+                    "no candidates parsed" trong last_error. Hiện không có source nào match điều kiện
+                    → agent đứng im, đây là trạng thái đúng.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/30">
+                        <tr className="text-left">
+                          <th className="px-3 py-2 font-medium">Khi</th>
+                          <th className="px-3 py-2 font-medium">Source</th>
+                          <th className="px-3 py-2 font-medium">Pattern cũ → mới</th>
+                          <th className="px-3 py-2 font-medium text-right">Confidence</th>
+                          <th className="px-3 py-2 font-medium text-right">Match</th>
+                          <th className="px-3 py-2 font-medium">Result</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(selectorFixes ?? []).map((f) => (
+                          <tr key={f.id} className="border-t hover:bg-muted/30">
+                            <td className="px-3 py-2 text-xs text-muted-foreground">{getRelativeTime(f.attempted_at)}</td>
+                            <td className="px-3 py-2 font-medium">{f.source_name}</td>
+                            <td className="px-3 py-2 font-mono text-xs">
+                              <div className="text-muted-foreground line-through truncate max-w-xs" title={f.old_pattern ?? ""}>
+                                {f.old_pattern ?? "—"}
+                              </div>
+                              <div className="truncate max-w-xs" title={f.new_pattern ?? ""}>
+                                {f.new_pattern ?? "—"}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono text-xs">
+                              {f.llm_confidence != null ? f.llm_confidence.toFixed(2) : "—"}
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono">{f.test_match_count ?? "—"}</td>
+                            <td className="px-3 py-2">
+                              <Badge
+                                variant="outline"
+                                className={`font-normal text-xs ${
+                                  f.applied ? "bg-green-50 border-green-200 text-green-800" : "bg-slate-50 border-slate-200 text-slate-600"
+                                }`}
+                              >
+                                {f.result ?? (f.applied ? "applied" : "—")}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            </div>
           </TabsContent>
         </Tabs>
       </main>
