@@ -1,3 +1,10 @@
+# [1.16.0](https://github.com/lth91/luot247-vision/compare/v1.15.2...v1.16.0) (2026-05-04)
+
+
+### Features
+
+* **electricity:** redesign /ddashboard với tabs theo crawl method ([8908e4f](https://github.com/lth91/luot247-vision/commit/8908e4f888891880ea7c647e4f0cef8a2037425b))
+
 ## [1.15.2](https://github.com/lth91/luot247-vision/compare/v1.15.1...v1.15.2) (2026-05-03)
 
 
