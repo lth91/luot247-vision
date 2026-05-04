@@ -1,3 +1,10 @@
+# [1.18.0](https://github.com/lth91/luot247-vision/compare/v1.17.1...v1.18.0) (2026-05-04)
+
+
+### Features
+
+* **electricity:** tab AI Agents trên dashboard — Phase E + Phase G ([37c0b92](https://github.com/lth91/luot247-vision/commit/37c0b920fd2a131594af2e1adade195de32de30d))
+
 ## [1.17.1](https://github.com/lth91/luot247-vision/compare/v1.17.0...v1.17.1) (2026-05-04)
 
 
