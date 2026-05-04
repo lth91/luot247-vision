@@ -1,3 +1,10 @@
+# [1.21.0](https://github.com/lth91/luot247-vision/compare/v1.20.3...v1.21.0) (2026-05-04)
+
+
+### Features
+
+* **autonomy:** pipeline-health-check cron 6h + Telegram alert khi có issue ([41df107](https://github.com/lth91/luot247-vision/commit/41df1070e2d523fcf21379d1c0d43eb179d0a54a))
+
 ## [1.20.3](https://github.com/lth91/luot247-vision/compare/v1.20.2...v1.20.3) (2026-05-04)
 
 
