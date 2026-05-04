@@ -1,3 +1,10 @@
+## [1.22.3](https://github.com/lth91/luot247-vision/compare/v1.22.2...v1.22.3) (2026-05-04)
+
+
+### Bug Fixes
+
+* **autonomy:** Telegram report viết lại bằng từ ngữ thân thiện, không kỹ thuật ([aaaf174](https://github.com/lth91/luot247-vision/commit/aaaf174404af93311fb8cfc8661f197ac2ec457b))
+
 ## [1.22.2](https://github.com/lth91/luot247-vision/compare/v1.22.1...v1.22.2) (2026-05-04)
 
 
