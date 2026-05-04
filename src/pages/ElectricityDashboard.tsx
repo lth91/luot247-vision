@@ -103,9 +103,27 @@ const fetchNews = async (): Promise<News[]> => {
   return (data ?? []) as unknown as News[];
 };
 
+type TabKey = "edge" | "mac-mini" | "rss-discovery" | "disabled";
+
 const ElectricityDashboard = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabKey>("edge");
+  const [flashAnchor, setFlashAnchor] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!flashAnchor) return;
+    const t = setTimeout(() => setFlashAnchor(null), 2000);
+    return () => clearTimeout(t);
+  }, [flashAnchor]);
+
+  const jumpTo = (tab: TabKey, anchor: string) => {
+    setActiveTab(tab);
+    setFlashAnchor(anchor);
+    setTimeout(() => {
+      document.getElementById(anchor)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
+  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
@@ -155,6 +173,41 @@ const ElectricityDashboard = () => {
     for (const n of news ?? []) {
       const t = new Date(n.published_at ?? n.crawled_at).getTime();
       if (t >= cutoff) m.set(n.source_name, (m.get(n.source_name) ?? 0) + 1);
+    }
+    return m;
+  }, [news]);
+
+  const sevenDayCountsByName = useMemo(() => {
+    const m = new Map<string, number[]>();
+    if (!news) return m;
+    const now = Date.now();
+    for (const n of news) {
+      const t = new Date(n.published_at ?? n.crawled_at).getTime();
+      const ageMs = now - t;
+      if (ageMs < 0 || ageMs >= 7 * DAY) continue;
+      const idx = 6 - Math.floor(ageMs / DAY);
+      const arr = m.get(n.source_name) ?? [0, 0, 0, 0, 0, 0, 0];
+      arr[idx] += 1;
+      m.set(n.source_name, arr);
+    }
+    return m;
+  }, [news]);
+
+  const sevenDayCountsByMacMiniHost = useMemo(() => {
+    const m = new Map<string, number[]>();
+    if (!news) return m;
+    const now = Date.now();
+    for (const n of news) {
+      if (n.source_name !== "Mac Mini Scraper") continue;
+      const host = getHost(n.original_url);
+      if (!host) continue;
+      const t = new Date(n.published_at ?? n.crawled_at).getTime();
+      const ageMs = now - t;
+      if (ageMs < 0 || ageMs >= 7 * DAY) continue;
+      const idx = 6 - Math.floor(ageMs / DAY);
+      const arr = m.get(host) ?? [0, 0, 0, 0, 0, 0, 0];
+      arr[idx] += 1;
+      m.set(host, arr);
     }
     return m;
   }, [news]);
@@ -263,6 +316,8 @@ const ElectricityDashboard = () => {
       title: string;
       detail?: string;
       hint?: string;
+      tab: TabKey;
+      anchor: string;
     }[] = [];
 
     for (const s of sources) {
@@ -271,6 +326,8 @@ const ElectricityDashboard = () => {
           severity: s.consecutive_failures >= 5 ? "danger" : "warn",
           title: `${s.name}: fail ${s.consecutive_failures}× liên tiếp`,
           hint: s.last_error?.slice(0, 100) ?? undefined,
+          tab: "edge",
+          anchor: `row-src-${s.id}`,
         });
       }
     }
@@ -281,13 +338,17 @@ const ElectricityDashboard = () => {
           severity: "warn",
           title: `Mac Mini "${h.host}": adapter claimed nhưng chưa produce bài`,
           hint: "Debug Playwright selector trong sources.py",
+          tab: "mac-mini",
+          anchor: `row-host-${h.host}`,
         });
       } else if (h.status === "silent") {
         items.push({
           severity: "warn",
-          title: `Mac Mini "${h.host}": im lặng > 7 ngày`,
+          title: `Mac Mini "${h.host}": im lặng quá 7 ngày`,
           detail: h.latest ? `Bài cuối ${getRelativeTime(h.latest)}` : undefined,
           hint: "Site có thể đổi structure, check selector",
+          tab: "mac-mini",
+          anchor: `row-host-${h.host}`,
         });
       }
     }
@@ -300,6 +361,8 @@ const ElectricityDashboard = () => {
           severity: "warn",
           title: `${s.name}: disabled hard-fail, chưa có Mac Mini handover`,
           hint: s.last_error?.slice(0, 100) ?? undefined,
+          tab: "disabled",
+          anchor: `row-disabled-${s.id}`,
         });
       }
     }
@@ -379,15 +442,22 @@ const ElectricityDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <ul className="space-y-2">
+              <ul className="space-y-1">
                 {actionItems.map((it, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm">
-                    <span className={`mt-1 h-2 w-2 rounded-full shrink-0 ${it.severity === "danger" ? "bg-red-500" : "bg-orange-400"}`} />
-                    <div>
-                      <div className="font-medium">{it.title}</div>
-                      {it.detail && <div className="text-muted-foreground text-xs">{it.detail}</div>}
-                      {it.hint && <div className="text-muted-foreground text-xs italic">→ {it.hint}</div>}
-                    </div>
+                  <li key={i}>
+                    <button
+                      type="button"
+                      onClick={() => jumpTo(it.tab, it.anchor)}
+                      className="w-full text-left flex items-start gap-2 text-sm rounded-md px-2 py-1.5 hover:bg-orange-100/70 transition-colors"
+                    >
+                      <span className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${it.severity === "danger" ? "bg-red-500" : "bg-orange-400"}`} />
+                      <div className="flex-1">
+                        <div className="font-medium">{it.title}</div>
+                        {it.detail && <div className="text-muted-foreground text-xs">{it.detail}</div>}
+                        {it.hint && <div className="text-muted-foreground text-xs italic">→ {it.hint}</div>}
+                      </div>
+                      <span className="text-xs text-muted-foreground shrink-0 self-center">↗</span>
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -441,7 +511,7 @@ const ElectricityDashboard = () => {
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="edge" className="w-full">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)} className="w-full">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-4">
             <TabsTrigger value="edge">
               Edge ({edgeSources.length})
@@ -469,7 +539,8 @@ const ElectricityDashboard = () => {
                       <th className="px-3 py-2 font-medium">Nguồn</th>
                       <th className="px-3 py-2 font-medium">Tier</th>
                       <th className="px-3 py-2 font-medium">Loại</th>
-                      <th className="px-3 py-2 font-medium text-right">Tin 24h</th>
+                      <th className="px-3 py-2 font-medium">7 ngày</th>
+                      <th className="px-3 py-2 font-medium text-right">24h</th>
                       <th className="px-3 py-2 font-medium text-right">Tổng</th>
                       <th className="px-3 py-2 font-medium text-right">Batch</th>
                       <th className="px-3 py-2 font-medium">Crawl</th>
@@ -483,8 +554,11 @@ const ElectricityDashboard = () => {
                       const n24 = news24hBySource.get(s.name) ?? 0;
                       const total = newsBySource.get(s.name) ?? 0;
                       const batch = lastBatchBySource.get(s.name) ?? 0;
+                      const counts = sevenDayCountsByName.get(s.name) ?? [0, 0, 0, 0, 0, 0, 0];
+                      const anchor = `row-src-${s.id}`;
+                      const flash = flashAnchor === anchor;
                       return (
-                        <tr key={s.id} className="border-t hover:bg-muted/30">
+                        <tr id={anchor} key={s.id} className={`border-t hover:bg-muted/30 transition-colors ${flash ? "bg-yellow-100" : ""}`}>
                           <td className="px-3 py-2">
                             <span className={`inline-flex items-center gap-1 ${status.cls}`} title={s.last_error ?? ""}>
                               {status.icon}<span className="text-xs">{status.label}</span>
@@ -501,6 +575,7 @@ const ElectricityDashboard = () => {
                           <td className="px-3 py-2">
                             <Badge variant="outline" className="font-normal">{CATEGORY_LABEL[s.category] ?? s.category}</Badge>
                           </td>
+                          <td className="px-3 py-2"><Sparkline counts={counts} /></td>
                           <td className="px-3 py-2 text-right font-mono">{n24}</td>
                           <td className="px-3 py-2 text-right font-mono text-muted-foreground">{total}</td>
                           <td className="px-3 py-2 text-right font-mono">
@@ -532,6 +607,7 @@ const ElectricityDashboard = () => {
                     <tr className="text-left">
                       <th className="px-3 py-2 font-medium">Trạng thái</th>
                       <th className="px-3 py-2 font-medium">Host</th>
+                      <th className="px-3 py-2 font-medium">7 ngày</th>
                       <th className="px-3 py-2 font-medium text-right">Tin tổng</th>
                       <th className="px-3 py-2 font-medium">Bài cuối</th>
                     </tr>
@@ -542,16 +618,20 @@ const ElectricityDashboard = () => {
                         h.status === "producing"
                           ? { icon: <CheckCircle2 className="h-4 w-4 text-green-600" />, label: "Producing", cls: "text-green-700" }
                           : h.status === "silent"
-                          ? { icon: <PauseCircle className="h-4 w-4 text-orange-500" />, label: "Silent >7d", cls: "text-orange-600" }
+                          ? { icon: <PauseCircle className="h-4 w-4 text-orange-500" />, label: "Silent quá 7d", cls: "text-orange-600" }
                           : { icon: <CircleDot className="h-4 w-4 text-slate-400" />, label: "Pending", cls: "text-slate-500" };
+                      const counts = sevenDayCountsByMacMiniHost.get(h.host) ?? [0, 0, 0, 0, 0, 0, 0];
+                      const anchor = `row-host-${h.host}`;
+                      const flash = flashAnchor === anchor;
                       return (
-                        <tr key={h.host} className="border-t hover:bg-muted/30">
+                        <tr id={anchor} key={h.host} className={`border-t hover:bg-muted/30 transition-colors ${flash ? "bg-yellow-100" : ""}`}>
                           <td className="px-3 py-2">
                             <span className={`inline-flex items-center gap-1 ${status.cls}`}>
                               {status.icon}<span className="text-xs">{status.label}</span>
                             </span>
                           </td>
                           <td className="px-3 py-2 font-mono text-xs">{h.host}</td>
+                          <td className="px-3 py-2"><Sparkline counts={counts} /></td>
                           <td className="px-3 py-2 text-right font-mono">{h.count}</td>
                           <td className="px-3 py-2 text-muted-foreground text-xs">
                             {h.latest ? getRelativeTime(h.latest) : "—"}
@@ -604,6 +684,7 @@ const ElectricityDashboard = () => {
               sources={disabledGrouped.handover}
               loading={isLoading}
               cls="bg-blue-50/40"
+              flashAnchor={flashAnchor}
             />
             <DisabledGroup
               title="Hard fail (chưa có solution)"
@@ -611,6 +692,7 @@ const ElectricityDashboard = () => {
               sources={disabledGrouped["hard-fail"]}
               loading={isLoading}
               cls="bg-red-50/40"
+              flashAnchor={flashAnchor}
             />
             <DisabledGroup
               title="Anti-bot / JS-render"
@@ -618,6 +700,7 @@ const ElectricityDashboard = () => {
               sources={disabledGrouped["anti-bot"]}
               loading={isLoading}
               cls="bg-orange-50/40"
+              flashAnchor={flashAnchor}
             />
             <DisabledGroup
               title="Off-topic / cleanup"
@@ -625,6 +708,7 @@ const ElectricityDashboard = () => {
               sources={disabledGrouped["off-topic"]}
               loading={isLoading}
               cls="bg-amber-50/40"
+              flashAnchor={flashAnchor}
             />
             <DisabledGroup
               title="Lý do không rõ"
@@ -632,10 +716,30 @@ const ElectricityDashboard = () => {
               sources={disabledGrouped.unknown}
               loading={isLoading}
               cls="bg-slate-50/40"
+              flashAnchor={flashAnchor}
             />
           </TabsContent>
         </Tabs>
       </main>
+    </div>
+  );
+};
+
+const Sparkline = ({ counts }: { counts: number[] }) => {
+  const max = Math.max(1, ...counts);
+  const total = counts.reduce((s, c) => s + c, 0);
+  return (
+    <div
+      className="inline-flex items-end gap-[2px] h-6 w-20"
+      title={`7 ngày qua (cũ → mới): ${counts.join(" · ")} — tổng ${total}`}
+    >
+      {counts.map((c, i) => (
+        <div
+          key={i}
+          className={`flex-1 rounded-sm ${c > 0 ? "bg-emerald-400" : "bg-muted"}`}
+          style={{ height: c > 0 ? `${Math.max(15, (c / max) * 100)}%` : "10%" }}
+        />
+      ))}
     </div>
   );
 };
@@ -665,12 +769,14 @@ const DisabledGroup = ({
   sources,
   loading,
   cls,
+  flashAnchor,
 }: {
   title: string;
   hint: string;
   sources: Source[];
   loading: boolean;
   cls: string;
+  flashAnchor: string | null;
 }) => {
   if (loading) return null;
   if (sources.length === 0) return null;
@@ -693,25 +799,29 @@ const DisabledGroup = ({
           </tr>
         </thead>
         <tbody>
-          {sources.map((s) => (
-            <tr key={s.id} className="border-t hover:bg-background/40">
-              <td className="px-3 py-2 font-medium">{s.name}</td>
-              <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{getHost(s.base_url)}</td>
-              <td className="px-3 py-2">
-                {TIER_LABEL[s.tier] && (
-                  <Badge variant="outline" className={`font-normal text-xs ${TIER_LABEL[s.tier].cls}`}>
-                    {TIER_LABEL[s.tier].label}
-                  </Badge>
-                )}
-              </td>
-              <td className="px-3 py-2 text-muted-foreground text-xs">
-                {s.last_crawled_at ? getRelativeTime(s.last_crawled_at) : "—"}
-              </td>
-              <td className="px-3 py-2 text-xs text-muted-foreground max-w-md truncate" title={s.last_error ?? ""}>
-                {s.last_error ?? ""}
-              </td>
-            </tr>
-          ))}
+          {sources.map((s) => {
+            const anchor = `row-disabled-${s.id}`;
+            const flash = flashAnchor === anchor;
+            return (
+              <tr id={anchor} key={s.id} className={`border-t hover:bg-background/40 transition-colors ${flash ? "bg-yellow-100" : ""}`}>
+                <td className="px-3 py-2 font-medium">{s.name}</td>
+                <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{getHost(s.base_url)}</td>
+                <td className="px-3 py-2">
+                  {TIER_LABEL[s.tier] && (
+                    <Badge variant="outline" className={`font-normal text-xs ${TIER_LABEL[s.tier].cls}`}>
+                      {TIER_LABEL[s.tier].label}
+                    </Badge>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-muted-foreground text-xs">
+                  {s.last_crawled_at ? getRelativeTime(s.last_crawled_at) : "—"}
+                </td>
+                <td className="px-3 py-2 text-xs text-muted-foreground max-w-md truncate" title={s.last_error ?? ""}>
+                  {s.last_error ?? ""}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
