@@ -37,6 +37,26 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Test mode: force gửi 1 Telegram message để verify pipeline alert hoạt động
+  // (cron + secret + channel còn sống). Gọi: ?test=1
+  const url = new URL(req.url);
+  if (url.searchParams.get("test") === "1") {
+    try {
+      await sendTelegram(
+        tgToken,
+        tgChatId,
+        `🧪 *Pipeline health-check test ping*\n\nNếu anh thấy message này, agent monitoring hoạt động đúng. Cron 6h sẽ tự gửi alert khi có vấn đề thật.\n\n_${new Date().toISOString()}_`,
+      );
+      return new Response(JSON.stringify({ ok: true, test_sent: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } catch (e) {
+      return new Response(JSON.stringify({ ok: false, error: (e as Error).message }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }
+
   const sb = createClient(supabaseUrl, serviceKey);
   const alerts: Alert[] = [];
   const stats: Record<string, number | string | null> = {};
