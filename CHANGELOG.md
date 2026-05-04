@@ -1,3 +1,10 @@
+# [1.20.0](https://github.com/lth91/luot247-vision/compare/v1.19.0...v1.20.0) (2026-05-04)
+
+
+### Features
+
+* **autonomy:** Phase E auto-handover Playwright cho site không-RSS-nhưng-đẹp ([9b8e6e6](https://github.com/lth91/luot247-vision/commit/9b8e6e6a03e667c7320f17ecc7fe6c6592887e9a))
+
 # [1.19.0](https://github.com/lth91/luot247-vision/compare/v1.18.0...v1.19.0) (2026-05-04)
 
 
