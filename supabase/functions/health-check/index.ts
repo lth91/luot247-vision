@@ -138,23 +138,59 @@ async function snapshotAndDetectEvents(supabase: any): Promise<SourceEvent[]> {
   return events;
 }
 
+function categoryName(c: string): string {
+  switch (c) {
+    case "bao-chi": return "báo chí";
+    case "doanh-nghiep": return "doanh nghiệp";
+    case "co-quan": return "cơ quan";
+    default: return c;
+  }
+}
+
+function friendlyDisableReason(detail: Record<string, unknown>): string {
+  const err = ((detail.last_error as string) ?? "").toLowerCase();
+  const noArticleMatch = err.match(/(\d+)\s*articles?\s*(\d+)d/);
+  if (noArticleMatch && noArticleMatch[1] === "0") {
+    return `${noArticleMatch[2]} ngày không có tin mới`;
+  }
+  const fails = detail.fails;
+  const failsNum = typeof fails === "number" && fails > 0 ? fails : null;
+  if (err.includes("error sending request") || err.includes("timeout") || err.includes("econnrefused") || err.includes("client error")) {
+    return failsNum ? `${failsNum} lần lỗi kết nối` : "lỗi kết nối";
+  }
+  if (err.includes("404") || err.includes("not found")) return "trang web không còn tồn tại";
+  if (err.includes("403") || err.includes("forbidden")) return "trang web chặn truy cập";
+  if (err.includes("dns") || err.includes("name resolution")) return "không tìm thấy địa chỉ trang";
+  if (err.includes("ssl") || err.includes("certificate")) return "lỗi chứng chỉ bảo mật";
+  if (failsNum) return `${failsNum} lần lỗi liên tiếp`;
+  return "";
+}
+
+function friendlyAge(days: number): string {
+  if (days >= 999) return "chưa lấy được tin lần nào";
+  if (days <= 0) return "hôm nay chưa có tin";
+  if (days === 1) return "1 ngày qua chưa có tin";
+  return `${days} ngày qua chưa có tin`;
+}
+
 function formatEventLine(e: SourceEvent | { source_name: string; source_tier: number; category: string; event_type: string; detail: Record<string, unknown> }): string {
   const name = e.source_name;
+  const cat = categoryName(e.category);
   switch (e.event_type) {
     case "added":
-      return `🆕 ${name} (T${e.source_tier}, ${e.category})`;
+      return `🆕 Thêm nguồn: ${name} (${cat})`;
     case "disabled": {
-      const reason = ((e.detail.last_error as string) ?? "").slice(0, 60);
-      return `🔴 ${name} disabled (fails=${e.detail.fails}${reason ? `, ${reason}` : ""})`;
+      const reason = friendlyDisableReason(e.detail);
+      return `🔴 Tạm dừng: ${name}${reason ? ` — ${reason}` : ""}`;
     }
     case "recovered":
-      return `✅ ${name} re-enabled`;
+      return `✅ Đã bật lại: ${name}`;
     case "failing": {
-      const reason = ((e.detail.last_error as string) ?? "").slice(0, 60);
-      return `⚠️ ${name} failing ${e.detail.fails}×${reason ? ` (${reason})` : ""}`;
+      const reason = friendlyDisableReason(e.detail);
+      return `⚠️ ${name} đang gặp lỗi${reason ? ` — ${reason}` : ""}`;
     }
     case "fail_recovered":
-      return `✅ ${name} fail recovered (was ${e.detail.was_fails}×)`;
+      return `✅ ${name} đã hết lỗi`;
     default:
       return `${e.event_type}: ${name}`;
   }
@@ -183,7 +219,7 @@ Deno.serve(async (req) => {
     await sendTelegram(
       tgToken,
       tgChatId,
-      `✅ *luot247 health-check test*\nBot hoạt động. Anh sẽ chỉ nhận tin khi có sự cố thật hoặc state change source.`,
+      `✅ *Báo cáo kiểm tra — luot247.com/d*\nHệ thống thông báo đang hoạt động. Anh sẽ chỉ nhận tin khi có sự cố hoặc khi nguồn tin có thay đổi.`,
     );
     return new Response(JSON.stringify({ ok: true, test: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -211,18 +247,14 @@ Deno.serve(async (req) => {
       counts[r.source_name] = (counts[r.source_name] ?? 0) + 1;
     });
 
-    // Top 5 active sources by quality_score
-    const { data: topByScore } = await supabase
-      .from("electricity_sources")
-      .select("name, quality_score")
-      .eq("is_active", true)
-      .order("quality_score", { ascending: false })
-      .limit(5);
-    const topStr = (topByScore && topByScore.length > 0)
-      ? topByScore.map((s: { name: string; quality_score: number }) =>
-          `  • ${s.name}: ${s.quality_score} (${counts[s.name] ?? 0} bài 24h)`
-        ).join("\n")
-      : "  (không có)";
+    // Top 5 active sources by 24h article count (friendly: ai lấy được nhiều tin nhất)
+    const topByCount = Object.entries(counts)
+      .filter(([_, n]) => (n as number) > 0)
+      .sort((a, b) => (b[1] as number) - (a[1] as number))
+      .slice(0, 5);
+    const topStr = topByCount.length > 0
+      ? topByCount.map(([name, n]) => `  • ${name}: ${n} tin`).join("\n")
+      : "  (không có nguồn nào lấy được tin)";
 
     // Bottom 3 active sources by quality_score (problems)
     const { data: bottomByScore } = await supabase
@@ -236,7 +268,7 @@ Deno.serve(async (req) => {
           const ageDays = s.last_crawled_at
             ? Math.floor((Date.now() - new Date(s.last_crawled_at).getTime()) / 86400000)
             : 999;
-          return `  • ${s.name}: ${s.quality_score} (${ageDays}d ago)`;
+          return `  • ${s.name} — ${friendlyAge(ageDays)}`;
         }).join("\n")
       : "  (không có)";
 
@@ -272,8 +304,8 @@ Deno.serve(async (req) => {
       .order("start_time", { ascending: false })
       .limit(10);
     const cronFailLine = cronFails24 && cronFails24.length > 0
-      ? `⚠️ *${cronFails24.length}* cron fails / 24h`
-      : `✅ Cron 24h: 0 fails`;
+      ? `⚠️ *${cronFails24.length}* lần hệ thống chạy lỗi (24h qua)`
+      : `✅ Hệ thống chạy ổn định (không lỗi 24h qua)`;
 
     const { count: disabledCount } = await supabase
       .from("electricity_sources")
@@ -308,10 +340,10 @@ Deno.serve(async (req) => {
           detail: e.detail,
         });
       });
-      const more = events24h.length > MAX_EVENTS_IN_REPORT ? `\n  …(+${events24h.length - MAX_EVENTS_IN_REPORT} more)` : "";
-      eventsBlock = `\n📋 *Events 24h (${events24h.length}):*\n${lines.map((l: string) => `  ${l}`).join("\n")}${more}\n`;
+      const more = events24h.length > MAX_EVENTS_IN_REPORT ? `\n  …(+${events24h.length - MAX_EVENTS_IN_REPORT} sự kiện nữa)` : "";
+      eventsBlock = `\n📋 *Hoạt động 24h (${events24h.length} sự kiện):*\n${lines.map((l: string) => `  ${l}`).join("\n")}${more}\n`;
     } else {
-      eventsBlock = `\n📋 Events 24h: 0\n`;
+      eventsBlock = `\n📋 Hoạt động 24h: không có gì đặc biệt\n`;
     }
 
     const recent24 = d24.count ?? 0;
@@ -320,39 +352,45 @@ Deno.serve(async (req) => {
     const status = recent24 >= 30 ? "🟢" : recent24 >= 10 ? "🟡" : "🔴";
 
     const autoActionsBlock = (autoDisabled.length === 0 && autoDeleted.length === 0)
-      ? `\n🤖 Auto-actions 24h: 0\n`
-      : `\n🤖 *Auto-actions 24h:*\n` +
+      ? `\n🤖 Hệ thống tự xử lý 24h: không có\n`
+      : `\n🤖 *Hệ thống tự xử lý 24h:*\n` +
         (autoDisabled.length > 0
-          ? `  • disabled (${autoDisabled.length}): ${autoDisabled.slice(0, 3).map((a: { source_name: string }) => a.source_name).join(", ")}${autoDisabled.length > 3 ? "…" : ""}\n`
+          ? `  • Đã tạm dừng ${autoDisabled.length} nguồn: ${autoDisabled.slice(0, 3).map((a: { source_name: string }) => a.source_name).join(", ")}${autoDisabled.length > 3 ? "…" : ""}\n`
           : "") +
         (autoDeleted.length > 0
-          ? `  • deleted (${autoDeleted.length}): ${autoDeleted.slice(0, 3).map((a: { source_name: string }) => a.source_name).join(", ")}${autoDeleted.length > 3 ? "…" : ""}\n`
+          ? `  • Đã xoá ${autoDeleted.length} nguồn: ${autoDeleted.slice(0, 3).map((a: { source_name: string }) => a.source_name).join(", ")}${autoDeleted.length > 3 ? "…" : ""}\n`
           : "");
 
+    const rejectedTotal =
+      (discoveryStats.rejected_anti_bot ?? 0) +
+      (discoveryStats.rejected_no_rss ?? 0) +
+      (discoveryStats.rejected_probe_fail ?? 0) +
+      (discoveryStats.rejected_low_count ?? 0) +
+      (discoveryStats.rejected_daily_limit ?? 0);
     const discoveryBlock = ((discovery24?.length ?? 0) === 0)
-      ? `🔍 Discovery 24h: 0\n`
-      : `🔍 *Discovery 24h (${discovery24?.length ?? 0} candidates):*\n` +
-        `  • added: ${discoveryStats.added ?? 0}${addedDomains.length > 0 ? ` (${addedDomains.slice(0, 3).join(", ")})` : ""}\n` +
-        `  • rejected: ${(discoveryStats.rejected_anti_bot ?? 0) + (discoveryStats.rejected_no_rss ?? 0) + (discoveryStats.rejected_probe_fail ?? 0) + (discoveryStats.rejected_low_count ?? 0) + (discoveryStats.rejected_daily_limit ?? 0)}\n`;
+      ? `🔍 Tìm nguồn mới 24h: chưa quét\n`
+      : `🔍 *Tìm nguồn mới (đã quét ${discovery24?.length ?? 0} trang web):*\n` +
+        `  • Thêm mới: ${discoveryStats.added ?? 0}${addedDomains.length > 0 ? ` (${addedDomains.slice(0, 3).join(", ")})` : ""}\n` +
+        `  • Bỏ qua (không phù hợp): ${rejectedTotal}\n`;
 
     const msg =
-`${status} *luot247.com/d daily report*
+`${status} *Báo cáo hàng ngày — luot247.com/d*
 
-📊 *Bài insert:*
-  • 1h: ${recent1}
-  • 6h: ${recent6}
-  • 24h: ${recent24}
+📊 *Tin tự động lấy về:*
+  • 1 giờ qua: ${recent1} tin
+  • 6 giờ qua: ${recent6} tin
+  • Cả ngày qua: ${recent24} tin
 
-🏆 *Top score:*
+🏆 *Nguồn lấy được nhiều tin nhất 24h:*
 ${topStr}
 
-📉 *Bottom 3 active:*
+📉 *Nguồn cần để ý:*
 ${bottomStr}
 
 ${cronFailLine}
-🛑 Disabled sources: ${disabledCount ?? "?"}
+🛑 Số nguồn đang tạm dừng: ${disabledCount ?? "?"}
 ${autoActionsBlock}${discoveryBlock}${eventsBlock}
-[Mở dashboard](https://www.luot247.com/d) | [EMERGENCY.md](https://github.com/lth91/luot247-scraper/blob/main/EMERGENCY.md)`;
+[Mở dashboard](https://www.luot247.com/d) | [Hướng dẫn xử lý sự cố](https://github.com/lth91/luot247-scraper/blob/main/EMERGENCY.md)`;
 
     await sendTelegram(tgToken, tgChatId, msg);
     return new Response(
@@ -370,7 +408,7 @@ ${autoActionsBlock}${discoveryBlock}${eventsBlock}
     .gt("crawled_at", since);
 
   if (countErr) {
-    await sendTelegram(tgToken, tgChatId, `🚨 *luot247 health-check FAILED*\nDB query error: ${countErr.message}`);
+    await sendTelegram(tgToken, tgChatId, `🚨 *Sự cố hệ thống — luot247.com/d*\nKhông truy vấn được cơ sở dữ liệu: ${countErr.message}`);
     return new Response(JSON.stringify({ ok: false, error: countErr.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -399,18 +437,18 @@ ${autoActionsBlock}${discoveryBlock}${eventsBlock}
 
   const sections: string[] = [];
   if (recent < HEALTHY_THRESHOLD) {
-    sections.push(`📉 Chỉ có *${recent}* bài mới trong ${WINDOW_HOURS}h qua (ngưỡng ${HEALTHY_THRESHOLD}).`);
+    sections.push(`📉 Chỉ có *${recent}* tin mới trong ${WINDOW_HOURS} giờ qua (mức bình thường là ${HEALTHY_THRESHOLD} tin).`);
   }
   if (failedCronCount >= 2) {
     const detail = (cronFails ?? [])
-      .map((c: { jobname: string; status: string; start_time: string }) => `- ${c.jobname} @ ${c.start_time?.slice(11, 16)} ${c.status}`)
+      .map((c: { jobname: string; status: string; start_time: string }) => `- ${c.jobname} lúc ${c.start_time?.slice(11, 16)} (${c.status})`)
       .join("\n");
-    sections.push(`⚠️ *${failedCronCount}* cron job fails:\n${detail}`);
+    sections.push(`⚠️ *${failedCronCount}* lần hệ thống chạy lỗi:\n${detail}`);
   }
   if (events.length > 0) {
     const lines = events.slice(0, MAX_EVENTS_IN_ALERT).map(formatEventLine);
-    const more = events.length > MAX_EVENTS_IN_ALERT ? `\n…(+${events.length - MAX_EVENTS_IN_ALERT} more)` : "";
-    sections.push(`📋 *Source events (4h qua):*\n${lines.map((l) => `  ${l}`).join("\n")}${more}`);
+    const more = events.length > MAX_EVENTS_IN_ALERT ? `\n…(+${events.length - MAX_EVENTS_IN_ALERT} sự kiện nữa)` : "";
+    sections.push(`📋 *Hoạt động nguồn tin (4 giờ qua):*\n${lines.map((l) => `  ${l}`).join("\n")}${more}`);
   }
 
   const isEmergency = recent < HEALTHY_THRESHOLD || failedCronCount >= 2;
@@ -418,9 +456,9 @@ ${autoActionsBlock}${discoveryBlock}${eventsBlock}
 
   if (isEmergency || hasEvents) {
     const header = isEmergency
-      ? "🚨 *luot247.com/d health alert*"
-      : "ℹ️ *luot247.com/d source events*";
-    const msg = `${header}\n\n${sections.join("\n\n")}\n\nMở [EMERGENCY.md](https://github.com/lth91/luot247-scraper/blob/main/EMERGENCY.md) để xử lý.`;
+      ? "🚨 *Cảnh báo sự cố — luot247.com/d*"
+      : "ℹ️ *Có thay đổi nguồn tin — luot247.com/d*";
+    const msg = `${header}\n\n${sections.join("\n\n")}\n\nXem [Hướng dẫn xử lý sự cố](https://github.com/lth91/luot247-scraper/blob/main/EMERGENCY.md) nếu cần.`;
     try {
       await sendTelegram(tgToken, tgChatId, msg);
     } catch (e) {

@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
       await sendTelegram(
         tgToken,
         tgChatId,
-        `🧪 *Pipeline health-check test ping*\n\nNếu anh thấy message này, agent monitoring hoạt động đúng. Cron 6h sẽ tự gửi alert khi có vấn đề thật.\n\n_${new Date().toISOString()}_`,
+        `🧪 *Kiểm tra hệ thống giám sát*\n\nNếu anh thấy tin nhắn này nghĩa là hệ thống giám sát đang hoạt động bình thường. Mỗi 6 giờ hệ thống sẽ tự gửi cảnh báo nếu có sự cố thật.\n\n_${new Date().toISOString()}_`,
       );
       return new Response(JSON.stringify({ ok: true, test_sent: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
     .is("is_duplicate_of", null);
   stats.articles_6h = articles6h ?? 0;
   if ((articles6h ?? 0) === 0) {
-    alerts.push({ severity: "critical", msg: "0 bài unique trong 6h gần nhất — pipeline dead?" });
+    alerts.push({ severity: "critical", msg: "Không có tin mới nào trong 6 giờ qua — hệ thống có thể đã ngừng hoạt động." });
   }
 
   // 2. Articles last 24h
@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     .is("is_duplicate_of", null);
   stats.articles_24h = articles24h ?? 0;
   if ((articles24h ?? 0) < 10 && (articles24h ?? 0) > 0) {
-    alerts.push({ severity: "warn", msg: `Yield 24h thấp bất thường: ${articles24h} bài (bình thường ~30)` });
+    alerts.push({ severity: "warn", msg: `Số tin lấy được trong 24 giờ qua thấp bất thường: ${articles24h} tin (bình thường khoảng 30 tin).` });
   }
 
   // 3. Mac Mini virtual source heartbeat
@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
   if (!mmLast || Date.now() - new Date(mmLast).getTime() > 3 * 3600 * 1000) {
     alerts.push({
       severity: "critical",
-      msg: `Mac Mini Scraper không cào ≥3h (last: ${mmLast ?? "never"}). Check Tailscale/LaunchAgent.`,
+      msg: `Mac Mini không lấy tin trong 3 giờ qua (lần cuối: ${mmLast ?? "chưa bao giờ"}). Cần kiểm tra kết nối Tailscale và dịch vụ LaunchAgent trên máy Mac.`,
     });
   }
 
@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
   for (const s of (failing ?? []) as Array<{ name: string; consecutive_failures: number; last_error: string | null }>) {
     alerts.push({
       severity: "warn",
-      msg: `${s.name}: fail ${s.consecutive_failures}× — ${(s.last_error ?? "").slice(0, 80)}`,
+      msg: `${s.name}: lỗi ${s.consecutive_failures} lần liên tiếp — ${(s.last_error ?? "").slice(0, 80)}`,
     });
   }
 
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     if (lastCrawlAge > 6 * 3600 * 1000) {
       alerts.push({
         severity: "warn",
-        msg: `Pending Playwright "${p.name}" chưa được Mac Mini cào ≥6h. Check fetch_playwright_sources_from_db.`,
+        msg: `Nguồn "${p.name}" đang chờ Mac Mini xử lý nhưng đã 6 giờ chưa thấy hoạt động. Kiểm tra script fetch_playwright_sources_from_db trên Mac Mini.`,
       });
     }
   }
@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
   if ((parserFails ?? 0) > 0) {
     alerts.push({
       severity: "warn",
-      msg: `${parserFails} bài 24h có markdown fence trong summary — parser fix có thể bị bypass.`,
+      msg: `${parserFails} tin trong 24 giờ qua có lỗi định dạng trong phần tóm tắt — bộ xử lý nội dung có thể bị lỗi.`,
     });
   }
 
@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
     if (!last || Date.now() - new Date(last).getTime() > 25 * 3600 * 1000) {
       alerts.push({
         severity: "critical",
-        msg: `Daily autonomy digest không chạy ≥25h (last: ${last ?? "never"}).`,
+        msg: `Báo cáo hàng ngày không chạy trong 25 giờ qua (lần chạy gần nhất: ${last ?? "chưa bao giờ"}).`,
       });
     }
   }
@@ -166,17 +166,17 @@ Deno.serve(async (req) => {
   if (alerts.length > 0) {
     const critical = alerts.filter((a) => a.severity === "critical");
     const warn = alerts.filter((a) => a.severity === "warn");
-    const lines: string[] = [`🩺 *Pipeline health alert* — ${alerts.length} issue${alerts.length > 1 ? "s" : ""}`];
+    const lines: string[] = [`🩺 *Cảnh báo hệ thống* — phát hiện ${alerts.length} vấn đề`];
     if (critical.length > 0) {
-      lines.push("", "🚨 *Critical:*");
+      lines.push("", "🚨 *Nghiêm trọng:*");
       for (const a of critical) lines.push(`  • ${a.msg}`);
     }
     if (warn.length > 0) {
-      lines.push("", "⚠️ *Warn:*");
+      lines.push("", "⚠️ *Cần chú ý:*");
       for (const a of warn) lines.push(`  • ${a.msg}`);
     }
-    lines.push("", `_articles 6h: ${stats.articles_6h} · 24h: ${stats.articles_24h} · MacMini last: ${stats.macmini_last_crawl ?? "—"}_`);
-    lines.push(`[Dashboard](https://www.luot247.com/ddashboard)`);
+    lines.push("", `_Tin 6h: ${stats.articles_6h} · 24h: ${stats.articles_24h} · Mac Mini lần cuối: ${stats.macmini_last_crawl ?? "—"}_`);
+    lines.push(`[Mở dashboard](https://www.luot247.com/ddashboard)`);
     try {
       await sendTelegram(tgToken, tgChatId, lines.join("\n"));
     } catch (e) {
