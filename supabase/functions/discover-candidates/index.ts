@@ -89,7 +89,52 @@ async function fetchGoogleNews(query: string): Promise<GnItem[]> {
 
 type ProbeResult =
   | { viable: true; rss_url: string }
-  | { viable: false; reason: "fetch_failed" | "http_error" | "anti_bot" | "no_rss" };
+  | { viable: false; reason: "fetch_failed" | "http_error" | "anti_bot" | "no_rss"; html?: string };
+
+// Extract article-like internal links từ HTML trang chủ.
+// Heuristic phân biệt article vs category/tag page:
+//   - Path length ≥ 25 chars (lọc category root)
+//   - Có digit ID ≥4 chữ số (nhiều CMS Việt dùng /-12345 hoặc -12345.html)
+//   - Hoặc path depth ≥ 2 (vd /category/article-slug)
+//   - Bỏ asset (.css/.js/.png/...), bỏ anchor (#), bỏ navigation chuẩn
+function extractInternalArticleLinks(html: string, domain: string): string[] {
+  const urls = new Set<string>();
+  const hrefRegex = /href=["']([^"'#]+)["']/gi;
+  let match: RegExpExecArray | null;
+  while ((match = hrefRegex.exec(html)) !== null) {
+    let href = match[1].trim();
+    if (!href || href.startsWith("#") || href.startsWith("javascript:") || href.startsWith("mailto:")) continue;
+
+    // Resolve relative
+    if (href.startsWith("//")) href = "https:" + href;
+    else if (href.startsWith("/")) href = `https://${domain}${href}`;
+    else if (!href.startsWith("http")) continue;
+
+    // Internal-only
+    let host: string;
+    let pathname: string;
+    try {
+      const u = new URL(href);
+      host = u.host.replace(/^www\./, "");
+      pathname = u.pathname;
+    } catch { continue; }
+    if (host !== domain) continue;
+
+    // Asset filter
+    if (/\.(css|js|png|jpe?g|svg|gif|webp|ico|woff2?|ttf|eot|mp4|pdf|xml|json)(\?|$)/i.test(pathname)) continue;
+
+    // Length filter (lọc /, /home, /tin-tuc — quá ngắn để là article)
+    if (pathname.length < 25) continue;
+
+    // Heuristic: hoặc có digit-id ≥4, hoặc path depth ≥ 2
+    const hasDigitId = /\d{4,}/.test(pathname);
+    const depth = pathname.split("/").filter((s) => s.length > 0).length;
+    if (!hasDigitId && depth < 2) continue;
+
+    urls.add(href);
+  }
+  return Array.from(urls).slice(0, 30);
+}
 
 // Suy luận link_pattern regex từ sample article URLs.
 // Strategy:
@@ -126,13 +171,23 @@ function inferLinkPattern(urls: string[]): string | null {
   const allSameExt = exts.length === paths.length && new Set(exts).size === 1;
   const extPart = allSameExt ? `\\.${exts[0]}$` : "";
 
-  if (common.length === 0 && !allSameExt) {
-    // Quá lỏng — coi như fail, để fallback hoặc reject
+  // Detect digit-ID: tất cả paths đều có ≥4 chữ số → require trong pattern
+  // (Lọc nhiều navigation/category page như /tin-tuc.htm vs /article-slug-12345.htm)
+  const allHaveDigitId = paths.every((p) => /\d{4,}/.test(p));
+
+  // Build pattern: prefix (nếu có common) + middle (.+) + digit guard (nếu có) + ext
+  let prefix: string;
+  if (common.length > 0) {
+    prefix = `^/${common.join("/")}/`;
+  } else if (allSameExt || allHaveDigitId) {
+    prefix = "^/";
+  } else {
+    // Không có common prefix, không có ext, không digit ID → quá lỏng, fail
     return null;
   }
 
-  const prefix = common.length > 0 ? `^/${common.join("/")}/.+` : `^/.+`;
-  return prefix + extPart;
+  const middle = allHaveDigitId ? "[a-z0-9-]+\\d{4,}" : ".+";
+  return prefix + middle + extPart;
 }
 
 // Gọi Claude Haiku để gợi ý content_selector hoặc skip nếu không cần.
@@ -195,7 +250,9 @@ async function probe(domain: string): Promise<ProbeResult> {
     } catch { /* try next */ }
   }
 
-  return { viable: false, reason: "no_rss" };
+  // No RSS — trả html để caller phục vụ Playwright handover (extract sample
+  // article links từ trang chủ, infer link_pattern).
+  return { viable: false, reason: "no_rss", html };
 }
 
 Deno.serve(async (req) => {
@@ -326,7 +383,12 @@ Deno.serve(async (req) => {
         stats.playwright_added < MAX_PLAYWRIGHT_HANDOVER_PER_DAY;
 
       if (isHandoverEligible) {
-        const linkPattern = inferLinkPattern(cand.sample_urls);
+        // Sample URLs từ Google News chỉ là homepage (do <source url> trả domain),
+        // nên phải parse trang chủ thực tế để lấy article links đúng pattern.
+        const articleLinks = probeResult.html
+          ? extractInternalArticleLinks(probeResult.html, cand.domain)
+          : [];
+        const linkPattern = articleLinks.length >= 5 ? inferLinkPattern(articleLinks) : null;
         if (linkPattern) {
           const today = new Date().toISOString().slice(0, 10);
           const scraperConfig = {
