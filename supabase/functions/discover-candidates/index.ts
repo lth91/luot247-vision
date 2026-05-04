@@ -147,14 +147,21 @@ function extractInternalArticleLinks(html: string, domain: string): string[] {
 //   4. Build regex: `^/<common>/.+(\.ext)?$`
 // Trả null nếu không đủ samples (<3) hoặc paths quá khác nhau (no common prefix).
 function inferLinkPattern(urls: string[]): string | null {
-  const paths: string[] = [];
+  const allPaths: string[] = [];
   for (const u of urls) {
     try {
       const p = new URL(u).pathname;
-      if (p && p !== "/") paths.push(p);
+      if (p && p !== "/") allPaths.push(p);
     } catch { /* skip */ }
   }
-  if (paths.length < 3) return null;
+  if (allPaths.length < 3) return null;
+
+  // VN article URL gần như luôn có digit-id ≥4 (post ID). Trang chủ trộn
+  // nav/category không có digit. Nếu có ≥5 paths digit-id, prefer subset
+  // đó để infer pattern sạch (tránh nhiễu).
+  const withDigit = allPaths.filter((p) => /\d{4,}/.test(p));
+  const useDigitSubset = withDigit.length >= 5;
+  const paths = useDigitSubset ? withDigit : allPaths;
 
   const splits = paths.map((p) => p.split("/").filter((s) => s.length > 0));
   const minLen = Math.min(...splits.map((s) => s.length));
@@ -174,18 +181,15 @@ function inferLinkPattern(urls: string[]): string | null {
   const allSameExt = exts.length === paths.length && new Set(exts).size === 1;
   const extPart = allSameExt ? `\\.${exts[0]}$` : "";
 
-  // Detect digit-ID: tất cả paths đều có ≥4 chữ số → require trong pattern
-  // (Lọc nhiều navigation/category page như /tin-tuc.htm vs /article-slug-12345.htm)
-  const allHaveDigitId = paths.every((p) => /\d{4,}/.test(p));
+  // Đã prefilter subset có digit, hoặc subset rỗng → check raw paths
+  const allHaveDigitId = useDigitSubset || paths.every((p) => /\d{4,}/.test(p));
 
-  // Build pattern: prefix (nếu có common) + middle (.+) + digit guard (nếu có) + ext
   let prefix: string;
   if (common.length > 0) {
     prefix = `^/${common.join("/")}/`;
   } else if (allSameExt || allHaveDigitId) {
     prefix = "^/";
   } else {
-    // Không có common prefix, không có ext, không digit ID → quá lỏng, fail
     return null;
   }
 
