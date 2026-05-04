@@ -1,3 +1,10 @@
+# [1.17.0](https://github.com/lth91/luot247-vision/compare/v1.16.0...v1.17.0) (2026-05-04)
+
+
+### Features
+
+* **electricity:** sparkline 7 ngày + click action item jump tới row ([1f406ac](https://github.com/lth91/luot247-vision/commit/1f406acfd6b3d959278288108bafad618bd77c48))
+
 # [1.16.0](https://github.com/lth91/luot247-vision/compare/v1.15.2...v1.16.0) (2026-05-04)
 
 
