@@ -1,3 +1,10 @@
+## [1.21.5](https://github.com/lth91/luot247-vision/compare/v1.21.4...v1.21.5) (2026-05-04)
+
+
+### Bug Fixes
+
+* **autonomy:** inferLinkPattern dùng subset có digit-id để tránh nhiễu ([9c85ad3](https://github.com/lth91/luot247-vision/commit/9c85ad30168d8b693aa18bcf49346115065dfe05))
+
 ## [1.21.4](https://github.com/lth91/luot247-vision/compare/v1.21.3...v1.21.4) (2026-05-04)
 
 
