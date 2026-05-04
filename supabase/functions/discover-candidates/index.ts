@@ -31,7 +31,10 @@ const QUERIES: { seed: string; q: string }[] = [
 const MAX_AUTO_ADD_PER_DAY = 3;
 const MAX_PLAYWRIGHT_HANDOVER_PER_DAY = 3;
 const MIN_SAMPLE_COUNT = 3;
-const MIN_SAMPLE_FOR_PLAYWRIGHT = 10;
+// Threshold handover Playwright = sample probe-eligible chung. Trước đây
+// đặt 10 (sai expectation user "không-RSS → tự Mac Mini"). Sample thấp
+// nếu ngon thì 7 ngày sau cron auto-promote, không thì auto-reject.
+const MIN_SAMPLE_FOR_PLAYWRIGHT = MIN_SAMPLE_COUNT;
 const TOP_N_CANDIDATES_TO_PROBE = 5;
 const FETCH_TIMEOUT_MS = 20000;
 const PROBE_TIMEOUT_MS = 12000;

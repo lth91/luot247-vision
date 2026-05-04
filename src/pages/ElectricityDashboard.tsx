@@ -888,7 +888,7 @@ const ElectricityDashboard = () => {
                     Mỗi 03:00 UTC: quét 5 Google News query (EVN/lưới · tái tạo · chính sách · vận hành · doanh nghiệp) →
                     group domain → probe top 5. <strong>2 nhánh tự động</strong>:
                     {" "}<span className="text-green-700">RSS auto-add (max 3/day)</span> nếu site có RSS feed,
-                    {" "}<span className="text-violet-700">Playwright handover (max 3/day)</span> nếu sample ≥10 nhưng không-RSS
+                    {" "}<span className="text-violet-700">Playwright handover (max 3/day)</span> nếu không-RSS (mọi sample đủ probe-eligible)
                     (Phase E suy luận link_pattern từ trang chủ → INSERT row pending → Mac Mini test 24h).
                     {candidateStats.latest && (
                       <> Last run: <strong>{getRelativeTime(candidateStats.latest)}</strong>.</>
