@@ -1,3 +1,10 @@
+## [1.22.4](https://github.com/lth91/luot247-vision/compare/v1.22.3...v1.22.4) (2026-05-04)
+
+
+### Bug Fixes
+
+* **autonomy:** cảnh báo pipeline gọn hơn + tránh underscore vỡ Telegram ([135d174](https://github.com/lth91/luot247-vision/commit/135d17498964fb447bfc073e0b895c9f672fff45))
+
 ## [1.22.3](https://github.com/lth91/luot247-vision/compare/v1.22.2...v1.22.3) (2026-05-04)
 
 
