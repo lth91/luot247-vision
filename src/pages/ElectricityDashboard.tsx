@@ -299,8 +299,9 @@ const ElectricityDashboard = () => {
     if (!news) return m;
     const now = Date.now();
     for (const n of news) {
-      if (n.source_name !== "Mac Mini Scraper") continue;
-      const host = getHost(n.original_url);
+      if (!n.source_name?.startsWith("Mac Mini")) continue;
+      const nameMatch = n.source_name.match(/^Mac Mini \(([^)]+)\)$/);
+      const host = nameMatch?.[1] ?? getHost(n.original_url);
       if (!host) continue;
       const t = new Date(n.published_at ?? n.crawled_at).getTime();
       const ageMs = now - t;
@@ -335,10 +336,14 @@ const ElectricityDashboard = () => {
       }
     }
 
+    // Match cả "Mac Mini Scraper" (legacy flat naming) và "Mac Mini (host.tld)"
+    // (per-host naming scraper.py mới). Derive host từ source_name regex hoặc
+    // fallback sang original_url.
     const seen = new Map<string, { count: number; latest: string }>();
     for (const n of news) {
-      if (n.source_name !== "Mac Mini Scraper") continue;
-      const h = getHost(n.original_url);
+      if (!n.source_name?.startsWith("Mac Mini")) continue;
+      const nameMatch = n.source_name.match(/^Mac Mini \(([^)]+)\)$/);
+      const h = nameMatch?.[1] ?? getHost(n.original_url);
       if (!h) continue;
       const cur = seen.get(h) ?? { count: 0, latest: "" };
       cur.count += 1;
@@ -506,7 +511,7 @@ const ElectricityDashboard = () => {
       const t = new Date(n.published_at ?? n.crawled_at).getTime();
       if (t < cutoff) continue;
       if (n.source_name === "RSS Discovery") counts["rss-discovery"]++;
-      else if (n.source_name === "Mac Mini Scraper") counts["mac-mini"]++;
+      else if (n.source_name?.startsWith("Mac Mini")) counts["mac-mini"]++;
       else counts.edge++;
     }
     const total = counts.edge + counts["rss-discovery"] + counts["mac-mini"];
