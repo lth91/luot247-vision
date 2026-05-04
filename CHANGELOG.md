@@ -1,3 +1,10 @@
+## [1.21.4](https://github.com/lth91/luot247-vision/compare/v1.21.3...v1.21.4) (2026-05-04)
+
+
+### Bug Fixes
+
+* **autonomy:** Phase E skip domain Mac Mini đã cover via per-host naming ([876c215](https://github.com/lth91/luot247-vision/commit/876c2158160f0717801ac1fe7234510585b432d4))
+
 ## [1.21.3](https://github.com/lth91/luot247-vision/compare/v1.21.2...v1.21.3) (2026-05-04)
 
 
