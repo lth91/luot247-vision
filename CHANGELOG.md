@@ -1,3 +1,10 @@
+## [1.21.6](https://github.com/lth91/luot247-vision/compare/v1.21.5...v1.21.6) (2026-05-04)
+
+
+### Bug Fixes
+
+* **electricity:** mobile responsive cho /ddashboard ([ff5cc3d](https://github.com/lth91/luot247-vision/commit/ff5cc3d62ae4414ce43f14cfa5ca3050853add44))
+
 ## [1.21.5](https://github.com/lth91/luot247-vision/compare/v1.21.4...v1.21.5) (2026-05-04)
 
 
