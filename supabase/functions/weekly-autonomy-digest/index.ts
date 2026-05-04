@@ -76,6 +76,7 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(supabaseUrl, serviceKey);
   const week = new Date(Date.now() - 7 * 86400000).toISOString();
+  const day = new Date(Date.now() - 86400000).toISOString();
 
   // 1. Aggregate Google News domains 7d (proxy)
   const gnDomains = new Map<string, number>();
@@ -120,11 +121,17 @@ Deno.serve(async (req) => {
     .sort((a, b) => b[1] - a[1])
     .slice(0, GAP_DOMAINS_TO_SHOW);
 
-  // 5. 7-day metrics
+  // 5. 7-day + 24h metrics
   const { count: articles7d } = await supabase
     .from("electricity_news")
     .select("*", { count: "exact", head: true })
     .gt("crawled_at", week)
+    .is("is_duplicate_of", null);
+
+  const { count: articles24h } = await supabase
+    .from("electricity_news")
+    .select("*", { count: "exact", head: true })
+    .gt("crawled_at", day)
     .is("is_duplicate_of", null);
 
   const { count: sourcesActive } = await supabase
@@ -132,15 +139,17 @@ Deno.serve(async (req) => {
     .select("*", { count: "exact", head: true })
     .eq("is_active", true);
 
-  // 6. Autonomy actions 7d
+  // 6. Autonomy actions 7d + 24h
   const { data: candidates7d } = await supabase
     .from("source_candidate_log")
-    .select("status")
+    .select("status, discovered_at")
     .gt("discovered_at", week);
   const candidatesByStatus = (candidates7d ?? []).reduce((acc: Record<string, number>, r: { status: string }) => {
     acc[r.status] = (acc[r.status] ?? 0) + 1;
     return acc;
   }, {});
+  const candidates24h = (candidates7d ?? []).filter((r: { discovered_at: string }) => r.discovered_at > day);
+  const candidates24hAdded = candidates24h.filter((r: { status: string }) => r.status === "added").length;
 
   const { data: cleanup7d } = await supabase
     .from("source_cleanup_audit")
@@ -171,9 +180,14 @@ Deno.serve(async (req) => {
   const coverageEmoji = coveragePct >= 70 ? "🟢" : coveragePct >= 40 ? "🟡" : "🔴";
 
   const msg =
-`📅 *luot247.com/d weekly autonomy report*
+`📅 *luot247.com/d daily autonomy report*
 
-📊 *7-day metrics:*
+🆕 *Hôm qua (24h):*
+  • Articles: ${articles24h ?? 0}
+  • Candidates probed: ${candidates24h.length}
+  • Auto-added: ${candidates24hAdded}
+
+📊 *Rolling 7 ngày:*
   • Articles inserted: ${articles7d ?? 0}
   • Sources active: ${sourcesActive ?? 0}
 
