@@ -1,3 +1,11 @@
+## [1.17.1](https://github.com/lth91/luot247-vision/compare/v1.17.0...v1.17.1) (2026-05-04)
+
+
+### Bug Fixes
+
+* **discovery:** decode double-encoded HTML entity + dedup tay 3 bài T&T Group ([3bef957](https://github.com/lth91/luot247-vision/commit/3bef9571b16f56ef6dc95b812532d6aefb15aa04))
+* **electricity:** dashboard +5 tin mới expand + gộp banner Mac Mini ([8133fb4](https://github.com/lth91/luot247-vision/commit/8133fb4f63ac1f4db28de03b7b500f845294ef3a))
+
 # [1.17.0](https://github.com/lth91/luot247-vision/compare/v1.16.0...v1.17.0) (2026-05-04)
 
 
