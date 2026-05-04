@@ -382,13 +382,15 @@ Deno.serve(async (req) => {
         cand.count >= MIN_SAMPLE_FOR_PLAYWRIGHT &&
         stats.playwright_added < MAX_PLAYWRIGHT_HANDOVER_PER_DAY;
 
+      // Debug fields cho mọi rejected_no_rss để dễ diagnose tại sao handover miss
+      let handoverDebug = "";
       if (isHandoverEligible) {
-        // Sample URLs từ Google News chỉ là homepage (do <source url> trả domain),
-        // nên phải parse trang chủ thực tế để lấy article links đúng pattern.
+        const htmlLen = probeResult.html?.length ?? 0;
         const articleLinks = probeResult.html
           ? extractInternalArticleLinks(probeResult.html, cand.domain)
           : [];
         const linkPattern = articleLinks.length >= 5 ? inferLinkPattern(articleLinks) : null;
+        handoverDebug = ` [handover_debug: html=${htmlLen}b articles=${articleLinks.length} pattern=${linkPattern ?? 'null'}]`;
         if (linkPattern) {
           const today = new Date().toISOString().slice(0, 10);
           const scraperConfig = {
@@ -447,7 +449,7 @@ Deno.serve(async (req) => {
         sample_titles: cand.sample_titles,
         sample_count: cand.count,
         status,
-        decision_reason: probeResult.reason,
+        decision_reason: probeResult.reason + handoverDebug,
         query_seed: cand.query_seed,
       });
       continue;
