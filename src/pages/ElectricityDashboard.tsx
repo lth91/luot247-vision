@@ -534,10 +534,10 @@ const ElectricityDashboard = () => {
     <div className="min-h-screen bg-background">
       <Header user={session?.user} userRole={userRole} />
 
-      <main className="container mx-auto px-4 py-6 max-w-6xl">
-        <div className="mb-6 flex items-center gap-3">
-          <Activity className="h-7 w-7 text-primary" />
-          <div className="flex-1">
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-6xl">
+        <div className="mb-6 flex items-start gap-3">
+          <Activity className="h-7 w-7 text-primary shrink-0 mt-1" />
+          <div className="flex-1 min-w-0">
             <h1 className="text-2xl md:text-3xl font-bold">Dashboard /d</h1>
             <p className="text-sm text-muted-foreground">
               Theo dõi crawl tin ngành điện. Tự refresh mỗi 60 giây.
@@ -605,10 +605,17 @@ const ElectricityDashboard = () => {
                       className="w-full text-left flex items-start gap-2 text-sm rounded-md px-2 py-1.5 hover:bg-orange-100/70 transition-colors"
                     >
                       <span className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${it.severity === "danger" ? "bg-red-500" : "bg-orange-400"}`} />
-                      <div className="flex-1">
-                        <div className="font-medium">{it.title}</div>
-                        {it.detail && <div className="text-muted-foreground text-xs">{it.detail}</div>}
-                        {it.hint && <div className="text-muted-foreground text-xs italic">→ {it.hint}</div>}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium break-words">{it.title}</div>
+                        {it.detail && (
+                          <div
+                            className="text-muted-foreground text-xs break-words line-clamp-2"
+                            title={it.detail}
+                          >
+                            {it.detail}
+                          </div>
+                        )}
+                        {it.hint && <div className="text-muted-foreground text-xs italic break-words">→ {it.hint}</div>}
                       </div>
                       <span className="text-xs text-muted-foreground shrink-0 self-center">↗</span>
                     </button>
@@ -619,29 +626,29 @@ const ElectricityDashboard = () => {
           </Card>
         )}
 
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-4">
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Tổng nguồn</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-bold">{overview.total}</div></CardContent>
+            <CardHeader className="pb-2 px-3 pt-3 sm:px-6 sm:pt-6"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Tổng nguồn</CardTitle></CardHeader>
+            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6"><div className="text-xl sm:text-2xl font-bold">{overview.total}</div></CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Active</CardTitle></CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{overview.active}</div>
+            <CardHeader className="pb-2 px-3 pt-3 sm:px-6 sm:pt-6"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Active</CardTitle></CardHeader>
+            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+              <div className="text-xl sm:text-2xl font-bold text-green-600">{overview.active}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Handover Mac Mini</CardTitle></CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{overview.handover}</div>
-              <div className="text-xs text-muted-foreground">đã chuyển scraper</div>
+            <CardHeader className="pb-2 px-3 pt-3 sm:px-6 sm:pt-6"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Handover Mac Mini</CardTitle></CardHeader>
+            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+              <div className="text-xl sm:text-2xl font-bold text-blue-600">{overview.handover}</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground">đã chuyển scraper</div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Tin (24h / 7d / total)</CardTitle></CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{overview.news24h}</div>
-              <div className="text-xs text-muted-foreground">{overview.news7d} / 7d · {overview.totalNews} total</div>
+            <CardHeader className="pb-2 px-3 pt-3 sm:px-6 sm:pt-6"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Tin (24h)</CardTitle></CardHeader>
+            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+              <div className="text-xl sm:text-2xl font-bold">{overview.news24h}</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground">{overview.news7d}/7d · {overview.totalNews} total</div>
             </CardContent>
           </Card>
         </section>
@@ -666,21 +673,22 @@ const ElectricityDashboard = () => {
         </Card>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 mb-4">
-            <TabsTrigger value="edge">
+          <TabsList className="flex w-full overflow-x-auto md:grid md:grid-cols-5 mb-4 h-auto whitespace-nowrap">
+            <TabsTrigger value="edge" className="shrink-0 text-xs sm:text-sm">
               Edge ({edgeSources.length})
             </TabsTrigger>
-            <TabsTrigger value="mac-mini">
+            <TabsTrigger value="mac-mini" className="shrink-0 text-xs sm:text-sm">
               Mac Mini ({macMiniHosts.length})
             </TabsTrigger>
-            <TabsTrigger value="rss-discovery">
-              RSS Discovery ({discoveryBreakdown.length})
+            <TabsTrigger value="rss-discovery" className="shrink-0 text-xs sm:text-sm">
+              <span className="md:hidden">RSS ({discoveryBreakdown.length})</span>
+              <span className="hidden md:inline">RSS Discovery ({discoveryBreakdown.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="disabled">
+            <TabsTrigger value="disabled" className="shrink-0 text-xs sm:text-sm">
               Disabled ({(sources?.filter((s) => !s.is_active).length) ?? 0})
             </TabsTrigger>
-            <TabsTrigger value="ai-agents">
-              🤖 AI Agents ({candidateStats.last7d + (selectorFixes?.length ?? 0)})
+            <TabsTrigger value="ai-agents" className="shrink-0 text-xs sm:text-sm">
+              🤖 AI ({candidateStats.last7d + (selectorFixes?.length ?? 0)})
             </TabsTrigger>
           </TabsList>
 
@@ -898,25 +906,25 @@ const ElectricityDashboard = () => {
 
                 <div className="p-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <div className="rounded border bg-green-50 p-2 text-center">
-                    <div className="text-xl font-bold text-green-700">{candidateStats.added7d}</div>
-                    <div className="text-xs text-green-800">RSS + Playwright add (7d)</div>
+                    <div className="text-lg sm:text-xl font-bold text-green-700">{candidateStats.added7d}</div>
+                    <div className="text-[10px] sm:text-xs text-green-800">RSS+Playwright (7d)</div>
                   </div>
                   <div className="rounded border bg-blue-50 p-2 text-center">
-                    <div className="text-xl font-bold text-blue-700">{candidateStats.last7d}</div>
-                    <div className="text-xs text-blue-800">Tổng probe (7d)</div>
+                    <div className="text-lg sm:text-xl font-bold text-blue-700">{candidateStats.last7d}</div>
+                    <div className="text-[10px] sm:text-xs text-blue-800">Tổng probe (7d)</div>
                   </div>
                   <div className="rounded border bg-amber-50 p-2 text-center">
-                    <div className="text-xl font-bold text-amber-700">
+                    <div className="text-lg sm:text-xl font-bold text-amber-700">
                       {(candidateStats.byStatus.get("rejected_anti_bot") ?? 0) +
                        (candidateStats.byStatus.get("rejected_no_rss") ?? 0)}
                     </div>
-                    <div className="text-xs text-amber-800">Anti-bot/No RSS (30d)</div>
+                    <div className="text-[10px] sm:text-xs text-amber-800">Anti-bot/No RSS</div>
                   </div>
                   <div className="rounded border bg-slate-50 p-2 text-center">
-                    <div className="text-xl font-bold text-slate-700">
+                    <div className="text-lg sm:text-xl font-bold text-slate-700">
                       {candidateStats.byStatus.get("rejected_low_count") ?? 0}
                     </div>
-                    <div className="text-xs text-slate-700">Sample thấp (30d)</div>
+                    <div className="text-[10px] sm:text-xs text-slate-700">Sample thấp</div>
                   </div>
                 </div>
 
@@ -1056,12 +1064,12 @@ const Sparkline = ({ counts }: { counts: number[] }) => {
 };
 
 const BarRow = ({ label, value, pct, cls }: { label: string; value: number; pct: number; cls: string }) => (
-  <div className="flex items-center gap-3 text-sm">
-    <div className="w-44 shrink-0 text-muted-foreground">{label}</div>
-    <div className="flex-1 h-5 bg-muted rounded overflow-hidden">
+  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+    <div className="w-24 sm:w-44 shrink-0 text-muted-foreground truncate">{label}</div>
+    <div className="flex-1 h-4 sm:h-5 bg-muted rounded overflow-hidden">
       <div className={`h-full ${cls}`} style={{ width: `${pct}%` }} />
     </div>
-    <div className="w-24 text-right font-mono text-xs">
+    <div className="w-16 sm:w-24 text-right font-mono text-[10px] sm:text-xs shrink-0">
       <span className="font-semibold">{value}</span>
       <span className="text-muted-foreground"> · {pct}%</span>
     </div>
