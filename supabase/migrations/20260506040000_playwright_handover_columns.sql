@@ -12,6 +12,16 @@ ALTER TABLE public.electricity_sources
   ADD COLUMN IF NOT EXISTS scraper_config jsonb,
   ADD COLUMN IF NOT EXISTS pending_review boolean NOT NULL DEFAULT false;
 
+-- Mở rộng feed_type CHECK để cho phép 'playwright'. Schema cũ chỉ allow
+-- 'rss' và 'html_list' → Phase E INSERT 'playwright' bị reject silent
+-- (rơi xuống fallthrough reject_no_rss). Sự cố audit 2026-05-04.
+ALTER TABLE public.electricity_sources
+  DROP CONSTRAINT IF EXISTS electricity_sources_feed_type_check;
+
+ALTER TABLE public.electricity_sources
+  ADD CONSTRAINT electricity_sources_feed_type_check
+  CHECK (feed_type = ANY (ARRAY['rss'::text, 'html_list'::text, 'playwright'::text]));
+
 COMMENT ON COLUMN public.electricity_sources.scraper_config IS
   'JSON config cho Mac Mini Playwright scraper: {list_url, link_pattern, content_selector, wait_for, wait_after_load_ms, category}. Chỉ relevant khi feed_type=playwright.';
 
