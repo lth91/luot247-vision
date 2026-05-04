@@ -23,6 +23,18 @@ const corsHeaders = {
 
 type Alert = { severity: "critical" | "warn"; msg: string };
 
+function friendlyFailReason(err: string | null | undefined): string {
+  const e = (err ?? "").toLowerCase();
+  if (!e) return "";
+  if (e.includes("404") || e.includes("not found")) return "trang web không còn tồn tại";
+  if (e.includes("403") || e.includes("forbidden")) return "trang web chặn truy cập";
+  if (e.includes("error sending request") || e.includes("timeout") || e.includes("econnrefused") || e.includes("client error")) return "lỗi kết nối";
+  if (e.includes("dns") || e.includes("name resolution")) return "không tìm thấy địa chỉ trang";
+  if (e.includes("ssl") || e.includes("certificate")) return "lỗi chứng chỉ bảo mật";
+  if (e.includes("no candidates") || (e.includes("rss") && e.includes("parsed"))) return "RSS không có bài hợp lệ";
+  return (err ?? "").slice(0, 80);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -108,9 +120,10 @@ Deno.serve(async (req) => {
     .limit(5);
   stats.failing_active_sources = (failing ?? []).length;
   for (const s of (failing ?? []) as Array<{ name: string; consecutive_failures: number; last_error: string | null }>) {
+    const reason = friendlyFailReason(s.last_error);
     alerts.push({
       severity: "warn",
-      msg: `${s.name}: lỗi ${s.consecutive_failures} lần liên tiếp — ${(s.last_error ?? "").slice(0, 80)}`,
+      msg: `${s.name}: lỗi ${s.consecutive_failures} lần liên tiếp${reason ? ` — ${reason}` : ""}`,
     });
   }
 
@@ -120,16 +133,22 @@ Deno.serve(async (req) => {
     .select("name, last_crawled_at, created_at")
     .eq("feed_type", "playwright")
     .eq("pending_review", true);
+  const pendingStaleNames: string[] = [];
   for (const p of (pendingStale ?? []) as Array<{ name: string; last_crawled_at: string | null; created_at: string }>) {
     const ageMs = Date.now() - new Date(p.created_at).getTime();
     if (ageMs < 60 * 60 * 1000) continue; // <1h cũ, chưa kịp cào
     const lastCrawlAge = p.last_crawled_at ? Date.now() - new Date(p.last_crawled_at).getTime() : Infinity;
     if (lastCrawlAge > 6 * 3600 * 1000) {
-      alerts.push({
-        severity: "warn",
-        msg: `Nguồn "${p.name}" đang chờ Mac Mini xử lý nhưng đã 6 giờ chưa thấy hoạt động. Kiểm tra script fetch_playwright_sources_from_db trên Mac Mini.`,
-      });
+      pendingStaleNames.push(p.name);
     }
+  }
+  if (pendingStaleNames.length > 0) {
+    const preview = pendingStaleNames.slice(0, 3).join(", ");
+    const more = pendingStaleNames.length > 3 ? `, +${pendingStaleNames.length - 3} nguồn nữa` : "";
+    alerts.push({
+      severity: "warn",
+      msg: `${pendingStaleNames.length} nguồn đang chờ Mac Mini xử lý nhưng đã 6 giờ chưa được thực hiện (${preview}${more}). Cần kiểm tra Mac Mini có nhận được danh sách nguồn mới không.`,
+    });
   }
   stats.pending_playwright_sources = (pendingStale ?? []).length;
 
