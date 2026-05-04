@@ -20,7 +20,7 @@ type ElectricityNewsRow = {
 };
 
 const PAGE_SIZE = 30;
-const RECENT_DAYS = 3;
+const RECENT_DAYS = 7;
 
 const fetchNewsPage = async (pageIndex: number): Promise<ElectricityNewsRow[]> => {
   // Sort theo crawled_at DESC để bài "mới tìm thấy" (mới về DB) lên đầu —
