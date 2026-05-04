@@ -507,17 +507,39 @@ async function summarizeWithClaude(
   if (!res.ok) throw new Error(`summarize HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const data = await res.json();
   const raw: string = (data?.content?.[0]?.text ?? "").trim();
-  const m = raw.match(/\{[\s\S]*\}/);
-  if (!m) return { summary: raw, publishedDate: null };
-  try {
-    const p = JSON.parse(m[0]);
-    const summary = String(p.summary ?? "").trim();
-    const pd = p.published_date;
-    const publishedDate = typeof pd === "string" && /^\d{4}-\d{2}-\d{2}$/.test(pd) ? pd : null;
-    return { summary, publishedDate };
-  } catch {
-    return { summary: raw, publishedDate: null };
+
+  // Strip markdown fences Claude đôi khi wrap (```json ... ```)
+  const cleaned = raw
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/, "")
+    .trim();
+
+  const m = cleaned.match(/\{[\s\S]*\}/);
+  if (m) {
+    try {
+      const p = JSON.parse(m[0]);
+      const summary = String(p.summary ?? "").trim();
+      const pd = p.published_date;
+      const publishedDate = typeof pd === "string" && /^\d{4}-\d{2}-\d{2}$/.test(pd) ? pd : null;
+      return { summary, publishedDate };
+    } catch {
+      // JSON malformed (vd Claude double-escape "\\\""): fall through.
+    }
   }
+
+  // Fallback regex extract — cứu data dù JSON malformed
+  const sumMatch = cleaned.match(/"summary"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+  const dateMatch = cleaned.match(/"published_date"\s*:\s*"(\d{4}-\d{2}-\d{2})"/);
+  if (sumMatch) {
+    const summary = sumMatch[1]
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, "\\")
+      .replace(/\\n/g, "\n")
+      .trim();
+    return { summary, publishedDate: dateMatch?.[1] ?? null };
+  }
+
+  return { summary: raw, publishedDate: null };
 }
 
 // ---------- Main handler ----------

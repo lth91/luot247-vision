@@ -227,20 +227,48 @@ VÍ DỤ MẪU:
   }
   const data = await res.json();
   const raw: string = (data?.content?.[0]?.text ?? "").trim();
-  const jsonMatch = raw.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) return { summary: raw, publishedDate: null, relevant: true };
-  try {
-    const parsed = JSON.parse(jsonMatch[0]);
-    const summary = String(parsed.summary ?? "").trim();
-    const pd = parsed.published_date;
-    const publishedDate = typeof pd === "string" && /^\d{4}-\d{2}-\d{2}$/.test(pd) ? pd : null;
-    // Default to true (no behavior change) if Claude omits the field — the keyword
-    // pre-filter already rejects most off-topic, this is the LLM safety net.
-    const relevant = parsed.relevant === false ? false : true;
-    return { summary, publishedDate, relevant };
-  } catch {
-    return { summary: raw, publishedDate: null, relevant: true };
+
+  // Strip markdown code fences (```json ... ```) Claude đôi khi wrap response.
+  const cleaned = raw
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/, "")
+    .trim();
+
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      const summary = String(parsed.summary ?? "").trim();
+      const pd = parsed.published_date;
+      const publishedDate = typeof pd === "string" && /^\d{4}-\d{2}-\d{2}$/.test(pd) ? pd : null;
+      const relevant = parsed.relevant === false ? false : true;
+      return { summary, publishedDate, relevant };
+    } catch {
+      // JSON.parse fail (Claude over-escape "\\\"" thay vì "\""): fall through.
+    }
   }
+
+  // Fallback: extract summary field bằng regex lenient để vẫn cứu được data
+  // dù JSON malformed. Match "summary": "..." cho đến quote đóng (allow escape).
+  const sumMatch = cleaned.match(/"summary"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+  const dateMatch = cleaned.match(/"published_date"\s*:\s*"(\d{4}-\d{2}-\d{2})"/);
+  const relMatch = cleaned.match(/"relevant"\s*:\s*(true|false)/);
+  if (sumMatch) {
+    const summary = sumMatch[1]
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, "\\")
+      .replace(/\\n/g, "\n")
+      .trim();
+    return {
+      summary,
+      publishedDate: dateMatch?.[1] ?? null,
+      relevant: relMatch?.[1] === "false" ? false : true,
+    };
+  }
+
+  // Cuối cùng: trả raw để tránh insert empty (vẫn invalid summary, sẽ skip
+  // trong is_invalid_summary check phía caller hoặc dedup_electricity_news bỏ).
+  return { summary: raw, publishedDate: null, relevant: true };
 }
 
 function wordCount(s: string): number {
