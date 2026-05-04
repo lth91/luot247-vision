@@ -29,7 +29,9 @@ const QUERIES: { seed: string; q: string }[] = [
 ];
 
 const MAX_AUTO_ADD_PER_DAY = 3;
+const MAX_PLAYWRIGHT_HANDOVER_PER_DAY = 3;
 const MIN_SAMPLE_COUNT = 3;
+const MIN_SAMPLE_FOR_PLAYWRIGHT = 10;
 const TOP_N_CANDIDATES_TO_PROBE = 5;
 const FETCH_TIMEOUT_MS = 20000;
 const PROBE_TIMEOUT_MS = 12000;
@@ -39,6 +41,7 @@ type DomainCandidate = {
   domain: string;
   count: number;
   sample_titles: string[];
+  sample_urls: string[];
   query_seed: string;
 };
 
@@ -87,6 +90,57 @@ async function fetchGoogleNews(query: string): Promise<GnItem[]> {
 type ProbeResult =
   | { viable: true; rss_url: string }
   | { viable: false; reason: "fetch_failed" | "http_error" | "anti_bot" | "no_rss" };
+
+// Suy luận link_pattern regex từ sample article URLs.
+// Strategy:
+//   1. Parse pathname từ mỗi URL
+//   2. Tìm prefix segments chung (longest matching initial /-separated segments)
+//   3. Detect file extension chung (vd .html, .htm, .chn) nếu có
+//   4. Build regex: `^/<common>/.+(\.ext)?$`
+// Trả null nếu không đủ samples (<3) hoặc paths quá khác nhau (no common prefix).
+function inferLinkPattern(urls: string[]): string | null {
+  const paths: string[] = [];
+  for (const u of urls) {
+    try {
+      const p = new URL(u).pathname;
+      if (p && p !== "/") paths.push(p);
+    } catch { /* skip */ }
+  }
+  if (paths.length < 3) return null;
+
+  const splits = paths.map((p) => p.split("/").filter((s) => s.length > 0));
+  const minLen = Math.min(...splits.map((s) => s.length));
+  const common: string[] = [];
+  for (let i = 0; i < minLen; i++) {
+    const seg = splits[0][i];
+    // Bỏ qua segment cuối (slug bài) — không cần làm common
+    if (i === minLen - 1) break;
+    if (splits.every((s) => s[i] === seg)) common.push(seg);
+    else break;
+  }
+
+  // Detect extension: tất cả paths cùng .X cuối → require trong pattern
+  const exts = paths
+    .map((p) => p.match(/\.([a-z0-9]{2,5})$/i)?.[1]?.toLowerCase())
+    .filter((e): e is string => !!e);
+  const allSameExt = exts.length === paths.length && new Set(exts).size === 1;
+  const extPart = allSameExt ? `\\.${exts[0]}$` : "";
+
+  if (common.length === 0 && !allSameExt) {
+    // Quá lỏng — coi như fail, để fallback hoặc reject
+    return null;
+  }
+
+  const prefix = common.length > 0 ? `^/${common.join("/")}/.+` : `^/.+`;
+  return prefix + extPart;
+}
+
+// Gọi Claude Haiku để gợi ý content_selector hoặc skip nếu không cần.
+// V1: skip LLM, dùng fallback selector. Mac Mini extractor đã có fallback chain
+// "article, main, .content, .article-content, .news-content, div.fck_detail".
+function inferContentSelector(_html: string): string | null {
+  return null;
+}
 
 async function probe(domain: string): Promise<ProbeResult> {
   const homepageUrl = `https://${domain}`;
@@ -160,6 +214,7 @@ Deno.serve(async (req) => {
     probed: 0,
     viable: 0,
     auto_added: 0,
+    playwright_added: 0,
     rejections: {} as Record<string, number>,
   };
 
@@ -181,11 +236,13 @@ Deno.serve(async (req) => {
     if (existing) {
       existing.count++;
       if (existing.sample_titles.length < 5) existing.sample_titles.push(item.title.slice(0, 200));
+      if (existing.sample_urls.length < 15) existing.sample_urls.push(item.sourceUrl);
     } else {
       byDomain.set(dom, {
         domain: dom,
         count: 1,
         sample_titles: [item.title.slice(0, 200)],
+        sample_urls: [item.sourceUrl],
         query_seed: seed,
       });
     }
@@ -259,6 +316,62 @@ Deno.serve(async (req) => {
 
     const probeResult = await probe(cand.domain);
     if (!probeResult.viable) {
+      // Playwright handover: site không có RSS nhưng sample đẹp + không bị
+      // anti-bot. Phase E suy luận link_pattern từ sample URLs Google News và
+      // INSERT row feed_type='playwright', pending_review=true. Mac Mini scraper
+      // đọc DB sẽ pick up trong run kế tiếp, test 24h trước khi flip is_active.
+      const isHandoverEligible =
+        probeResult.reason === "no_rss" &&
+        cand.count >= MIN_SAMPLE_FOR_PLAYWRIGHT &&
+        stats.playwright_added < MAX_PLAYWRIGHT_HANDOVER_PER_DAY;
+
+      if (isHandoverEligible) {
+        const linkPattern = inferLinkPattern(cand.sample_urls);
+        if (linkPattern) {
+          const today = new Date().toISOString().slice(0, 10);
+          const scraperConfig = {
+            list_url: `https://${cand.domain}/`,
+            link_pattern: linkPattern,
+            content_selector: null,
+            category: "bao-chi",
+            wait_after_load_ms: 4000,
+          };
+          const { data: insertedPw, error: pwErr } = await supabase
+            .from("electricity_sources")
+            .insert({
+              name: `Mac Mini (${cand.domain})`,
+              base_url: `https://${cand.domain}`,
+              list_url: scraperConfig.list_url,
+              feed_type: "playwright",
+              list_link_pattern: linkPattern,
+              article_content_selector: null,
+              category: "bao-chi",
+              tier: 3,
+              is_active: false,
+              pending_review: true,
+              scraper_config: scraperConfig,
+              consecutive_failures: 0,
+              last_error: `auto-handover ${today} from Phase E: ${cand.count} GN articles in 7d, no RSS but sample URLs match pattern. Mac Mini test pending.`,
+            })
+            .select("id")
+            .single();
+
+          if (!pwErr && insertedPw) {
+            stats.playwright_added++;
+            await supabase.from("source_candidate_log").insert({
+              domain: cand.domain,
+              sample_titles: cand.sample_titles,
+              sample_count: cand.count,
+              status: "added_playwright_pending",
+              decision_reason: `Playwright handover: ${linkPattern}`,
+              query_seed: cand.query_seed,
+              inserted_source_id: (insertedPw as { id: string }).id,
+            });
+            continue;
+          }
+        }
+      }
+
       const statusMap: Record<string, string> = {
         anti_bot: "rejected_anti_bot",
         no_rss: "rejected_no_rss",

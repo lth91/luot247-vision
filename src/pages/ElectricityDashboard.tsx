@@ -72,7 +72,7 @@ function classifyDisabledReason(s: Source): {
   cls: string;
 } {
   const err = s.last_error ?? "";
-  if (/Mac Mini Scraper|handled by Mac Mini/i.test(err))
+  if (/Mac Mini Scraper|handled by Mac Mini|auto-handover.*Mac Mini/i.test(err))
     return { key: "handover", label: "Handover Mac Mini", cls: "border-blue-200 bg-blue-50 text-blue-700" };
   if (/off.topic|redundant|RSS Discovery covers|list_url là trang chủ|misconfigured/i.test(err))
     return { key: "off-topic", label: "Off-topic", cls: "border-amber-200 bg-amber-50 text-amber-700" };
@@ -159,7 +159,8 @@ type SelectorFix = {
 };
 
 const CANDIDATE_STATUS: Record<string, { label: string; cls: string }> = {
-  added: { label: "Đã add", cls: "bg-green-100 text-green-800 border-green-200" },
+  added: { label: "Đã add (RSS)", cls: "bg-green-100 text-green-800 border-green-200" },
+  added_playwright_pending: { label: "Handover Mac Mini ⏳", cls: "bg-violet-100 text-violet-800 border-violet-200" },
   rejected_existing: { label: "Đã có sẵn", cls: "bg-slate-100 text-slate-700 border-slate-200" },
   rejected_low_count: { label: "Sample thấp", cls: "bg-slate-100 text-slate-600 border-slate-200" },
   rejected_no_rss: { label: "Không có RSS", cls: "bg-amber-100 text-amber-800 border-amber-200" },
