@@ -1,3 +1,10 @@
+## [1.21.1](https://github.com/lth91/luot247-vision/compare/v1.21.0...v1.21.1) (2026-05-04)
+
+
+### Bug Fixes
+
+* **electricity:** dashboard match per-host Mac Mini naming + mark CPC handover ([83dc2af](https://github.com/lth91/luot247-vision/commit/83dc2affbe2f010fca0a7cd31b6a5a5184f883d9))
+
 # [1.21.0](https://github.com/lth91/luot247-vision/compare/v1.20.3...v1.21.0) (2026-05-04)
 
 
