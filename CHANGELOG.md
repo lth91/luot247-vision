@@ -1,3 +1,10 @@
+## [1.21.2](https://github.com/lth91/luot247-vision/compare/v1.21.1...v1.21.2) (2026-05-04)
+
+
+### Bug Fixes
+
+* **electricity:** tab AI Agents — RLS public read + mô tả Phase E up to date ([e8bc73e](https://github.com/lth91/luot247-vision/commit/e8bc73eae81e44b51742183d19f10438efb5f0ea))
+
 ## [1.21.1](https://github.com/lth91/luot247-vision/compare/v1.21.0...v1.21.1) (2026-05-04)
 
 
