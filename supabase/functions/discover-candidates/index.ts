@@ -328,6 +328,20 @@ Deno.serve(async (req) => {
     if (r.source_domain) knownDomains.add(r.source_domain.replace(/^www\./, ""));
   }
 
+  // Bổ sung domain Mac Mini scraper đã cover via per-host naming
+  // ("Mac Mini (host.tld)"). source_domain field hiện null trên các bài
+  // Mac Mini, nên parse từ source_name. Tránh log noise "Probe fail" cho
+  // domain Mac Mini đã làm việc tốt.
+  const { data: macMiniNames } = await supabase
+    .from("electricity_news")
+    .select("source_name")
+    .like("source_name", "Mac Mini (%")
+    .gt("crawled_at", new Date(Date.now() - 30 * 86400000).toISOString());
+  for (const r of (macMiniNames ?? []) as Array<{ source_name: string }>) {
+    const m = r.source_name?.match(/^Mac Mini \(([^)]+)\)$/);
+    if (m) knownDomains.add(m[1].replace(/^www\./, ""));
+  }
+
   const candidates: DomainCandidate[] = [];
   for (const cand of byDomain.values()) {
     if (knownDomains.has(cand.domain)) {
