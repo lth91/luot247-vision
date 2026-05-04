@@ -1,3 +1,10 @@
+## [1.22.1](https://github.com/lth91/luot247-vision/compare/v1.22.0...v1.22.1) (2026-05-04)
+
+
+### Bug Fixes
+
+* **electricity:** timestamp /d hiển thị tách "Tìm thấy" + "Đăng" ([ada7237](https://github.com/lth91/luot247-vision/commit/ada7237a5fc288b8ed761007330a8d6954de3868))
+
 # [1.22.0](https://github.com/lth91/luot247-vision/compare/v1.21.6...v1.22.0) (2026-05-04)
 
 
