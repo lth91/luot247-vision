@@ -23,6 +23,10 @@ const PAGE_SIZE = 30;
 const RECENT_DAYS = 3;
 
 const fetchNewsPage = async (pageIndex: number): Promise<ElectricityNewsRow[]> => {
+  // Sort theo crawled_at DESC để bài "mới tìm thấy" (mới về DB) lên đầu —
+  // user feedback: muốn thấy ngay tin mới crawl, kể cả bài có publish_at lùi
+  // vài ngày (vd Mac Mini cào báo cũ vẫn coi là "mới với mình"). Dedup
+  // url_hash đảm bảo không re-insert nên crawled_at là 1-time event.
   const threshold = new Date(Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const from = pageIndex * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
@@ -30,8 +34,7 @@ const fetchNewsPage = async (pageIndex: number): Promise<ElectricityNewsRow[]> =
     .from("electricity_news" as never)
     .select("id, title, summary, original_url, published_at, crawled_at")
     .is("is_duplicate_of", null)
-    .or(`published_at.gte.${threshold},and(published_at.is.null,crawled_at.gte.${threshold})`)
-    .order("published_at", { ascending: false, nullsFirst: false })
+    .gte("crawled_at", threshold)
     .order("crawled_at", { ascending: false })
     .range(from, to);
   if (error) throw error;
