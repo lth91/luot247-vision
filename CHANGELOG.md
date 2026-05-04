@@ -1,3 +1,10 @@
+## [1.20.1](https://github.com/lth91/luot247-vision/compare/v1.20.0...v1.20.1) (2026-05-04)
+
+
+### Bug Fixes
+
+* **autonomy:** Phase E suy luận link_pattern từ trang chủ thật + cron lifecycle ([3cb5b62](https://github.com/lth91/luot247-vision/commit/3cb5b62ba1214f36fec4e6f84ea609270d5fa30d))
+
 # [1.20.0](https://github.com/lth91/luot247-vision/compare/v1.19.0...v1.20.0) (2026-05-04)
 
 
