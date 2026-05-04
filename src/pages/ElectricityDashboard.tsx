@@ -39,6 +39,7 @@ type News = {
   published_at: string | null;
   crawled_at: string;
   original_url: string;
+  title: string;
 };
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -94,11 +95,17 @@ const fetchSources = async (): Promise<Source[]> => {
 };
 
 const fetchNews = async (): Promise<News[]> => {
+  // Lấy 30 ngày để đảm bảo Mac Mini hosts produce tuần trước vẫn nằm trong window.
+  // Trước đây limit 1500 newest theo crawled_at — Edge crawler chạy hàng giờ tạo
+  // nhiều row mới đẩy bài Mac Mini cũ ra khỏi window, khiến status hiển thị
+  // "pending" sai cho host đang produce.
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase
     .from("electricity_news" as never)
-    .select("id, source_name, source_domain, source_category, published_at, crawled_at, original_url")
+    .select("id, source_name, source_domain, source_category, published_at, crawled_at, original_url, title")
+    .gte("crawled_at", since)
     .order("crawled_at", { ascending: false })
-    .limit(1500);
+    .limit(5000);
   if (error) throw error;
   return (data ?? []) as unknown as News[];
 };
@@ -110,6 +117,7 @@ const ElectricityDashboard = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("edge");
   const [flashAnchor, setFlashAnchor] = useState<string | null>(null);
+  const [showBatch, setShowBatch] = useState(false);
 
   useEffect(() => {
     if (!flashAnchor) return;
@@ -332,25 +340,30 @@ const ElectricityDashboard = () => {
       }
     }
 
-    for (const h of macMiniHosts) {
-      if (h.status === "pending") {
-        items.push({
-          severity: "warn",
-          title: `Mac Mini "${h.host}": adapter claimed nhưng chưa produce bài`,
-          hint: "Debug Playwright selector trong sources.py",
-          tab: "mac-mini",
-          anchor: `row-host-${h.host}`,
-        });
-      } else if (h.status === "silent") {
-        items.push({
-          severity: "warn",
-          title: `Mac Mini "${h.host}": im lặng quá 7 ngày`,
-          detail: h.latest ? `Bài cuối ${getRelativeTime(h.latest)}` : undefined,
-          hint: "Site có thể đổi structure, check selector",
-          tab: "mac-mini",
-          anchor: `row-host-${h.host}`,
-        });
-      }
+    // Collapse Mac Mini issues: 1 dòng cho pending hosts, 1 dòng cho silent hosts.
+    // Trước đây mỗi host 1 dòng → banner ngập 13+ entry trùng pattern.
+    const pendingHosts = macMiniHosts.filter((h) => h.status === "pending");
+    const silentHosts = macMiniHosts.filter((h) => h.status === "silent");
+
+    if (pendingHosts.length > 0) {
+      items.push({
+        severity: "warn",
+        title: `Mac Mini: ${pendingHosts.length} host claimed nhưng chưa produce bài`,
+        detail: pendingHosts.map((h) => h.host).join(", "),
+        hint: "Debug Playwright selector trong sources.py",
+        tab: "mac-mini",
+        anchor: `row-host-${pendingHosts[0].host}`,
+      });
+    }
+    if (silentHosts.length > 0) {
+      items.push({
+        severity: "warn",
+        title: `Mac Mini: ${silentHosts.length} host im lặng quá 7 ngày`,
+        detail: silentHosts.map((h) => `${h.host} (${h.latest ? getRelativeTime(h.latest) : "—"})`).join(", "),
+        hint: "Site có thể đổi structure, check selector",
+        tab: "mac-mini",
+        anchor: `row-host-${silentHosts[0].host}`,
+      });
     }
 
     for (const s of sources) {
@@ -369,6 +382,13 @@ const ElectricityDashboard = () => {
 
     return items;
   }, [sources, news, macMiniHosts]);
+
+  const lastBatchArticles = useMemo(() => {
+    if (lastBatchCutoffMs == null) return [];
+    return (news ?? [])
+      .filter((n) => new Date(n.crawled_at).getTime() >= lastBatchCutoffMs)
+      .sort((a, b) => (a.crawled_at < b.crawled_at ? 1 : -1));
+  }, [news, lastBatchCutoffMs]);
 
   const overview = useMemo(() => {
     const total = sources?.length ?? 0;
@@ -419,17 +439,53 @@ const ElectricityDashboard = () => {
       <main className="container mx-auto px-4 py-6 max-w-6xl">
         <div className="mb-6 flex items-center gap-3">
           <Activity className="h-7 w-7 text-primary" />
-          <div>
+          <div className="flex-1">
             <h1 className="text-2xl md:text-3xl font-bold">Dashboard /d</h1>
             <p className="text-sm text-muted-foreground">
               Theo dõi crawl tin ngành điện. Tự refresh mỗi 60 giây.
               {lastCrawled && (
                 <>
                   {" "}Lần crawl gần nhất: <strong>{getRelativeTime(lastCrawled)}</strong>
-                  {" "}· <strong className="text-green-700">+{overview.lastBatchNews}</strong> tin mới.
+                  {overview.lastBatchNews > 0 ? (
+                    <>
+                      {" "}·{" "}
+                      <button
+                        type="button"
+                        onClick={() => setShowBatch((v) => !v)}
+                        className="text-green-700 font-semibold hover:underline"
+                      >
+                        +{overview.lastBatchNews} tin mới {showBatch ? "▴" : "▾"}
+                      </button>
+                      .
+                    </>
+                  ) : (
+                    " · 0 tin mới."
+                  )}
                 </>
               )}
             </p>
+            {showBatch && lastBatchArticles.length > 0 && (
+              <div className="mt-3 rounded-md border bg-muted/30 p-3 space-y-1.5">
+                {lastBatchArticles.map((n) => (
+                  <div key={n.id} className="text-sm flex items-start gap-2">
+                    <Badge variant="outline" className="font-normal text-[10px] shrink-0 mt-0.5">
+                      {n.source_name}
+                    </Badge>
+                    <a
+                      href={n.original_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:underline flex-1"
+                    >
+                      {n.title}
+                    </a>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {getRelativeTime(n.crawled_at)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
