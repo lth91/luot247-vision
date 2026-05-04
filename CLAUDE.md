@@ -21,6 +21,13 @@ Supabase project ref: `gklpvaindbfkcmuuuffz`. Edge functions are deployed by Git
 
 Local one-off function deploy: `npx supabase functions deploy <name> --project-ref gklpvaindbfkcmuuuffz`.
 
+#### Supabase Rules
+
+- **Do NOT create Supabase preview branches** (costs money). The `mcp__supabase__create_branch` tool is off-limits in this project.
+- **Run migrations directly on the main/production branch.** Database changes commit straight to `main` — there is no staging DB.
+- **Use `supabase start` for local testing** if you need to validate schema changes before applying. Local stack is fine; preview branches are not.
+- DML-only fixes (UPDATE/DELETE rows) can be applied via `mcp__supabase__execute_sql` for immediacy, but the corresponding `.sql` file must still be committed under `supabase/migrations/` for git history.
+
 ### Releases
 
 `semantic-release` runs on push to `main` (`.github/workflows/release.yml`). It bumps `package.json`, regenerates `CHANGELOG.md`, tags, and creates a GitHub release. Commits must use Conventional Commits (`fix:`, `feat:`, `chore:`, scopes like `electricity`, `discovery`, `autonomy`). Release commits are skipped via `chore(release):` prefix to avoid loops.
