@@ -243,7 +243,7 @@ const ElectricityDashboard = () => {
       const t = new Date(c.discovered_at).getTime();
       if (t >= sevenDaysAgo) {
         last7d += 1;
-        if (c.status === "added") added7d += 1;
+        if (c.status === "added" || c.status === "added_playwright_pending") added7d += 1;
       }
       if (!latest || c.discovered_at > latest) latest = c.discovered_at;
     }
@@ -886,7 +886,10 @@ const ElectricityDashboard = () => {
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
                     Mỗi 03:00 UTC: quét 5 Google News query (EVN/lưới · tái tạo · chính sách · vận hành · doanh nghiệp) →
-                    group domain → probe top 5 → auto-INSERT max 3/day nếu RSS available.
+                    group domain → probe top 5. <strong>2 nhánh tự động</strong>:
+                    {" "}<span className="text-green-700">RSS auto-add (max 3/day)</span> nếu site có RSS feed,
+                    {" "}<span className="text-violet-700">Playwright handover (max 3/day)</span> nếu sample ≥10 nhưng không-RSS
+                    (Phase E suy luận link_pattern từ trang chủ → INSERT row pending → Mac Mini test 24h).
                     {candidateStats.latest && (
                       <> Last run: <strong>{getRelativeTime(candidateStats.latest)}</strong>.</>
                     )}
@@ -896,7 +899,7 @@ const ElectricityDashboard = () => {
                 <div className="p-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <div className="rounded border bg-green-50 p-2 text-center">
                     <div className="text-xl font-bold text-green-700">{candidateStats.added7d}</div>
-                    <div className="text-xs text-green-800">Đã add (7d)</div>
+                    <div className="text-xs text-green-800">RSS + Playwright add (7d)</div>
                   </div>
                   <div className="rounded border bg-blue-50 p-2 text-center">
                     <div className="text-xl font-bold text-blue-700">{candidateStats.last7d}</div>
