@@ -1,3 +1,10 @@
+## [1.20.3](https://github.com/lth91/luot247-vision/compare/v1.20.2...v1.20.3) (2026-05-04)
+
+
+### Bug Fixes
+
+* **electricity:** parser robust với JSON malformed/markdown fence từ Claude ([bfd6805](https://github.com/lth91/luot247-vision/commit/bfd68051c19e79771040628a29160caef1e546cc))
+
 ## [1.20.2](https://github.com/lth91/luot247-vision/compare/v1.20.1...v1.20.2) (2026-05-04)
 
 
