@@ -1,3 +1,10 @@
+## [1.21.3](https://github.com/lth91/luot247-vision/compare/v1.21.2...v1.21.3) (2026-05-04)
+
+
+### Bug Fixes
+
+* **autonomy:** hạ threshold Playwright handover xuống = MIN_SAMPLE_COUNT (3) ([213c0c2](https://github.com/lth91/luot247-vision/commit/213c0c2475fb4c2361a930af0525bd096892ac50))
+
 ## [1.21.2](https://github.com/lth91/luot247-vision/compare/v1.21.1...v1.21.2) (2026-05-04)
 
 
