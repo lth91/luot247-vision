@@ -249,10 +249,19 @@ const NAMED_ENTITIES: Record<string, string> = {
 
 function unescapeXml(s: string): string {
   if (!s) return s;
-  return s
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
-    .replace(/&([a-zA-Z][a-zA-Z0-9]+);/g, (m, name) => NAMED_ENTITIES[name] ?? m);
+  // Loop tới khi stable (max 3 vòng) để xử lý double-encoded entity từ một số RSS
+  // VN CMS encode hai lần: "T&amp;amp;T" → "T&amp;T" → "T&T". Single pass cũ chỉ
+  // decode lớp ngoài → giữ "T&amp;T" raw trong DB.
+  let prev = "";
+  let cur = s;
+  for (let i = 0; i < 3 && cur !== prev; i++) {
+    prev = cur;
+    cur = cur
+      .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+      .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+      .replace(/&([a-zA-Z][a-zA-Z0-9]+);/g, (m, name) => NAMED_ENTITIES[name] ?? m);
+  }
+  return cur;
 }
 
 function stripHtml(s: string): string {
