@@ -1,3 +1,10 @@
+# [1.22.0](https://github.com/lth91/luot247-vision/compare/v1.21.6...v1.22.0) (2026-05-04)
+
+
+### Features
+
+* **electricity:** /d sort theo crawled_at — tin mới tìm thấy lên đầu ([bbab12f](https://github.com/lth91/luot247-vision/commit/bbab12fd16bae90949630bd5b612332d4b8753fb))
+
 ## [1.21.6](https://github.com/lth91/luot247-vision/compare/v1.21.5...v1.21.6) (2026-05-04)
 
 
