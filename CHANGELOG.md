@@ -1,3 +1,10 @@
+## [1.22.2](https://github.com/lth91/luot247-vision/compare/v1.22.1...v1.22.2) (2026-05-04)
+
+
+### Bug Fixes
+
+* **electricity:** /d timestamp đơn giản hóa — chỉ "X phút trước" (crawled_at) ([9ab5b18](https://github.com/lth91/luot247-vision/commit/9ab5b1888d80178b5d37b284f3213137e589490a))
+
 ## [1.22.1](https://github.com/lth91/luot247-vision/compare/v1.22.0...v1.22.1) (2026-05-04)
 
 
