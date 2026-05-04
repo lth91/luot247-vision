@@ -1,3 +1,10 @@
+# [1.19.0](https://github.com/lth91/luot247-vision/compare/v1.18.0...v1.19.0) (2026-05-04)
+
+
+### Features
+
+* **autonomy:** chuyển Phase F digest sang daily Telegram + thêm section 24h ([f26afb0](https://github.com/lth91/luot247-vision/commit/f26afb029dd14e6362016103f499c6c6e7e8e5d6))
+
 # [1.18.0](https://github.com/lth91/luot247-vision/compare/v1.17.1...v1.18.0) (2026-05-04)
 
 
