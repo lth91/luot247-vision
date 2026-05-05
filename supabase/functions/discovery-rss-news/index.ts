@@ -46,6 +46,7 @@ const FEEDS: { name: string; url: string }[] = [
   { name: "Nhân Dân - Khoa học",      url: "https://nhandan.vn/rss/khoahoc.rss" },
   { name: "VietnamPlus - Kinh tế",    url: "https://www.vietnamplus.vn/rss/kinhte.rss" },
   { name: "VietnamNet - Kinh doanh",  url: "https://vietnamnet.vn/rss/kinh-doanh.rss" },
+  { name: "VietnamNet - Thời sự",     url: "https://vietnamnet.vn/rss/thoi-su.rss" },
   { name: "PECC3",                    url: "https://www.pecc3.com.vn/feed" },
   { name: "Báo Đấu Thầu - Năng lượng",url: "https://baodauthau.vn/rss/nang-luong.rss" },
   // Phase B1 (audit 03/05): Báo Chính Phủ + SGGP — RSS 50 items/feed, fresh today.
@@ -64,6 +65,7 @@ const HTML_FEEDS: { name: string; listUrl: string; linkPattern: string }[] = [
   { name: "PetroVietnam",               listUrl: "https://petrovietnam.petrotimes.vn/",     linkPattern: "^/[a-z0-9-]{20,}-\\d{5,}\\.html$" },
   { name: "Người Quan Sát",             listUrl: "https://nguoiquansat.vn/tin-moi-nhat",    linkPattern: "^/[a-z0-9-]{20,}-\\d{5,}\\.html$" },
   { name: "Doanh nghiệp VN",            listUrl: "https://doanhnghiepvn.vn/948/tin-tuc",    linkPattern: "^/tin-tuc/[^/]+/\\d{14}$" },
+  { name: "VTV8",                       listUrl: "https://vtv8.vtv.vn/",                    linkPattern: "^/[a-z0-9-]{20,}-\\d{15,}\\.htm$" },
 ];
 
 // Keyword pre-filter: loại ~94% bài không liên quan trước khi gọi LLM.
