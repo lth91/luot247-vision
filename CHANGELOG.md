@@ -1,3 +1,10 @@
+# [1.24.0](https://github.com/lth91/luot247-vision/compare/v1.23.0...v1.24.0) (2026-05-05)
+
+
+### Features
+
+* **discovery:** thêm VietnamNet Thời sự + VTV8 vào RSS Discovery feeds ([bd13c99](https://github.com/lth91/luot247-vision/commit/bd13c9969ec150e75f7f293f9a8117b65dc34328)), closes [#7](https://github.com/lth91/luot247-vision/issues/7) [#15](https://github.com/lth91/luot247-vision/issues/15)
+
 # [1.23.0](https://github.com/lth91/luot247-vision/compare/v1.22.5...v1.23.0) (2026-05-05)
 
 
