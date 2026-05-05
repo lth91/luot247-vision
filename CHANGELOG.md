@@ -1,3 +1,10 @@
+# [1.23.0](https://github.com/lth91/luot247-vision/compare/v1.22.5...v1.23.0) (2026-05-05)
+
+
+### Features
+
+* **electricity:** add EVN - Vận hành source (category 60-2015) ([04b58fa](https://github.com/lth91/luot247-vision/commit/04b58fa15c2aec2ef67ae123ae4a2c05a00011cf)), closes [#9](https://github.com/lth91/luot247-vision/issues/9)
+
 ## [1.22.5](https://github.com/lth91/luot247-vision/compare/v1.22.4...v1.22.5) (2026-05-05)
 
 
