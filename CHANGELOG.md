@@ -1,3 +1,10 @@
+## [1.22.5](https://github.com/lth91/luot247-vision/compare/v1.22.4...v1.22.5) (2026-05-05)
+
+
+### Bug Fixes
+
+* **autonomy:** link_pattern Playwright source vietnam/plo/tapchicongthuong ([9591c7e](https://github.com/lth91/luot247-vision/commit/9591c7e4175a73ac7b94b3ec14d54f742280b2b1))
+
 ## [1.22.4](https://github.com/lth91/luot247-vision/compare/v1.22.3...v1.22.4) (2026-05-04)
 
 
