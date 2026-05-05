@@ -1,3 +1,10 @@
+# [1.25.0](https://github.com/lth91/luot247-vision/compare/v1.24.0...v1.25.0) (2026-05-05)
+
+
+### Features
+
+* **electricity:** manual add baodautu.vn + vietnamfinance.vn qua Playwright ([1225a6f](https://github.com/lth91/luot247-vision/commit/1225a6f54d691259f2d17309fd1844edea3daf2f))
+
 # [1.24.0](https://github.com/lth91/luot247-vision/compare/v1.23.0...v1.24.0) (2026-05-05)
 
 
