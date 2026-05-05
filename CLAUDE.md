@@ -67,12 +67,16 @@ End-to-end flow per cycle (cron-driven in Postgres):
 
 1. **`crawl-electricity-news`** (every 15 min → hourly) iterates `electricity_sources` (RSS or HTML list), respecting `tier`, `consecutive_failures`, `SOURCE_CONCURRENCY=3`, `MAX_ARTICLES_PER_SOURCE=6`, `SOURCES_PER_RUN=15`, `TIME_BUDGET_MS=120000`. Each article is canonicalised, SHA-256 hashed for dedup, content-extracted with `deno_dom`, then summarised in ≤150 words by `claude-haiku-4-5-20251001`. Stored in `electricity_news`.
 2. **`discovery-rss-news`** scans general-news RSS feeds, runs `_shared/electricity-keywords.ts` keyword pre-filter, then LLM-classifies survivors with Haiku to find candidate articles outside the curated source list.
-3. **`discover-candidates`** (autonomy Phase E) probes Google News for new *source domains*, not articles, feeding the source-quality score.
+3. **`discover-candidates`** (autonomy Phase E) probes Google News for new *source domains*. Two paths:
+   - **RSS handover**: domain has working RSS feed → INSERT `electricity_sources` row with `feed_type='rss'`, `pending_review=true`.
+   - **Playwright handover**: domain returns rich HTML but no RSS → INSERT row with `feed_type='playwright'`, `pending_review=true`, plus `scraper_config jsonb` containing `{list_url, link_pattern, content_selector, category, wait_for, wait_after_load_ms, user_agent}`. Mac Mini's `luot247-scraper` (separate repo) reads these rows via `fetch_playwright_sources_from_db()` and crawls them with Playwright. Threshold: ≥3 sample articles + non-RSS-domain heuristic. See migrations `20260506040000_playwright_handover_columns.sql` + `20260506050000_cron_pending_playwright_lifecycle.sql`.
 4. **`auto-fix-selector`** (Phase G) attempts to repair broken `article_content_selector` values when a source starts returning empty content.
-5. **`weekly-autonomy-digest`** + **`health-check`** push Telegram events via `_shared/telegram.ts`.
+5. **`weekly-autonomy-digest`** + **`health-check`** + **`pipeline-health-check`** push Telegram events via `_shared/telegram.ts`. The latter (cron 6h) silently no-ops when healthy; alerts on insert lull, Mac Mini heartbeat stale, parser regression, or pending Playwright source >6h unprocessed.
 6. **`cleanup-electricity-news`** + `source-cleanup` purge off-topic articles and disable zero-yield sources.
 
 Topical filtering is layered: keyword pre-filter → LLM classifier → reject-rules → post-insert cleanup migrations. When an off-topic article slips through, the fix is usually a new reject-rule migration plus a one-shot DELETE migration — see the `20260426*` and `20260503*` series for examples.
+
+**Playwright handover lifecycle**: Phase E inserts `is_active=false, pending_review=true`. After 24h, cron `pending-playwright-lifecycle` (migration `20260506050000_*`) flips `is_active=true` if any articles arrived, else marks `pending_review=false` (left disabled). Mac Mini repo `luot247-scraper` must update `last_crawled_at` per source row each cycle (see `update_source_crawled()` in `db.py`) — otherwise `pipeline-health-check` will alert "N nguồn chờ Mac Mini xử lý 6h" indefinitely.
 
 `src/pages/ElectricityNews.tsx` (`/d`) reuses the same single-column "list of rows" layout as the home feed (see `2dd9aae`). `/ddashboard` is the admin view for source health, tier, and quality score.
 
