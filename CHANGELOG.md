@@ -1,3 +1,10 @@
+# [1.30.0](https://github.com/lth91/luot247-vision/compare/v1.29.1...v1.30.0) (2026-05-06)
+
+
+### Features
+
+* **electricity:** per-tier MAX_ARTICLES — tier 3 broad channels cần 20 ([39674db](https://github.com/lth91/luot247-vision/commit/39674db84d05c00935e695969a9fa9548a69ef01)), closes [hi#signal](https://github.com/hi/issues/signal)
+
 ## [1.29.1](https://github.com/lth91/luot247-vision/compare/v1.29.0...v1.29.1) (2026-05-06)
 
 
