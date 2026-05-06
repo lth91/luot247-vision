@@ -1,3 +1,10 @@
+# [1.32.0](https://github.com/lth91/luot247-vision/compare/v1.31.0...v1.32.0) (2026-05-06)
+
+
+### Features
+
+* **discovery:** log mọi LLM classification cho threshold analysis ([aa4d57b](https://github.com/lth91/luot247-vision/commit/aa4d57bf6c284b12a1bc05cfb48b060c309f3d1c))
+
 # [1.31.0](https://github.com/lth91/luot247-vision/compare/v1.30.2...v1.31.0) (2026-05-06)
 
 
