@@ -40,6 +40,7 @@ const FEEDS: { name: string; url: string }[] = [
   { name: "VnEconomy - Kinh tế",      url: "https://vneconomy.vn/kinh-te.rss" },
   { name: "VnEconomy - Tài chính",    url: "https://vneconomy.vn/tai-chinh.rss" },
   { name: "VnEconomy - Đầu tư",       url: "https://vneconomy.vn/dau-tu.rss" },
+  { name: "VnEconomy - Khoa học",     url: "https://vneconomy.vn/khoa-hoc.rss" },
   { name: "VOV - Kinh tế",            url: "https://vov.vn/rss/kinh-te.rss" },
   { name: "VTC News - Kinh tế",       url: "https://vtcnews.vn/rss/kinh-te.rss" },
   { name: "Nhân Dân - Kinh tế",       url: "https://nhandan.vn/rss/kinhte.rss" },
