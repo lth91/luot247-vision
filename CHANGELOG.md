@@ -1,3 +1,10 @@
+## [1.25.3](https://github.com/lth91/luot247-vision/compare/v1.25.2...v1.25.3) (2026-05-06)
+
+
+### Bug Fixes
+
+* **electricity:** re-cleanup 2 bài SHB+NovaLand crawl lại do race condition ([392dfc1](https://github.com/lth91/luot247-vision/commit/392dfc1b7c66012332636761c0c330d65a5064fd))
+
 ## [1.25.2](https://github.com/lth91/luot247-vision/compare/v1.25.1...v1.25.2) (2026-05-06)
 
 
