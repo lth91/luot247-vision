@@ -1,3 +1,11 @@
+## [1.25.1](https://github.com/lth91/luot247-vision/compare/v1.25.0...v1.25.1) (2026-05-06)
+
+
+### Bug Fixes
+
+* **electricity:** disable soha.vn + Googlebot UA cho nguoiquansat.vn ([50c8b27](https://github.com/lth91/luot247-vision/commit/50c8b276f356b354406ee315761f3ed62608606e))
+* **electricity:** switch nguoiquansat.vn từ Playwright sang RSS ([33788cd](https://github.com/lth91/luot247-vision/commit/33788cd8adfbcc07a262cb4dfeffb1baf31bf012))
+
 # [1.25.0](https://github.com/lth91/luot247-vision/compare/v1.24.0...v1.25.0) (2026-05-05)
 
 
