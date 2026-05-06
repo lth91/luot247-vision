@@ -1,3 +1,10 @@
+## [1.30.2](https://github.com/lth91/luot247-vision/compare/v1.30.1...v1.30.2) (2026-05-06)
+
+
+### Bug Fixes
+
+* **electricity:** Unicode \b boundary + quality_score sample_factor ([2cce6b1](https://github.com/lth91/luot247-vision/commit/2cce6b199c1bee02d6df10e632c95e40e44ef807)), closes [#22](https://github.com/lth91/luot247-vision/issues/22) [#21](https://github.com/lth91/luot247-vision/issues/21)
+
 ## [1.30.1](https://github.com/lth91/luot247-vision/compare/v1.30.0...v1.30.1) (2026-05-06)
 
 
