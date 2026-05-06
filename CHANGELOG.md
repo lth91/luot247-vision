@@ -1,3 +1,10 @@
+## [1.25.2](https://github.com/lth91/luot247-vision/compare/v1.25.1...v1.25.2) (2026-05-06)
+
+
+### Bug Fixes
+
+* **electricity:** tighten keyword regex + cleanup 3 bài off-topic ([27ad8d4](https://github.com/lth91/luot247-vision/commit/27ad8d4971931b1ef9ab0614f3c005be3c34d028))
+
 ## [1.25.1](https://github.com/lth91/luot247-vision/compare/v1.25.0...v1.25.1) (2026-05-06)
 
 
