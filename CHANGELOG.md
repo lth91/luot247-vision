@@ -1,3 +1,10 @@
+# [1.28.0](https://github.com/lth91/luot247-vision/compare/v1.27.0...v1.28.0) (2026-05-06)
+
+
+### Features
+
+* **electricity:** Phase 1C — 3 domain mới (Nhà Đầu Tư, Một Thế Giới, Lào Cai) ([173300c](https://github.com/lth91/luot247-vision/commit/173300c2b4db8df1c8444239d1f315332e02e42c)), closes [#14](https://github.com/lth91/luot247-vision/issues/14) [#19](https://github.com/lth91/luot247-vision/issues/19) [#21](https://github.com/lth91/luot247-vision/issues/21)
+
 # [1.27.0](https://github.com/lth91/luot247-vision/compare/v1.26.0...v1.27.0) (2026-05-06)
 
 
