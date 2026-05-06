@@ -84,12 +84,19 @@ Deno.serve(async (req) => {
   // Active + 0 articles 14d + crawled recently (within 3d): source được poll
   // đều đặn nhưng không yield bài (selector nhặt link nhưng classifier reject hết,
   // hoặc bài bị dedup, hoặc fall ngoài window 3d) → underperforming.
+  //
+  // GUARD: chỉ disable source đã sống ≥14 ngày (created_at < day14). Source
+  // mới insert vài giờ trước chưa kịp catch bài đầu tiên — disable oan sẽ
+  // làm hỏng Phase E auto-discovery + manual channel additions (xem Phase
+  // 1B/C/D — 5 source mới bị disable trong cycle đầu tiên).
   const candidatesToDisable = (allSources ?? [])
     .filter((s: typeof allSources[0]) =>
       s.is_active &&
       (articlesBySource.get(s.id) ?? 0) === 0 &&
       s.last_crawled_at !== null &&
-      new Date(s.last_crawled_at) > new Date(day3)
+      new Date(s.last_crawled_at) > new Date(day3) &&
+      s.created_at !== null &&
+      new Date(s.created_at) < new Date(day14)
     );
 
   for (const s of candidatesToDisable as typeof allSources) {
