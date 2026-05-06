@@ -1,3 +1,10 @@
+# [1.31.0](https://github.com/lth91/luot247-vision/compare/v1.30.2...v1.31.0) (2026-05-06)
+
+
+### Features
+
+* **discovery:** dry_run mode để xem classifications borderline ([fbb75aa](https://github.com/lth91/luot247-vision/commit/fbb75aaddcbab0bff4ddbe902906bc9cd8728455))
+
 ## [1.30.2](https://github.com/lth91/luot247-vision/compare/v1.30.1...v1.30.2) (2026-05-06)
 
 
