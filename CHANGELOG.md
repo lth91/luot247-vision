@@ -1,3 +1,10 @@
+# [1.29.0](https://github.com/lth91/luot247-vision/compare/v1.28.0...v1.29.0) (2026-05-06)
+
+
+### Features
+
+* **electricity:** Phase 1D — Cafef ngân hàng + Tuổi Trẻ Thế giới ([f2950e3](https://github.com/lth91/luot247-vision/commit/f2950e34f46f877356cb125ffb5ec85576a45e6f)), closes [#1](https://github.com/lth91/luot247-vision/issues/1) [#14](https://github.com/lth91/luot247-vision/issues/14) [#16](https://github.com/lth91/luot247-vision/issues/16) [#2](https://github.com/lth91/luot247-vision/issues/2) [#11](https://github.com/lth91/luot247-vision/issues/11)
+
 # [1.28.0](https://github.com/lth91/luot247-vision/compare/v1.27.0...v1.28.0) (2026-05-06)
 
 
