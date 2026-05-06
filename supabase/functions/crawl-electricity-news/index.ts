@@ -13,11 +13,20 @@ const corsHeaders = {
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 const SOURCE_CONCURRENCY = 3;
-const MAX_ARTICLES_PER_SOURCE = 6;
 const SOURCES_PER_RUN = 15;
 const TIME_BUDGET_MS = 120000;
 const FETCH_TIMEOUT_MS = 30000;
 const MAX_CONTENT_CHARS = 8000;
+
+// Per-tier candidate cap. Tier 1/2 dùng dedicated electricity channels →
+// 8 bài đầu đủ. Tier 3 broad channels (báo-chí Kinh tế/Tài chính) bài
+// điện thường nằm vị trí 7-20 giữa nhiều bài stock/banking → cần quét
+// rộng hơn. Trade-off: ~2-3x LLM call cho tier 3 nhưng catch nhiều hơn.
+function maxArticlesFor(tier: number | null): number {
+  if (tier === 1) return 8;
+  if (tier === 2) return 12;
+  return 20; // tier 3 hoặc null
+}
 
 interface Source {
   id: string;
@@ -92,10 +101,10 @@ function extractLinks(html: string, source: Source): string[] {
     }
     urls.add(abs);
   });
-  return Array.from(urls).slice(0, MAX_ARTICLES_PER_SOURCE);
+  return Array.from(urls).slice(0, maxArticlesFor(source.tier));
 }
 
-function extractRssItems(xml: string): { url: string; title: string; pubDate: string | null }[] {
+function extractRssItems(xml: string, max: number): { url: string; title: string; pubDate: string | null }[] {
   const items: { url: string; title: string; pubDate: string | null }[] = [];
   const itemRegex = /<item[\s\S]*?<\/item>/gi;
   const matches = xml.match(itemRegex) || [];
@@ -104,7 +113,7 @@ function extractRssItems(xml: string): { url: string; title: string; pubDate: st
     const title = it.match(/<title(?:\s[^>]*)?>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i)?.[1]?.trim();
     const pub = it.match(/<pubDate>([\s\S]*?)<\/pubDate>/i)?.[1]?.trim() ?? null;
     if (link && title) items.push({ url: link, title, pubDate: pub });
-    if (items.length >= MAX_ARTICLES_PER_SOURCE) break;
+    if (items.length >= max) break;
   }
   return items;
 }
@@ -398,7 +407,7 @@ async function handleCrawl(req: Request): Promise<Response> {
 
       let candidates: { url: string; title?: string; pubDate?: string | null }[] = [];
       if (src.feed_type === "rss") {
-        candidates = extractRssItems(listBody).map((i) => ({ url: i.url, title: i.title, pubDate: i.pubDate }));
+        candidates = extractRssItems(listBody, maxArticlesFor(src.tier)).map((i) => ({ url: i.url, title: i.title, pubDate: i.pubDate }));
       } else {
         candidates = extractLinks(listBody, src).map((u) => ({ url: u }));
       }

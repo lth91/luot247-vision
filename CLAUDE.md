@@ -65,7 +65,7 @@ Every visit to `/` inserts a row into `view_logs2`. Aggregation runs in Postgres
 
 End-to-end flow per cycle (cron-driven in Postgres):
 
-1. **`crawl-electricity-news`** (every 15 min → hourly) iterates `electricity_sources` (RSS or HTML list), respecting `tier`, `consecutive_failures`, `SOURCE_CONCURRENCY=3`, `MAX_ARTICLES_PER_SOURCE=6`, `SOURCES_PER_RUN=15`, `TIME_BUDGET_MS=120000`. Each article is canonicalised, SHA-256 hashed for dedup, content-extracted with `deno_dom`, then summarised in ≤150 words by `claude-haiku-4-5-20251001`. Stored in `electricity_news`.
+1. **`crawl-electricity-news`** (every 15 min → hourly) iterates `electricity_sources` (RSS or HTML list), respecting `tier`, `consecutive_failures`, `SOURCE_CONCURRENCY=3`, per-tier `maxArticlesFor` (tier 1=8, tier 2=12, tier 3=20 — broad channels need wider scan để catch bài điện vị trí 7-20), `SOURCES_PER_RUN=15`, `TIME_BUDGET_MS=120000`. Each article is canonicalised, SHA-256 hashed for dedup, content-extracted with `deno_dom`, then summarised in ≤150 words by `claude-haiku-4-5-20251001`. Stored in `electricity_news`.
 2. **`discovery-rss-news`** scans general-news RSS feeds, runs `_shared/electricity-keywords.ts` keyword pre-filter, then LLM-classifies survivors with Haiku to find candidate articles outside the curated source list.
 3. **`discover-candidates`** (autonomy Phase E) probes Google News for new *source domains*. Two paths:
    - **RSS handover**: domain has working RSS feed → INSERT `electricity_sources` row with `feed_type='rss'`, `pending_review=true`.
