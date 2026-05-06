@@ -554,7 +554,7 @@ async function summarizeWithClaude(
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    return await handle();
+    return await handle(req);
   } catch (e) {
     const msg = (e as Error)?.message ?? String(e);
     console.error("uncaught:", msg, (e as Error)?.stack);
@@ -565,7 +565,14 @@ Deno.serve(async (req) => {
   }
 });
 
-async function handle(): Promise<Response> {
+async function handle(req?: Request): Promise<Response> {
+  // dry_run=true: chạy đến hết LLM classify, return chi tiết tất cả
+  // {title, url, confidence, reason, would_pass} và SKIP insert. Dùng để
+  // user xem bài borderline (confidence < MIN_CLASSIFY_CONFIDENCE) trước
+  // khi build approval queue.
+  const isDryRun = req
+    ? new URL(req.url).searchParams.get("dry_run") === "true"
+    : false;
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
@@ -700,6 +707,28 @@ async function handle(): Promise<Response> {
     return c.relevant === true && c.confidence >= MIN_CLASSIFY_CONFIDENCE;
   });
   stats.relevant = relevant.length;
+
+  if (isDryRun) {
+    const detail = toClassify.map((it, i) => {
+      const c = classifications[i];
+      return {
+        title: it.title,
+        url: it.link,
+        feed: it.feedName,
+        relevant: c.relevant,
+        confidence: c.confidence,
+        reason: c.reason,
+        would_pass: c.relevant === true && c.confidence >= MIN_CLASSIFY_CONFIDENCE,
+      };
+    });
+    detail.sort((a, b) => b.confidence - a.confidence);
+    return new Response(JSON.stringify({
+      ok: true, dry_run: true, threshold: MIN_CLASSIFY_CONFIDENCE,
+      stats, classifications: detail,
+    }, null, 2), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   // 6. Fetch + summarize + insert (parallel 3)
   const toInsert = relevant.slice(0, MAX_INSERTS_PER_RUN);
