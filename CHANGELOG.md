@@ -1,3 +1,10 @@
+## [1.30.1](https://github.com/lth91/luot247-vision/compare/v1.30.0...v1.30.1) (2026-05-06)
+
+
+### Bug Fixes
+
+* **electricity:** disable 403 sources + move baotintuc sang Discovery ([ac1065d](https://github.com/lth91/luot247-vision/commit/ac1065da049274563e4de50be54e52c02ff11d2c)), closes [#23](https://github.com/lth91/luot247-vision/issues/23)
+
 # [1.30.0](https://github.com/lth91/luot247-vision/compare/v1.29.1...v1.30.0) (2026-05-06)
 
 
