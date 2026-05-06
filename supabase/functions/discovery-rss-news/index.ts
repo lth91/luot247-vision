@@ -732,6 +732,7 @@ async function handle(req?: Request): Promise<Response> {
 
   // 6. Fetch + summarize + insert (parallel 3)
   const toInsert = relevant.slice(0, MAX_INSERTS_PER_RUN);
+  const insertedUrls = new Set<string>();
   const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
 
   const processOne = async (it: RssItem) => {
@@ -803,6 +804,7 @@ async function handle(req?: Request): Promise<Response> {
         }
       } else {
         stats.inserted++;
+        insertedUrls.add(it.link);
       }
     } catch (e) {
       stats.errors.push(`${it.feedName}: ${(e as Error).message}`);
@@ -819,6 +821,24 @@ async function handle(req?: Request): Promise<Response> {
     }
   });
   await Promise.all(workers);
+
+  // Log mọi LLM classification (cả pass + reject) cho threshold analysis.
+  // Không await response (background insert ok — không block response). Nếu
+  // log fail, không ảnh hưởng pipeline chính.
+  const logRows = toClassify.map((it, i) => {
+    const c = classifications[i];
+    return {
+      feed_name: it.feedName.slice(0, 100),
+      title: it.title.slice(0, 500),
+      url: it.link.slice(0, 1000),
+      url_hash: urlHashMap.get(it.link) ?? null,
+      relevant: c.relevant,
+      confidence: c.confidence,
+      reason: (c.reason ?? "").slice(0, 200),
+      inserted: insertedUrls.has(it.link),
+    };
+  });
+  await supabase.from("discovery_classification_log").insert(logRows);
 
   // Update last_crawled_at on virtual source
   await supabase
