@@ -1,3 +1,10 @@
+## [1.29.1](https://github.com/lth91/luot247-vision/compare/v1.29.0...v1.29.1) (2026-05-06)
+
+
+### Bug Fixes
+
+* **electricity:** cleanup không disable source <14 ngày tuổi + reactivate ([1d474d9](https://github.com/lth91/luot247-vision/commit/1d474d986e8945c5fe75e6bb52d06cf64fa65767))
+
 # [1.29.0](https://github.com/lth91/luot247-vision/compare/v1.28.0...v1.29.0) (2026-05-06)
 
 
