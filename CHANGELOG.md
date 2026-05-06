@@ -1,3 +1,10 @@
+# [1.26.0](https://github.com/lth91/luot247-vision/compare/v1.25.3...v1.26.0) (2026-05-06)
+
+
+### Features
+
+* **electricity:** Phase 1A — bổ sung 3 channel còn thiếu ([ad6b366](https://github.com/lth91/luot247-vision/commit/ad6b366ed93c252d3d029c61cef1bcf7993d6ad3)), closes [#8](https://github.com/lth91/luot247-vision/issues/8) [#24](https://github.com/lth91/luot247-vision/issues/24) [#5](https://github.com/lth91/luot247-vision/issues/5) [#16](https://github.com/lth91/luot247-vision/issues/16) [#2](https://github.com/lth91/luot247-vision/issues/2) [#17](https://github.com/lth91/luot247-vision/issues/17)
+
 ## [1.25.3](https://github.com/lth91/luot247-vision/compare/v1.25.2...v1.25.3) (2026-05-06)
 
 
