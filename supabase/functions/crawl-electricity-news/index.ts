@@ -428,16 +428,21 @@ async function handleCrawl(req: Request): Promise<Response> {
         }
       }
 
-      // HTTP 200 nhưng 0 link parse được = selector/RSS pattern hỏng. Treat as failure
-      // để consecutive_failures tích lũy, nguồn die sẽ tự bị flag thay vì im lặng "thành công".
+      // HTTP 200 nhưng 0 link parse được = selector/RSS pattern hỏng (HOẶC tier-3
+      // RSS feed bị filter reject hết — error message phân biệt 2 case).
+      // Treat as failure để consecutive_failures tích lũy, nguồn die sẽ tự bị flag.
       if (candidates.length === 0) {
         const newFails = src.consecutive_failures + 1;
+        const filteredOutAll = src.tier === 3 && src.category === "bao-chi" && src.feed_type === "rss";
+        const errMsg = filteredOutAll
+          ? `0 sau keyword filter (tier-3 RSS, top items không có "điện") — cân nhắc move sang Discovery FEEDS`
+          : `no candidates parsed from ${src.feed_type} list`;
         await supabase
           .from("electricity_sources")
           .update({
             last_crawled_at: new Date().toISOString(),
             consecutive_failures: newFails,
-            last_error: `no candidates parsed from ${src.feed_type} list`,
+            last_error: errMsg,
             is_active: newFails < 10,
           })
           .eq("id", src.id);

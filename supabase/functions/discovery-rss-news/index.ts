@@ -33,6 +33,8 @@ const FEEDS: { name: string; url: string }[] = [
   { name: "Tuổi Trẻ - Kinh doanh",    url: "https://tuoitre.vn/rss/kinh-doanh.rss" },
   { name: "Tuổi Trẻ - Thời sự",       url: "https://tuoitre.vn/rss/thoi-su.rss" },
   { name: "Tuổi Trẻ - Thế giới",      url: "https://tuoitre.vn/rss/the-gioi.rss" },
+  { name: "BaoTinTuc - Tin mới",      url: "https://baotintuc.vn/tin-moi-nhat.rss" },
+  { name: "BaoTinTuc - Thế giới",     url: "https://baotintuc.vn/the-gioi.rss" },
   { name: "Thanh Niên - Kinh tế",     url: "https://thanhnien.vn/rss/kinh-te.rss" },
   { name: "CafeF - Doanh nghiệp",     url: "https://cafef.vn/doanh-nghiep.rss" },
   { name: "CafeF - Chứng khoán",      url: "https://cafef.vn/thi-truong-chung-khoan.rss" },
