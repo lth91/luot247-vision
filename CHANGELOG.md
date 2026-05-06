@@ -1,3 +1,10 @@
+# [1.27.0](https://github.com/lth91/luot247-vision/compare/v1.26.0...v1.27.0) (2026-05-06)
+
+
+### Features
+
+* **electricity:** Phase 1B — 3 channel cuối + reactivate baotintuc ([caa95cc](https://github.com/lth91/luot247-vision/commit/caa95cceade08aadc72228722e8ac694108188cc)), closes [#2](https://github.com/lth91/luot247-vision/issues/2) [#3](https://github.com/lth91/luot247-vision/issues/3) [#17](https://github.com/lth91/luot247-vision/issues/17)
+
 # [1.26.0](https://github.com/lth91/luot247-vision/compare/v1.25.3...v1.26.0) (2026-05-06)
 
 
