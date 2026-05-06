@@ -79,7 +79,8 @@ const KEYWORD_RE = ELECTRICITY_KEYWORD_RE;
 // Title blacklist: pattern rõ ràng off-topic dù đã pass KEYWORD_RE qua description.
 // Chạy trước LLM để tiết kiệm cost + bắt được case LLM borderline confidence.
 // Nếu title có signal mạnh về electricity (STRONG_ELEC_RE), KHÔNG reject — để LLM xử lý.
-const STRONG_ELEC_RE = /\b(EVN|BESS|PPA|DPPA|điện\s*lực|điện\s*gió|điện\s*mặt\s*trời|điện\s*hạt\s*nhân|thủy\s*điện|nhiệt\s*điện|lưới\s*điện|cung\s*ứng\s*điện|giá\s*điện|Cục\s*Điện\s*lực|Quy\s*hoạch\s*điện|Bộ\s*Công\s*Thương|LNG|điện\s*sinh\s*khối|điện\s*khí)\b/i;
+// Unicode-aware boundaries (giải thích trong electricity-keywords.ts).
+const STRONG_ELEC_RE = /(?<![\p{L}\p{N}_])(EVN|BESS|PPA|DPPA|điện\s*lực|điện\s*gió|điện\s*mặt\s*trời|điện\s*hạt\s*nhân|thủy\s*điện|nhiệt\s*điện|lưới\s*điện|cung\s*ứng\s*điện|giá\s*điện|Cục\s*Điện\s*lực|Quy\s*hoạch\s*điện|Bộ\s*Công\s*Thương|LNG|điện\s*sinh\s*khối|điện\s*khí)(?![\p{L}\p{N}_])/iu;
 
 const BLACKLIST_PATTERNS: Array<{ name: string; re: RegExp }> = [
   // Digest title trộn 2+ chủ đề bằng ; hoặc | — luôn loãng dù 1 phần là điện
