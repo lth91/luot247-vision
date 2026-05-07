@@ -1,3 +1,10 @@
+## [1.34.7](https://github.com/lth91/luot247-vision/compare/v1.34.6...v1.34.7) (2026-05-07)
+
+
+### Bug Fixes
+
+* **d:** mobile dùng scroll memory pattern thay scroll-mark (match /) ([a8fa6f8](https://github.com/lth91/luot247-vision/commit/a8fa6f8f9b8e72930ea63c9982026d77de350c55))
+
 ## [1.34.6](https://github.com/lth91/luot247-vision/compare/v1.34.5...v1.34.6) (2026-05-07)
 
 
