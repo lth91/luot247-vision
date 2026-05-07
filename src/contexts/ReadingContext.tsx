@@ -338,7 +338,9 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
     }
   };
 
-  // Electricity-news mark/clear handlers
+  // Electricity-news mark/clear handlers — auto-enable hide giống news flow.
+  // Page-level useLayoutEffect compensate scrollY khi card collapse (mobile
+  // Safari thiếu scroll-anchor — manual fix).
   const markElectricityNewsAsRead = (id: string) => {
     setReadElectricityNewsIds(prev => {
       if (prev.has(id)) return prev;
@@ -349,7 +351,6 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
       } catch (e) {
         console.error('save read_electricity_news error:', e);
       }
-      // Auto-enable hide khi đánh dấu bài đầu tiên (giống news flow)
       if (!shouldHideReadElectricityNews) setShouldHideReadElectricityNews(true);
       return next;
     });

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -111,6 +111,48 @@ const ElectricityNews = () => {
   const allHiddenWhenToggleOn =
     shouldHideReadElectricityNews && hiddenCount === allRows.length && allRows.length > 0;
 
+  // Scroll compensation: trước khi card collapse khiến page height giảm,
+  // capture vị trí của card "anchor" (card đầu tiên hiện hữu trong/dưới
+  // viewport, KHÔNG bị hide). Sau commit → useLayoutEffect đo lại vị trí
+  // anchor → scrollBy delta để giữ anchor stable. Mobile Safari thiếu
+  // CSS scroll-anchor nên cần manual fix.
+  const anchorRef = useRef<{ id: string; topPx: number } | null>(null);
+  // Capture trước mỗi mark/toggle: gọi từ scroll handler ngay trước markRef
+  const captureAnchor = () => {
+    const cards = document.querySelectorAll<HTMLElement>("[data-news-id]");
+    for (const card of cards) {
+      const cardId = card.dataset.newsId!;
+      // Skip card đang đọc đã hidden (height 0, không dùng làm anchor)
+      if (
+        shouldHideReadElectricityNews &&
+        readElectricityNewsIds.has(cardId)
+      ) continue;
+      const rect = card.getBoundingClientRect();
+      // Anchor = card visible đầu tiên (top trong khoảng [-50, viewport-100])
+      if (rect.top > -50 && rect.top < window.innerHeight - 100) {
+        anchorRef.current = { id: cardId, topPx: rect.top };
+        return;
+      }
+    }
+  };
+
+  useLayoutEffect(() => {
+    const anchor = anchorRef.current;
+    if (!anchor) return;
+    const el = document.querySelector<HTMLElement>(`[data-news-id="${anchor.id}"]`);
+    if (!el) {
+      anchorRef.current = null;
+      return;
+    }
+    const newTop = el.getBoundingClientRect().top;
+    const delta = newTop - anchor.topPx;
+    if (Math.abs(delta) > 1) {
+      // Scroll compensate ngay tại commit, trước paint → user không thấy jump
+      window.scrollBy(0, delta);
+    }
+    anchorRef.current = null;
+  });
+
   // Mark-as-read khi card scroll qua phía trên header + buffer 60px.
   // Pattern giống Index.tsx (/): scroll listener throttled bằng setTimeout
   // 100ms + requestAnimationFrame, KHÔNG dùng IntersectionObserver vì:
@@ -137,14 +179,17 @@ const ElectricityNews = () => {
         processing = true;
         requestAnimationFrame(() => {
           // Trigger: card phải ra HẲN viewport top (rect.bottom < 0).
-          // Trước đây dùng headerBottom+60 — quá nhạy, mark khi card vẫn
-          // đang đọc được, user cảm giác "ẩn quá nhanh".
           const cards = root.querySelectorAll<HTMLElement>("[data-news-id]");
+          let anchorCaptured = false;
           cards.forEach((card) => {
             const rect = card.getBoundingClientRect();
             if (rect.bottom < 0) {
               const id = card.dataset.newsId;
               if (id && !readSetRef.current.has(id)) {
+                if (!anchorCaptured) {
+                  captureAnchor();
+                  anchorCaptured = true;
+                }
                 markRef.current(id);
               }
             }
