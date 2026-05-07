@@ -56,9 +56,26 @@ const fetchLastCrawled = async (): Promise<string | null> => {
   return (data as { last_crawled_at: string | null } | null)?.last_crawled_at ?? null;
 };
 
+// Mobile detection — match pattern Index.tsx (/) line 124
+const detectMobile = (): boolean => {
+  if (typeof navigator === "undefined") return false;
+  return (
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent,
+    ) || window.innerWidth < 768
+  );
+};
+
+const STORAGE_SCROLL_Y = "luot247_d_scroll_position";
+const STORAGE_LAST_VISIBLE = "luot247_d_last_visible_news";
+
 const ElectricityNews = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isMobile] = useState<boolean>(() => detectMobile());
+  // Desktop hiện ngay, mobile đợi scroll restore xong mới hiện (chống flash
+  // jump khi reload). Match Index.tsx isScrollRestored pattern.
+  const [isScrollRestored, setIsScrollRestored] = useState<boolean>(() => !detectMobile());
   const {
     readElectricityNewsIds,
     markElectricityNewsAsRead,
@@ -126,7 +143,9 @@ const ElectricityNews = () => {
   readSetRef.current = readElectricityNewsIds;
   shouldHideRef.current = shouldHideReadElectricityNews;
 
+  // Scroll compensation chỉ chạy trên DESKTOP (mobile không auto-mark)
   useLayoutEffect(() => {
+    if (isMobile) return;
     const anchor = anchorRef.current;
     if (!anchor) return;
     const el = document.querySelector<HTMLElement>(`[data-news-id="${anchor.id}"]`);
@@ -137,26 +156,26 @@ const ElectricityNews = () => {
     const newTop = el.getBoundingClientRect().top;
     const delta = newTop - anchor.topPx;
     if (Math.abs(delta) > 1) {
-      // Sync scrollBy ngay tại commit, trước paint → user không thấy nhảy.
-      // Dùng scrollTo + behavior:'instant' tránh smooth scroll interfere.
       window.scrollTo({ top: window.scrollY + delta, behavior: "instant" as ScrollBehavior });
     }
     anchorRef.current = null;
   });
 
+  // DESKTOP ONLY: scroll-mark-as-read + compensation. Mobile dùng scroll-memory
+  // pattern (xem useEffect dưới) — không auto-mark trên scroll vì layout
+  // shift trên mobile gây jump (giống Index.tsx / mobile branch).
   useEffect(() => {
+    if (isMobile) return;
     const root = listRef.current;
     if (!root) return;
 
     let timer: ReturnType<typeof setTimeout> | undefined;
     let processing = false;
 
-    // Capture anchor inline trong useEffect → đọc state qua refs (luôn fresh)
     const captureAnchor = () => {
       const cards = document.querySelectorAll<HTMLElement>("[data-news-id]");
       for (const card of cards) {
         const cardId = card.dataset.newsId!;
-        // Skip card đã hidden (height 0, không dùng làm anchor)
         if (shouldHideRef.current && readSetRef.current.has(cardId)) continue;
         const rect = card.getBoundingClientRect();
         if (rect.top > -50 && rect.top < window.innerHeight - 100) {
@@ -197,7 +216,112 @@ const ElectricityNews = () => {
       window.removeEventListener("scroll", onScroll);
       if (timer) clearTimeout(timer);
     };
-  }, [allRows.length]);
+  }, [allRows.length, isMobile]);
+
+  // MOBILE ONLY: scroll position memory (save trên scroll/unload/visibility,
+  // restore trên mount). Match Index.tsx pattern line 138-471. Cards "đã đọc"
+  // không tự mark trên scroll — user dùng flip mode hoặc batch hide button.
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const saveScrollPosition = () => {
+      try {
+        localStorage.setItem(STORAGE_SCROLL_Y, String(window.scrollY));
+        // Tìm card gần đỉnh viewport nhất (skip cards display:none)
+        const cards = document.querySelectorAll<HTMLElement>("[data-news-id]");
+        let closestId: string | null = null;
+        let minDist = Infinity;
+        cards.forEach((card) => {
+          if (card.classList.contains("hidden")) return;
+          const dist = Math.abs(card.getBoundingClientRect().top);
+          if (dist < minDist) {
+            minDist = dist;
+            closestId = card.dataset.newsId ?? null;
+          }
+        });
+        if (closestId) localStorage.setItem(STORAGE_LAST_VISIBLE, closestId);
+      } catch {
+        /* localStorage unavailable, ignore */
+      }
+    };
+
+    let scrollTimer: ReturnType<typeof setTimeout> | undefined;
+    const onScrollSave = () => {
+      if (scrollTimer) clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(saveScrollPosition, 1000);
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") saveScrollPosition();
+    };
+
+    window.addEventListener("beforeunload", saveScrollPosition);
+    window.addEventListener("pagehide", saveScrollPosition);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("scroll", onScrollSave, { passive: true });
+    const periodic = setInterval(saveScrollPosition, 5000);
+
+    return () => {
+      window.removeEventListener("beforeunload", saveScrollPosition);
+      window.removeEventListener("pagehide", saveScrollPosition);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("scroll", onScrollSave);
+      if (scrollTimer) clearTimeout(scrollTimer);
+      clearInterval(periodic);
+    };
+  }, [isMobile]);
+
+  // MOBILE ONLY: restore scroll position khi cards đã render. Hide content
+  // (opacity-0) tới khi position stable 3 lần check liên tiếp → no flash.
+  useEffect(() => {
+    if (!isMobile) return;
+    if (isScrollRestored) return;
+    if (allRows.length === 0) return;
+
+    const savedId = localStorage.getItem(STORAGE_LAST_VISIBLE);
+    const savedY = localStorage.getItem(STORAGE_SCROLL_Y);
+
+    if (!savedId && !savedY) {
+      setIsScrollRestored(true);
+      return;
+    }
+
+    // Đợi DOM render xong rồi restore
+    const restoreTimer = setTimeout(() => {
+      let target: HTMLElement | null = null;
+      if (savedId) {
+        target = document.querySelector(`[data-news-id="${savedId}"]`);
+      }
+
+      if (target && !target.classList.contains("hidden")) {
+        const rect = target.getBoundingClientRect();
+        const targetY = window.scrollY + rect.top - 60; // header offset
+        window.scrollTo(0, Math.max(0, targetY));
+      } else if (savedY) {
+        window.scrollTo(0, parseInt(savedY, 10) || 0);
+      }
+
+      // Stability check: 3 lần liên tiếp scrollY không đổi → reveal content
+      let stable = 0;
+      let last = window.scrollY;
+      let attempts = 0;
+      const maxAttempts = 20;
+      const check = () => {
+        attempts++;
+        const now = window.scrollY;
+        if (Math.abs(now - last) < 2) stable++;
+        else stable = 0;
+        last = now;
+        if (stable >= 3 || attempts >= maxAttempts) {
+          setIsScrollRestored(true);
+        } else {
+          setTimeout(check, 100);
+        }
+      };
+      setTimeout(check, 100);
+    }, 300);
+
+    return () => clearTimeout(restoreTimer);
+  }, [isMobile, allRows.length, isScrollRestored]);
 
   // Sentinel cuối list: vào viewport (rootMargin 600px) → fetchNextPage.
   // Margin lớn để load trước khi user thực sự chạm đáy, tránh giật.
@@ -228,7 +352,11 @@ const ElectricityNews = () => {
     <div className="min-h-screen bg-background">
       <Header user={session?.user} userRole={userRole} />
 
-      <main className="w-full max-w-2xl mx-auto px-4 py-4">
+      <main
+        className={`w-full max-w-2xl mx-auto px-4 py-4 transition-opacity duration-200 ${
+          isMobile && !isScrollRestored ? "opacity-0" : "opacity-100"
+        }`}
+      >
         {isError && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>Lỗi tải tin: {(error as Error).message}</AlertDescription>
