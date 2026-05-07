@@ -1,3 +1,10 @@
+## [1.34.1](https://github.com/lth91/luot247-vision/compare/v1.34.0...v1.34.1) (2026-05-07)
+
+
+### Bug Fixes
+
+* **d:** mobile bug auto-hide — switch sang scroll listener pattern / ([d5523ff](https://github.com/lth91/luot247-vision/commit/d5523ff08340cd08929c7e0dfefd2a01a2552d81))
+
 # [1.34.0](https://github.com/lth91/luot247-vision/compare/v1.33.0...v1.34.0) (2026-05-07)
 
 
