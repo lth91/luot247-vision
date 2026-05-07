@@ -1,3 +1,10 @@
+## [1.34.4](https://github.com/lth91/luot247-vision/compare/v1.34.3...v1.34.4) (2026-05-07)
+
+
+### Bug Fixes
+
+* **d:** manual scroll compensation cho iOS Safari thiếu scroll-anchor ([eec32b6](https://github.com/lth91/luot247-vision/commit/eec32b6fa2f7d0e517d4170321b5727211c90e59)), closes [#1](https://github.com/lth91/luot247-vision/issues/1) [#5](https://github.com/lth91/luot247-vision/issues/5) [#5](https://github.com/lth91/luot247-vision/issues/5) [#1-4](https://github.com/lth91/luot247-vision/issues/1-4) [#5](https://github.com/lth91/luot247-vision/issues/5)
+
 ## [1.34.3](https://github.com/lth91/luot247-vision/compare/v1.34.2...v1.34.3) (2026-05-07)
 
 
