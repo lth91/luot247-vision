@@ -1,3 +1,10 @@
+## [1.34.3](https://github.com/lth91/luot247-vision/compare/v1.34.2...v1.34.3) (2026-05-07)
+
+
+### Bug Fixes
+
+* **d:** bỏ defer scrolling toggle effect — dùng CSS collapse animation ([166e719](https://github.com/lth91/luot247-vision/commit/166e719bd114ba3c5dde3af61f0c1417cf9e2054))
+
 ## [1.34.2](https://github.com/lth91/luot247-vision/compare/v1.34.1...v1.34.2) (2026-05-07)
 
 
