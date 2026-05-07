@@ -4,37 +4,46 @@ interface ReadingContextType {
   // Current reading position
   currentNewsIndex: number;
   setCurrentNewsIndex: (index: number) => void;
-  
+
   // Read news tracking
   readNewsIds: Set<string>;
   markNewsAsRead: (newsId: string) => void;
   clearReadNews: () => void;
-  
+
   // Hide read news state
   shouldHideReadNews: boolean;
   setShouldHideReadNews: (hide: boolean) => void;
-  
+
   // News data
   news: any[];
   setNews: (news: any[]) => void;
-  
+
   // Filtered news (excluding read ones if shouldHideReadNews is true)
   filteredNews: any[];
-  
+
   // Current news based on index
   currentNews: any | null;
-  
+
   // Highlight effect for sync
   highlightedNewsId: string | null;
   setHighlightedNewsId: (newsId: string | null) => void;
-  
+
   // Mode synchronization
   syncToFlipMode: () => void;
   syncToScrollMode: () => void;
-  
+
   // Deep link handling
   isFromSharedLink: boolean;
   setIsFromSharedLink: (value: boolean) => void;
+
+  // Electricity news (/d) — separate tracking. Cùng pattern UX với news
+  // (auto-hide khi mark first, persist localStorage, clear all) nhưng key
+  // riêng để 2 luồng không đụng nhau.
+  readElectricityNewsIds: Set<string>;
+  markElectricityNewsAsRead: (id: string) => void;
+  clearReadElectricityNews: () => void;
+  shouldHideReadElectricityNews: boolean;
+  setShouldHideReadElectricityNews: (hide: boolean) => void;
 }
 
 const ReadingContext = createContext<ReadingContextType | undefined>(undefined);
@@ -58,6 +67,10 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
   const [news, setNews] = useState<any[]>([]);
   const [highlightedNewsId, setHighlightedNewsId] = useState<string | null>(null);
   const [isFromSharedLink, setIsFromSharedLink] = useState(false);
+
+  // Electricity-news tracking (separate state, separate localStorage key)
+  const [readElectricityNewsIds, setReadElectricityNewsIds] = useState<Set<string>>(new Set());
+  const [shouldHideReadElectricityNews, setShouldHideReadElectricityNews] = useState(false);
 
   // Load read news and current index from localStorage on mount
   useEffect(() => {
@@ -94,6 +107,20 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
     };
 
     loadFromStorage();
+  }, []);
+
+  // Load read electricity_news from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('luot247_read_electricity_news');
+      if (stored) {
+        const ids = JSON.parse(stored) as string[];
+        setReadElectricityNewsIds(new Set(ids));
+        if (ids.length > 0) setShouldHideReadElectricityNews(true);
+      }
+    } catch (e) {
+      console.error('ReadingContext - load read_electricity_news error:', e);
+    }
   }, []);
 
   // Save read news to localStorage
@@ -311,6 +338,29 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
     }
   };
 
+  // Electricity-news mark/clear handlers
+  const markElectricityNewsAsRead = (id: string) => {
+    setReadElectricityNewsIds(prev => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      try {
+        localStorage.setItem('luot247_read_electricity_news', JSON.stringify([...next]));
+      } catch (e) {
+        console.error('save read_electricity_news error:', e);
+      }
+      // Auto-enable hide khi đánh dấu bài đầu tiên (giống news flow)
+      if (!shouldHideReadElectricityNews) setShouldHideReadElectricityNews(true);
+      return next;
+    });
+  };
+
+  const clearReadElectricityNews = () => {
+    localStorage.removeItem('luot247_read_electricity_news');
+    setReadElectricityNewsIds(new Set());
+    setShouldHideReadElectricityNews(false);
+  };
+
   const value: ReadingContextType = {
     currentNewsIndex,
     setCurrentNewsIndex: updateCurrentNewsIndex,
@@ -329,6 +379,11 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
     syncToScrollMode,
     isFromSharedLink,
     setIsFromSharedLink,
+    readElectricityNewsIds,
+    markElectricityNewsAsRead,
+    clearReadElectricityNews,
+    shouldHideReadElectricityNews,
+    setShouldHideReadElectricityNews,
   };
 
   return (

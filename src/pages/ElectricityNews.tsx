@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,8 +7,10 @@ import { Header } from "@/components/Header";
 import { ElectricityNewsCard } from "@/components/ElectricityNewsCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Zap } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Eye, EyeOff, Loader2, RotateCcw, Zap } from "lucide-react";
 import { getRelativeTime } from "@/lib/dateUtils";
+import { useReadingContext } from "@/contexts/ReadingContext";
 
 type ElectricityNewsRow = {
   id: string;
@@ -57,6 +59,13 @@ const fetchLastCrawled = async (): Promise<string | null> => {
 const ElectricityNews = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const {
+    readElectricityNewsIds,
+    markElectricityNewsAsRead,
+    clearReadElectricityNews,
+    shouldHideReadElectricityNews,
+    setShouldHideReadElectricityNews,
+  } = useReadingContext();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
@@ -95,7 +104,46 @@ const ElectricityNews = () => {
   });
 
   const allRows = data?.pages.flat() ?? [];
+  const visibleRows = useMemo(
+    () =>
+      shouldHideReadElectricityNews
+        ? allRows.filter((r) => !readElectricityNewsIds.has(r.id))
+        : allRows,
+    [allRows, shouldHideReadElectricityNews, readElectricityNewsIds],
+  );
   const isEmpty = !isLoading && allRows.length === 0;
+  const hiddenCount = allRows.length - visibleRows.length;
+
+  // Mark-as-read khi card scroll qua khỏi top viewport. Mỗi card dán
+  // data-news-id; observer detect rect.bottom < 0 (card đã ra ngoài đỉnh).
+  // Ref pattern cho mark + readSet → useEffect chỉ re-register khi list
+  // thay đổi length (không phải mỗi lần mark mới).
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const markRef = useRef(markElectricityNewsAsRead);
+  const readSetRef = useRef(readElectricityNewsIds);
+  markRef.current = markElectricityNewsAsRead;
+  readSetRef.current = readElectricityNewsIds;
+
+  useEffect(() => {
+    const root = listRef.current;
+    if (!root) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (!e.isIntersecting && e.boundingClientRect.bottom < 0) {
+            const id = (e.target as HTMLElement).dataset.newsId;
+            if (id && !readSetRef.current.has(id)) {
+              markRef.current(id);
+            }
+          }
+        });
+      },
+      { threshold: 0 },
+    );
+    const cards = root.querySelectorAll<HTMLElement>("[data-news-id]");
+    cards.forEach((c) => observer.observe(c));
+    return () => observer.disconnect();
+  }, [visibleRows.length]);
 
   // Sentinel cuối list: vào viewport (rootMargin 600px) → fetchNextPage.
   // Margin lớn để load trước khi user thực sự chạm đáy, tránh giật.
@@ -162,18 +210,58 @@ const ElectricityNews = () => {
           </div>
         ) : (
           <>
-            <div className="border rounded-lg overflow-hidden bg-card divide-y divide-gray-200">
-              {allRows.map((item) => (
-                <ElectricityNewsCard
-                  key={item.id}
-                  title={item.title}
-                  summary={item.summary}
-                  originalUrl={item.original_url}
-                  publishedAt={item.published_at}
-                  crawledAt={item.crawled_at}
-                />
-              ))}
-            </div>
+            {/* Toolbar: hide-read toggle + clear */}
+            {(readElectricityNewsIds.size > 0 || hiddenCount > 0) && (
+              <div className="flex items-center justify-between mb-3 text-sm">
+                <span className="text-muted-foreground">
+                  {hiddenCount > 0
+                    ? `Đang ẩn ${hiddenCount} tin đã đọc`
+                    : `Đã đọc ${readElectricityNewsIds.size} tin`}
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShouldHideReadElectricityNews(!shouldHideReadElectricityNews)}
+                  >
+                    {shouldHideReadElectricityNews ? (
+                      <>
+                        <Eye className="h-4 w-4 mr-1" /> Hiện đã đọc
+                      </>
+                    ) : (
+                      <>
+                        <EyeOff className="h-4 w-4 mr-1" /> Ẩn đã đọc
+                      </>
+                    )}
+                  </Button>
+                  {readElectricityNewsIds.size > 0 && (
+                    <Button size="sm" variant="ghost" onClick={clearReadElectricityNews}>
+                      <RotateCcw className="h-4 w-4 mr-1" /> Xoá lịch sử
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {visibleRows.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>Bạn đã đọc hết tin. Nhấn "Hiện đã đọc" để xem lại.</p>
+              </div>
+            ) : (
+              <div ref={listRef} className="border rounded-lg overflow-hidden bg-card divide-y divide-gray-200">
+                {visibleRows.map((item) => (
+                  <div key={item.id} data-news-id={item.id}>
+                    <ElectricityNewsCard
+                      title={item.title}
+                      summary={item.summary}
+                      originalUrl={item.original_url}
+                      publishedAt={item.published_at}
+                      crawledAt={item.crawled_at}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
             <div ref={sentinelRef} className="flex justify-center py-6">
               {isFetchingNextPage && (
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
