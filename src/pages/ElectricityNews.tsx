@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -104,35 +104,12 @@ const ElectricityNews = () => {
   });
 
   const allRows = data?.pages.flat() ?? [];
-
-  // Defer filter trong khi đang scroll active để tránh DOM remove giữa lúc
-  // cuộn (mobile Safari thiếu scroll-anchor → jank). Filter chỉ apply sau
-  // 300ms từ scroll cuối → user đã dừng → no perceived jump.
-  const [isScrolling, setIsScrolling] = useState(false);
-  useEffect(() => {
-    let t: ReturnType<typeof setTimeout> | undefined;
-    const onScroll = () => {
-      setIsScrolling(true);
-      if (t) clearTimeout(t);
-      t = setTimeout(() => setIsScrolling(false), 300);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      if (t) clearTimeout(t);
-    };
-  }, []);
-
-  const visibleRows = useMemo(() => {
-    if (!shouldHideReadElectricityNews) return allRows;
-    if (isScrolling) return allRows; // hoãn filter, render full list
-    return allRows.filter((r) => !readElectricityNewsIds.has(r.id));
-  }, [allRows, shouldHideReadElectricityNews, readElectricityNewsIds, isScrolling]);
-
   const isEmpty = !isLoading && allRows.length === 0;
   const hiddenCount = shouldHideReadElectricityNews
     ? allRows.filter((r) => readElectricityNewsIds.has(r.id)).length
     : 0;
+  const allHiddenWhenToggleOn =
+    shouldHideReadElectricityNews && hiddenCount === allRows.length && allRows.length > 0;
 
   // Mark-as-read khi card scroll qua phía trên header + buffer 60px.
   // Pattern giống Index.tsx (/): scroll listener throttled bằng setTimeout
@@ -182,7 +159,7 @@ const ElectricityNews = () => {
       window.removeEventListener("scroll", onScroll);
       if (timer) clearTimeout(timer);
     };
-  }, [visibleRows.length]);
+  }, [allRows.length]);
 
   // Sentinel cuối list: vào viewport (rootMargin 600px) → fetchNextPage.
   // Margin lớn để load trước khi user thực sự chạm đáy, tránh giật.
@@ -283,23 +260,40 @@ const ElectricityNews = () => {
               </div>
             )}
 
-            {visibleRows.length === 0 ? (
+            {allHiddenWhenToggleOn ? (
               <div className="text-center py-12 text-muted-foreground">
                 <p>Bạn đã đọc hết tin. Nhấn "Hiện đã đọc" để xem lại.</p>
               </div>
             ) : (
               <div ref={listRef} className="border rounded-lg overflow-hidden bg-card divide-y divide-gray-200">
-                {visibleRows.map((item) => (
-                  <div key={item.id} data-news-id={item.id}>
-                    <ElectricityNewsCard
-                      title={item.title}
-                      summary={item.summary}
-                      originalUrl={item.original_url}
-                      publishedAt={item.published_at}
-                      crawledAt={item.crawled_at}
-                    />
-                  </div>
-                ))}
+                {allRows.map((item) => {
+                  const isHidden =
+                    shouldHideReadElectricityNews && readElectricityNewsIds.has(item.id);
+                  return (
+                    <div
+                      key={item.id}
+                      data-news-id={item.id}
+                      className={
+                        // Card collapse mượt khi đã đọc + toggle hide ON. KHÔNG
+                        // remove khỏi DOM (sẽ jump trên iOS Safari thiếu
+                        // scroll-anchor). max-height transition 300ms → smooth,
+                        // overflow-hidden cắt content tràn, opacity-0 fade out.
+                        isHidden
+                          ? "max-h-0 opacity-0 overflow-hidden transition-all duration-300 pointer-events-none"
+                          : "max-h-[600px] opacity-100 overflow-hidden transition-all duration-300"
+                      }
+                      aria-hidden={isHidden ? true : undefined}
+                    >
+                      <ElectricityNewsCard
+                        title={item.title}
+                        summary={item.summary}
+                        originalUrl={item.original_url}
+                        publishedAt={item.published_at}
+                        crawledAt={item.crawled_at}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             )}
             <div ref={sentinelRef} className="flex justify-center py-6">
