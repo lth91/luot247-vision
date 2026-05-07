@@ -35,6 +35,12 @@ const FEEDS: { name: string; url: string }[] = [
   { name: "Tuổi Trẻ - Thế giới",      url: "https://tuoitre.vn/rss/the-gioi.rss" },
   { name: "BaoTinTuc - Tin mới",      url: "https://baotintuc.vn/tin-moi-nhat.rss" },
   { name: "BaoTinTuc - Thế giới",     url: "https://baotintuc.vn/the-gioi.rss" },
+  { name: "VietnamBiz - Tin mới",     url: "https://vietnambiz.vn/tin-moi-nhat.rss" },
+  { name: "Bnews - Kinh tế VN",       url: "https://bnews.vn/rss/kinh-te-viet-nam-1.rss" },
+  { name: "Bnews - Doanh nghiệp",     url: "https://bnews.vn/rss/doanh-nghiep-6.rss" },
+  { name: "Môi Trường - Tin trong nước", url: "https://moitruong.net.vn/rss/tin-tuc/tin-trong-nuoc" },
+  { name: "Môi Trường - KT tuần hoàn",   url: "https://moitruong.net.vn/rss/kinh-te-xanh/kinh-te-tuan-hoan" },
+  { name: "NLĐ - Kinh tế",            url: "https://nld.com.vn/rss/kinh-te.rss" },
   { name: "Thanh Niên - Kinh tế",     url: "https://thanhnien.vn/rss/kinh-te.rss" },
   { name: "CafeF - Doanh nghiệp",     url: "https://cafef.vn/doanh-nghiep.rss" },
   { name: "CafeF - Chứng khoán",      url: "https://cafef.vn/thi-truong-chung-khoan.rss" },
@@ -70,6 +76,7 @@ const HTML_FEEDS: { name: string; listUrl: string; linkPattern: string }[] = [
   { name: "Người Quan Sát",             listUrl: "https://nguoiquansat.vn/tin-moi-nhat",    linkPattern: "^/[a-z0-9-]{20,}-\\d{5,}\\.html$" },
   { name: "Doanh nghiệp VN",            listUrl: "https://doanhnghiepvn.vn/948/tin-tuc",    linkPattern: "^/tin-tuc/[^/]+/\\d{14}$" },
   { name: "VTV8",                       listUrl: "https://vtv8.vtv.vn/",                    linkPattern: "^/[a-z0-9-]{20,}-\\d{15,}\\.htm$" },
+  { name: "Mekong ASEAN",               listUrl: "https://mekongasean.vn/",                 linkPattern: "^/[a-z0-9-]{20,}-\\d{4,}\\.html$" },
 ];
 
 // Keyword pre-filter: loại ~94% bài không liên quan trước khi gọi LLM.
