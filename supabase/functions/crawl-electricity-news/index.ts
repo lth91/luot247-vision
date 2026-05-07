@@ -18,14 +18,12 @@ const TIME_BUDGET_MS = 120000;
 const FETCH_TIMEOUT_MS = 30000;
 const MAX_CONTENT_CHARS = 8000;
 
-// Per-tier candidate cap. Tier 1/2 dùng dedicated electricity channels →
-// 8 bài đầu đủ. Tier 3 broad channels (báo-chí Kinh tế/Tài chính) bài
-// điện thường nằm vị trí 7-20 giữa nhiều bài stock/banking → cần quét
-// rộng hơn. Trade-off: ~2-3x LLM call cho tier 3 nhưng catch nhiều hơn.
+// Per-tier candidate cap. Revert 07/05 (cost spike): tier 3 từ 20 → 6 default.
+// Tier 1/2 giữ tăng nhẹ vì dedicated electricity channels yield cao.
 function maxArticlesFor(tier: number | null): number {
   if (tier === 1) return 8;
-  if (tier === 2) return 12;
-  return 20; // tier 3 hoặc null
+  if (tier === 2) return 10;
+  return 6; // tier 3 hoặc null — về mức trước combo
 }
 
 interface Source {
