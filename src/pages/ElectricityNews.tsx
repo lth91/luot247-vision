@@ -314,19 +314,16 @@ const ElectricityNews = () => {
                 {allRows.map((item) => {
                   const isHidden =
                     shouldHideReadElectricityNews && readElectricityNewsIds.has(item.id);
+                  // Instant display:none thay vì max-height transition. Lý do:
+                  // gradual shrink (300ms) làm scroll-anchor của Chrome KHÔNG
+                  // trigger (browser anchor heuristic detect "sudden shift",
+                  // gradual = drift). Instant remove → 1 layout shift → manual
+                  // useLayoutEffect compensate scrollBy bằng delta đo được.
                   return (
                     <div
                       key={item.id}
                       data-news-id={item.id}
-                      className={
-                        // Card collapse mượt khi đã đọc + toggle hide ON. KHÔNG
-                        // remove khỏi DOM (sẽ jump trên iOS Safari thiếu
-                        // scroll-anchor). max-height transition 300ms → smooth,
-                        // overflow-hidden cắt content tràn, opacity-0 fade out.
-                        isHidden
-                          ? "max-h-0 opacity-0 overflow-hidden transition-all duration-300 pointer-events-none"
-                          : "max-h-[600px] opacity-100 overflow-hidden transition-all duration-300"
-                      }
+                      className={isHidden ? "hidden" : ""}
                       aria-hidden={isHidden ? true : undefined}
                     >
                       <ElectricityNewsCard
