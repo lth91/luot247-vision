@@ -1,3 +1,10 @@
+## [1.34.2](https://github.com/lth91/luot247-vision/compare/v1.34.1...v1.34.2) (2026-05-07)
+
+
+### Bug Fixes
+
+* **d:** chống giật lag — defer filter trong scroll + trigger ít nhạy ([b1d7dc7](https://github.com/lth91/luot247-vision/commit/b1d7dc7042dd1748a0560dc353c1a9c9786dc233))
+
 ## [1.34.1](https://github.com/lth91/luot247-vision/compare/v1.34.0...v1.34.1) (2026-05-07)
 
 
