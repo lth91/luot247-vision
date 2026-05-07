@@ -1,3 +1,10 @@
+# [1.33.0](https://github.com/lth91/luot247-vision/compare/v1.32.0...v1.33.0) (2026-05-07)
+
+
+### Features
+
+* **discovery:** combo coverage gain — +6 RSS feed, +1 HTML feed, 30min cron ([6aea001](https://github.com/lth91/luot247-vision/commit/6aea0010fb831838bba1439f1bc546508948f58e)), closes [#6](https://github.com/lth91/luot247-vision/issues/6) [#3](https://github.com/lth91/luot247-vision/issues/3) [#10](https://github.com/lth91/luot247-vision/issues/10) [#9](https://github.com/lth91/luot247-vision/issues/9) [#22](https://github.com/lth91/luot247-vision/issues/22) [#20](https://github.com/lth91/luot247-vision/issues/20)
+
 # [1.32.0](https://github.com/lth91/luot247-vision/compare/v1.31.0...v1.32.0) (2026-05-06)
 
 
