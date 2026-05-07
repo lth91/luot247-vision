@@ -1,3 +1,10 @@
+## [1.35.1](https://github.com/lth91/luot247-vision/compare/v1.35.0...v1.35.1) (2026-05-07)
+
+
+### Bug Fixes
+
+* **d:** không ẩn tin MỚI crawl sau save khi mobile restore ([a032a1b](https://github.com/lth91/luot247-vision/commit/a032a1bf0506c6243bcc00c6ff745810eafb2cca)), closes [#5](https://github.com/lth91/luot247-vision/issues/5) [#5](https://github.com/lth91/luot247-vision/issues/5) [#1-4](https://github.com/lth91/luot247-vision/issues/1-4) [#5](https://github.com/lth91/luot247-vision/issues/5)
+
 # [1.35.0](https://github.com/lth91/luot247-vision/compare/v1.34.7...v1.35.0) (2026-05-07)
 
 
