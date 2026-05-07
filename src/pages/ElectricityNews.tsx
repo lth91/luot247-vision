@@ -76,6 +76,11 @@ const ElectricityNews = () => {
   // Desktop hiện ngay, mobile đợi scroll restore xong mới hiện (chống flash
   // jump khi reload). Match Index.tsx isScrollRestored pattern.
   const [isScrollRestored, setIsScrollRestored] = useState<boolean>(() => !detectMobile());
+  // Session-only set: ID của các card user đã lướt qua trước khi refresh.
+  // Sau khi mobile restore từ lastVisibleNewsId, tất cả card phía trước được
+  // tạm ẩn (display:none) → user thấy tin restore ở top, list gọn gàng. Khác
+  // với readElectricityNewsIds (persistent) — passedNewsIds reset mỗi reload.
+  const [passedNewsIds, setPassedNewsIds] = useState<Set<string>>(new Set());
   const {
     readElectricityNewsIds,
     markElectricityNewsAsRead,
@@ -123,10 +128,18 @@ const ElectricityNews = () => {
   const allRows = data?.pages.flat() ?? [];
   const isEmpty = !isLoading && allRows.length === 0;
   const hiddenCount = shouldHideReadElectricityNews
-    ? allRows.filter((r) => readElectricityNewsIds.has(r.id)).length
+    ? allRows.filter(
+        (r) => readElectricityNewsIds.has(r.id) || passedNewsIds.has(r.id),
+      ).length
     : 0;
   const allHiddenWhenToggleOn =
     shouldHideReadElectricityNews && hiddenCount === allRows.length && allRows.length > 0;
+
+  // Wrap clear: vừa clear context vừa reset session passedNewsIds
+  const handleClearAll = () => {
+    clearReadElectricityNews();
+    setPassedNewsIds(new Set());
+  };
 
   // Scroll compensation cho mark-then-collapse: anchor = card đầu tiên
   // visible (không bị hide), capture top trước mark; useLayoutEffect đo
@@ -270,8 +283,13 @@ const ElectricityNews = () => {
     };
   }, [isMobile]);
 
-  // MOBILE ONLY: restore scroll position khi cards đã render. Hide content
-  // (opacity-0) tới khi position stable 3 lần check liên tiếp → no flash.
+  // MOBILE ONLY: restore khi cards render. Strategy:
+  //   1. Tìm lastVisibleNewsId trong allRows.
+  //   2. Nếu có → populate passedNewsIds với tất cả ID phía trước → cards
+  //      đó display:none → tin lastVisible tự động ở top. ScrollTo(0,0).
+  //   3. Auto-enable shouldHide để display:none thực sự apply.
+  //   4. Nếu lastVisibleId KHÔNG trong allRows (đã trôi khỏi 7d window
+  //      hoặc page chưa load tới) → fallback scroll-by-Y với stability.
   useEffect(() => {
     if (!isMobile) return;
     if (isScrollRestored) return;
@@ -285,22 +303,27 @@ const ElectricityNews = () => {
       return;
     }
 
-    // Đợi DOM render xong rồi restore
     const restoreTimer = setTimeout(() => {
-      let target: HTMLElement | null = null;
+      // Strategy 1: hide cards trước lastVisibleId
       if (savedId) {
-        target = document.querySelector(`[data-news-id="${savedId}"]`);
+        const idx = allRows.findIndex((r) => r.id === savedId);
+        if (idx > 0) {
+          const passed = new Set(allRows.slice(0, idx).map((r) => r.id));
+          setPassedNewsIds(passed);
+          setShouldHideReadElectricityNews(true); // ép apply display:none
+          // Card lastVisibleId giờ là first visible → scroll top
+          requestAnimationFrame(() => {
+            window.scrollTo(0, 0);
+            setIsScrollRestored(true);
+          });
+          return;
+        }
       }
 
-      if (target && !target.classList.contains("hidden")) {
-        const rect = target.getBoundingClientRect();
-        const targetY = window.scrollY + rect.top - 60; // header offset
-        window.scrollTo(0, Math.max(0, targetY));
-      } else if (savedY) {
+      // Strategy 2 (fallback): scroll-by-Y với stability check
+      if (savedY) {
         window.scrollTo(0, parseInt(savedY, 10) || 0);
       }
-
-      // Stability check: 3 lần liên tiếp scrollY không đổi → reveal content
       let stable = 0;
       let last = window.scrollY;
       let attempts = 0;
@@ -321,7 +344,7 @@ const ElectricityNews = () => {
     }, 300);
 
     return () => clearTimeout(restoreTimer);
-  }, [isMobile, allRows.length, isScrollRestored]);
+  }, [isMobile, allRows.length, isScrollRestored, setShouldHideReadElectricityNews]);
 
   // Sentinel cuối list: vào viewport (rootMargin 600px) → fetchNextPage.
   // Margin lớn để load trước khi user thực sự chạm đáy, tránh giật.
@@ -392,14 +415,17 @@ const ElectricityNews = () => {
           </div>
         ) : (
           <>
-            {/* Toolbar: hide-read toggle + clear. flex-wrap để mobile ≤375px
-                không bị tràn — count xuống dòng dưới các nút khi cần. */}
-            {(readElectricityNewsIds.size > 0 || hiddenCount > 0) && (
+            {/* Toolbar: hide-read toggle + clear. Counter gồm cả "đã đọc"
+                (read persistent) và "đã lướt qua" (passed session-only sau
+                refresh trên mobile). */}
+            {(readElectricityNewsIds.size > 0 ||
+              passedNewsIds.size > 0 ||
+              hiddenCount > 0) && (
               <div className="flex flex-wrap items-center justify-between gap-2 mb-3 text-sm">
                 <span className="text-muted-foreground">
                   {hiddenCount > 0
-                    ? `Đang ẩn ${hiddenCount} tin đã đọc`
-                    : `Đã đọc ${readElectricityNewsIds.size} tin`}
+                    ? `Đang ẩn ${hiddenCount} tin đã đọc/lướt qua`
+                    : `Đã đọc ${readElectricityNewsIds.size + passedNewsIds.size} tin`}
                 </span>
                 <div className="flex gap-2 flex-shrink-0">
                   <Button
@@ -417,8 +443,8 @@ const ElectricityNews = () => {
                       </>
                     )}
                   </Button>
-                  {readElectricityNewsIds.size > 0 && (
-                    <Button size="sm" variant="ghost" onClick={clearReadElectricityNews}>
+                  {(readElectricityNewsIds.size > 0 || passedNewsIds.size > 0) && (
+                    <Button size="sm" variant="ghost" onClick={handleClearAll}>
                       <RotateCcw className="h-4 w-4 mr-1" /> Xoá lịch sử
                     </Button>
                   )}
@@ -434,7 +460,8 @@ const ElectricityNews = () => {
               <div ref={listRef} className="border rounded-lg overflow-hidden bg-card divide-y divide-gray-200">
                 {allRows.map((item) => {
                   const isHidden =
-                    shouldHideReadElectricityNews && readElectricityNewsIds.has(item.id);
+                    shouldHideReadElectricityNews &&
+                    (readElectricityNewsIds.has(item.id) || passedNewsIds.has(item.id));
                   // Instant display:none thay vì max-height transition. Lý do:
                   // gradual shrink (300ms) làm scroll-anchor của Chrome KHÔNG
                   // trigger (browser anchor heuristic detect "sudden shift",
