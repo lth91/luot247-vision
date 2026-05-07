@@ -114,10 +114,12 @@ const ElectricityNews = () => {
   const isEmpty = !isLoading && allRows.length === 0;
   const hiddenCount = allRows.length - visibleRows.length;
 
-  // Mark-as-read khi card scroll qua khỏi top viewport. Mỗi card dán
-  // data-news-id; observer detect rect.bottom < 0 (card đã ra ngoài đỉnh).
-  // Ref pattern cho mark + readSet → useEffect chỉ re-register khi list
-  // thay đổi length (không phải mỗi lần mark mới).
+  // Mark-as-read khi card scroll qua phía trên header + buffer 60px.
+  // Pattern giống Index.tsx (/): scroll listener throttled bằng setTimeout
+  // 100ms + requestAnimationFrame, KHÔNG dùng IntersectionObserver vì:
+  //   - IO fires sync khi observe → mark nhầm các card load lần đầu
+  //   - iOS rubber-band tạo false positive ở viewport top
+  //   - Filter shift cards → observer re-register fires lại
   const listRef = useRef<HTMLDivElement | null>(null);
   const markRef = useRef(markElectricityNewsAsRead);
   const readSetRef = useRef(readElectricityNewsIds);
@@ -127,22 +129,39 @@ const ElectricityNews = () => {
   useEffect(() => {
     const root = listRef.current;
     if (!root) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (!e.isIntersecting && e.boundingClientRect.bottom < 0) {
-            const id = (e.target as HTMLElement).dataset.newsId;
-            if (id && !readSetRef.current.has(id)) {
-              markRef.current(id);
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let processing = false;
+
+    const onScroll = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (processing) return;
+        processing = true;
+        requestAnimationFrame(() => {
+          const header = document.querySelector("header");
+          const headerBottom = header ? header.getBoundingClientRect().bottom : 0;
+          const triggerLine = headerBottom + 60; // buffer zone
+          const cards = root.querySelectorAll<HTMLElement>("[data-news-id]");
+          cards.forEach((card) => {
+            const rect = card.getBoundingClientRect();
+            if (rect.bottom < triggerLine) {
+              const id = card.dataset.newsId;
+              if (id && !readSetRef.current.has(id)) {
+                markRef.current(id);
+              }
             }
-          }
+          });
+          processing = false;
         });
-      },
-      { threshold: 0 },
-    );
-    const cards = root.querySelectorAll<HTMLElement>("[data-news-id]");
-    cards.forEach((c) => observer.observe(c));
-    return () => observer.disconnect();
+      }, 100);
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (timer) clearTimeout(timer);
+    };
   }, [visibleRows.length]);
 
   // Sentinel cuối list: vào viewport (rootMargin 600px) → fetchNextPage.
@@ -210,15 +229,16 @@ const ElectricityNews = () => {
           </div>
         ) : (
           <>
-            {/* Toolbar: hide-read toggle + clear */}
+            {/* Toolbar: hide-read toggle + clear. flex-wrap để mobile ≤375px
+                không bị tràn — count xuống dòng dưới các nút khi cần. */}
             {(readElectricityNewsIds.size > 0 || hiddenCount > 0) && (
-              <div className="flex items-center justify-between mb-3 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3 text-sm">
                 <span className="text-muted-foreground">
                   {hiddenCount > 0
                     ? `Đang ẩn ${hiddenCount} tin đã đọc`
                     : `Đã đọc ${readElectricityNewsIds.size} tin`}
                 </span>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-shrink-0">
                   <Button
                     size="sm"
                     variant="outline"
