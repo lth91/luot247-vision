@@ -111,30 +111,20 @@ const ElectricityNews = () => {
   const allHiddenWhenToggleOn =
     shouldHideReadElectricityNews && hiddenCount === allRows.length && allRows.length > 0;
 
-  // Scroll compensation: trước khi card collapse khiến page height giảm,
-  // capture vị trí của card "anchor" (card đầu tiên hiện hữu trong/dưới
-  // viewport, KHÔNG bị hide). Sau commit → useLayoutEffect đo lại vị trí
-  // anchor → scrollBy delta để giữ anchor stable. Mobile Safari thiếu
-  // CSS scroll-anchor nên cần manual fix.
+  // Scroll compensation cho mark-then-collapse: anchor = card đầu tiên
+  // visible (không bị hide), capture top trước mark; useLayoutEffect đo
+  // lại sau commit và scrollBy delta. Cross-platform (Chrome+Safari,
+  // Android+iOS) — bypass mọi browser-specific scroll-anchor heuristic.
   const anchorRef = useRef<{ id: string; topPx: number } | null>(null);
-  // Capture trước mỗi mark/toggle: gọi từ scroll handler ngay trước markRef
-  const captureAnchor = () => {
-    const cards = document.querySelectorAll<HTMLElement>("[data-news-id]");
-    for (const card of cards) {
-      const cardId = card.dataset.newsId!;
-      // Skip card đang đọc đã hidden (height 0, không dùng làm anchor)
-      if (
-        shouldHideReadElectricityNews &&
-        readElectricityNewsIds.has(cardId)
-      ) continue;
-      const rect = card.getBoundingClientRect();
-      // Anchor = card visible đầu tiên (top trong khoảng [-50, viewport-100])
-      if (rect.top > -50 && rect.top < window.innerHeight - 100) {
-        anchorRef.current = { id: cardId, topPx: rect.top };
-        return;
-      }
-    }
-  };
+
+  // Refs cho closure stable — không lệ thuộc render cycle.
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const markRef = useRef(markElectricityNewsAsRead);
+  const readSetRef = useRef(readElectricityNewsIds);
+  const shouldHideRef = useRef(shouldHideReadElectricityNews);
+  markRef.current = markElectricityNewsAsRead;
+  readSetRef.current = readElectricityNewsIds;
+  shouldHideRef.current = shouldHideReadElectricityNews;
 
   useLayoutEffect(() => {
     const anchor = anchorRef.current;
@@ -147,23 +137,12 @@ const ElectricityNews = () => {
     const newTop = el.getBoundingClientRect().top;
     const delta = newTop - anchor.topPx;
     if (Math.abs(delta) > 1) {
-      // Scroll compensate ngay tại commit, trước paint → user không thấy jump
-      window.scrollBy(0, delta);
+      // Sync scrollBy ngay tại commit, trước paint → user không thấy nhảy.
+      // Dùng scrollTo + behavior:'instant' tránh smooth scroll interfere.
+      window.scrollTo({ top: window.scrollY + delta, behavior: "instant" as ScrollBehavior });
     }
     anchorRef.current = null;
   });
-
-  // Mark-as-read khi card scroll qua phía trên header + buffer 60px.
-  // Pattern giống Index.tsx (/): scroll listener throttled bằng setTimeout
-  // 100ms + requestAnimationFrame, KHÔNG dùng IntersectionObserver vì:
-  //   - IO fires sync khi observe → mark nhầm các card load lần đầu
-  //   - iOS rubber-band tạo false positive ở viewport top
-  //   - Filter shift cards → observer re-register fires lại
-  const listRef = useRef<HTMLDivElement | null>(null);
-  const markRef = useRef(markElectricityNewsAsRead);
-  const readSetRef = useRef(readElectricityNewsIds);
-  markRef.current = markElectricityNewsAsRead;
-  readSetRef.current = readElectricityNewsIds;
 
   useEffect(() => {
     const root = listRef.current;
@@ -172,13 +151,27 @@ const ElectricityNews = () => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let processing = false;
 
+    // Capture anchor inline trong useEffect → đọc state qua refs (luôn fresh)
+    const captureAnchor = () => {
+      const cards = document.querySelectorAll<HTMLElement>("[data-news-id]");
+      for (const card of cards) {
+        const cardId = card.dataset.newsId!;
+        // Skip card đã hidden (height 0, không dùng làm anchor)
+        if (shouldHideRef.current && readSetRef.current.has(cardId)) continue;
+        const rect = card.getBoundingClientRect();
+        if (rect.top > -50 && rect.top < window.innerHeight - 100) {
+          anchorRef.current = { id: cardId, topPx: rect.top };
+          return;
+        }
+      }
+    };
+
     const onScroll = () => {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         if (processing) return;
         processing = true;
         requestAnimationFrame(() => {
-          // Trigger: card phải ra HẲN viewport top (rect.bottom < 0).
           const cards = root.querySelectorAll<HTMLElement>("[data-news-id]");
           let anchorCaptured = false;
           cards.forEach((card) => {
