@@ -22,7 +22,7 @@ const MAX_CANDIDATES_PER_RUN = 30;        // trần bài gửi LLM classify/run 
 const MAX_INSERTS_PER_RUN = 15;           // trần bài summarize + insert/run
 const MAX_CONTENT_CHARS = 8000;
 const DISCOVERY_SOURCE_NAME = "RSS Discovery";
-const MIN_CLASSIFY_CONFIDENCE = 0.85;     // Bumped 0.7 → 0.85 (Phase 1 audit 03/05): borderline confidence
+const MIN_CLASSIFY_CONFIDENCE = 0.75;     // 0.85 → 0.75 (audit 06/05 từ discovery_classification_log): 18 bài 0.70-0.84 relevant=true bị reject, ~50% on-topic thực (thủy điện, hạ tầng). Hạ để catch ~3-5 bài unique/ngày extra; reversible nếu thấy noise tăng.
                                           // 0.7-0.85 hay miss off-topic (vd "Triều Tiên hạt nhân", lifestyle có "tiết kiệm điện").
                                           // Trade-off: giảm recall ~10-15%, tăng precision rõ rệt.
 
