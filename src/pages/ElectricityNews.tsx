@@ -68,6 +68,7 @@ const detectMobile = (): boolean => {
 
 const STORAGE_SCROLL_Y = "luot247_d_scroll_position";
 const STORAGE_LAST_VISIBLE = "luot247_d_last_visible_news";
+const STORAGE_SAVED_AT = "luot247_d_saved_at"; // ISO timestamp lúc save
 
 const ElectricityNews = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -240,6 +241,7 @@ const ElectricityNews = () => {
     const saveScrollPosition = () => {
       try {
         localStorage.setItem(STORAGE_SCROLL_Y, String(window.scrollY));
+        localStorage.setItem(STORAGE_SAVED_AT, new Date().toISOString());
         // Tìm card gần đỉnh viewport nhất (skip cards display:none)
         const cards = document.querySelectorAll<HTMLElement>("[data-news-id]");
         let closestId: string | null = null;
@@ -304,16 +306,37 @@ const ElectricityNews = () => {
     }
 
     const restoreTimer = setTimeout(() => {
-      // Strategy 1: hide cards trước lastVisibleId
+      // Strategy 1: hide cards CŨ (đã lướt qua trước save) — KHÔNG hide tin
+      // mới crawl sau save. Distinguish bằng crawled_at vs savedAt timestamp.
       if (savedId) {
         const idx = allRows.findIndex((r) => r.id === savedId);
         if (idx > 0) {
-          const passed = new Set(allRows.slice(0, idx).map((r) => r.id));
-          setPassedNewsIds(passed);
-          setShouldHideReadElectricityNews(true); // ép apply display:none
-          // Card lastVisibleId giờ là first visible → scroll top
+          const savedAtStr = localStorage.getItem(STORAGE_SAVED_AT);
+          const savedAt = savedAtStr ? new Date(savedAtStr).getTime() : 0;
+          const passed = new Set<string>();
+          for (let i = 0; i < idx; i++) {
+            // Card crawled trước hoặc bằng savedAt → user đã thấy → ẩn.
+            // Card crawled SAU savedAt → tin mới → giữ visible.
+            const crawledMs = new Date(allRows[i].crawled_at).getTime();
+            if (savedAt > 0 && crawledMs <= savedAt) {
+              passed.add(allRows[i].id);
+            }
+          }
+          if (passed.size > 0) {
+            setPassedNewsIds(passed);
+            setShouldHideReadElectricityNews(true);
+          }
+          // Scroll tới card lastVisibleId (KHÔNG phải scroll 0). Tin mới ở
+          // trên (cuộn lên xem được), savedId ở top viewport.
           requestAnimationFrame(() => {
-            window.scrollTo(0, 0);
+            const target = document.querySelector<HTMLElement>(
+              `[data-news-id="${savedId}"]`,
+            );
+            if (target) {
+              const rect = target.getBoundingClientRect();
+              const targetY = window.scrollY + rect.top - 60; // header offset
+              window.scrollTo(0, Math.max(0, targetY));
+            }
             setIsScrollRestored(true);
           });
           return;
