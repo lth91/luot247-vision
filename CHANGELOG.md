@@ -1,3 +1,10 @@
+# [1.34.0](https://github.com/lth91/luot247-vision/compare/v1.33.0...v1.34.0) (2026-05-07)
+
+
+### Features
+
+* **d:** auto-hide read news — port tính năng từ trang chủ / ([47f8dd9](https://github.com/lth91/luot247-vision/commit/47f8dd9e954cbca4e5fe85a4539940db3bd38fa5))
+
 # [1.33.0](https://github.com/lth91/luot247-vision/compare/v1.32.0...v1.33.0) (2026-05-07)
 
 
