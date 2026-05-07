@@ -104,15 +104,35 @@ const ElectricityNews = () => {
   });
 
   const allRows = data?.pages.flat() ?? [];
-  const visibleRows = useMemo(
-    () =>
-      shouldHideReadElectricityNews
-        ? allRows.filter((r) => !readElectricityNewsIds.has(r.id))
-        : allRows,
-    [allRows, shouldHideReadElectricityNews, readElectricityNewsIds],
-  );
+
+  // Defer filter trong khi đang scroll active để tránh DOM remove giữa lúc
+  // cuộn (mobile Safari thiếu scroll-anchor → jank). Filter chỉ apply sau
+  // 300ms từ scroll cuối → user đã dừng → no perceived jump.
+  const [isScrolling, setIsScrolling] = useState(false);
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const onScroll = () => {
+      setIsScrolling(true);
+      if (t) clearTimeout(t);
+      t = setTimeout(() => setIsScrolling(false), 300);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (t) clearTimeout(t);
+    };
+  }, []);
+
+  const visibleRows = useMemo(() => {
+    if (!shouldHideReadElectricityNews) return allRows;
+    if (isScrolling) return allRows; // hoãn filter, render full list
+    return allRows.filter((r) => !readElectricityNewsIds.has(r.id));
+  }, [allRows, shouldHideReadElectricityNews, readElectricityNewsIds, isScrolling]);
+
   const isEmpty = !isLoading && allRows.length === 0;
-  const hiddenCount = allRows.length - visibleRows.length;
+  const hiddenCount = shouldHideReadElectricityNews
+    ? allRows.filter((r) => readElectricityNewsIds.has(r.id)).length
+    : 0;
 
   // Mark-as-read khi card scroll qua phía trên header + buffer 60px.
   // Pattern giống Index.tsx (/): scroll listener throttled bằng setTimeout
@@ -139,13 +159,13 @@ const ElectricityNews = () => {
         if (processing) return;
         processing = true;
         requestAnimationFrame(() => {
-          const header = document.querySelector("header");
-          const headerBottom = header ? header.getBoundingClientRect().bottom : 0;
-          const triggerLine = headerBottom + 60; // buffer zone
+          // Trigger: card phải ra HẲN viewport top (rect.bottom < 0).
+          // Trước đây dùng headerBottom+60 — quá nhạy, mark khi card vẫn
+          // đang đọc được, user cảm giác "ẩn quá nhanh".
           const cards = root.querySelectorAll<HTMLElement>("[data-news-id]");
           cards.forEach((card) => {
             const rect = card.getBoundingClientRect();
-            if (rect.bottom < triggerLine) {
+            if (rect.bottom < 0) {
               const id = card.dataset.newsId;
               if (id && !readSetRef.current.has(id)) {
                 markRef.current(id);
