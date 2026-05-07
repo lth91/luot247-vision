@@ -1,3 +1,10 @@
+## [1.34.6](https://github.com/lth91/luot247-vision/compare/v1.34.5...v1.34.6) (2026-05-07)
+
+
+### Bug Fixes
+
+* **d:** captureAnchor dùng refs + scrollTo behavior:instant cross-platform ([ac3f117](https://github.com/lth91/luot247-vision/commit/ac3f1178887719c8e944f08e6e3869bedd0f9bcc))
+
 ## [1.34.5](https://github.com/lth91/luot247-vision/compare/v1.34.4...v1.34.5) (2026-05-07)
 
 
