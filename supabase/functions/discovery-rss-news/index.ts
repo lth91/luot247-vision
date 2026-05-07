@@ -18,8 +18,8 @@ const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 const FEED_FETCH_TIMEOUT_MS = 15000;
 const ARTICLE_FETCH_TIMEOUT_MS = 20000;
 const WINDOW_MS = 24 * 60 * 60 * 1000;
-const MAX_CANDIDATES_PER_RUN = 30;        // trần bài gửi LLM classify/run (chi phí)
-const MAX_INSERTS_PER_RUN = 15;           // trần bài summarize + insert/run
+const MAX_CANDIDATES_PER_RUN = 60;        // 30 → 60 (audit 5/7 sau combo): 65 candidates pass keyword nhưng cap 30 bỏ qua 32+ bài/cycle. Tăng → catch nhiều hơn, +~$5/mo Anthropic.
+const MAX_INSERTS_PER_RUN = 25;           // 15 → 25 song song với candidate cap
 const MAX_CONTENT_CHARS = 8000;
 const DISCOVERY_SOURCE_NAME = "RSS Discovery";
 const MIN_CLASSIFY_CONFIDENCE = 0.75;     // 0.85 → 0.75 (audit 06/05 từ discovery_classification_log): 18 bài 0.70-0.84 relevant=true bị reject, ~50% on-topic thực (thủy điện, hạ tầng). Hạ để catch ~3-5 bài unique/ngày extra; reversible nếu thấy noise tăng.
