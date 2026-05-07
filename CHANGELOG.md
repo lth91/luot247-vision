@@ -1,3 +1,10 @@
+## [1.34.5](https://github.com/lth91/luot247-vision/compare/v1.34.4...v1.34.5) (2026-05-07)
+
+
+### Bug Fixes
+
+* **d:** instant display:none thay max-height transition ([70261cf](https://github.com/lth91/luot247-vision/commit/70261cfd7da9be64e0830ca465d4a90f7d4db751)), closes [#5](https://github.com/lth91/luot247-vision/issues/5)
+
 ## [1.34.4](https://github.com/lth91/luot247-vision/compare/v1.34.3...v1.34.4) (2026-05-07)
 
 
