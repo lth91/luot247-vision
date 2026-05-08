@@ -1,3 +1,18 @@
+# [1.36.0](https://github.com/lth91/luot247-vision/compare/v1.35.1...v1.36.0) (2026-05-08)
+
+
+### Features
+
+* **autonomy:** thêm báo cáo cost 6h qua Telegram (4 lần/ngày) ([4a06289](https://github.com/lth91/luot247-vision/commit/4a0628917e0b5673657945d63c1ef37dbd8b8a66))
+* **autonomy:** track LLM API cost + Telegram daily report & threshold alert ([3b890ee](https://github.com/lth91/luot247-vision/commit/3b890eeecbe4e5d2a53fad5b6e8867bc127d67ed))
+* **electricity:** pre-LLM fuzzy dedupe + reject lịch cúp điện + prompt chất lượng ([fb0a781](https://github.com/lth91/luot247-vision/commit/fb0a781c725da5c61a691bd19a17c7222ac92e35))
+* **electricity:** thêm Báo Bắc Ninh + Bộ KHCN làm electricity_sources ([d1be537](https://github.com/lth91/luot247-vision/commit/d1be53788565f5335cff22fe68ff1e616d2de6ac)), closes [E#13](https://github.com/E/issues/13) [E#12](https://github.com/E/issues/12)
+
+
+### Reverts
+
+* combo coverage gain để stop API cost spike ([e22bcd6](https://github.com/lth91/luot247-vision/commit/e22bcd62f8fff4c0cbb9d238caa1facca6f6c3a7))
+
 ## [1.35.1](https://github.com/lth91/luot247-vision/compare/v1.35.0...v1.35.1) (2026-05-07)
 
 
