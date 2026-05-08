@@ -15,6 +15,7 @@
 //     -d '{"limit": 50, "days": 3}'
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
+import { logLlmUsage } from "../_shared/llm-usage.ts";
 import { DOMParser, Element } from "https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts";
 
 const corsHeaders = {
@@ -224,6 +225,13 @@ Deno.serve(async (req) => {
           }
           stats.totalIn += s.usage?.input_tokens ?? 0;
           stats.totalOut += s.usage?.output_tokens ?? 0;
+          if (s.usage) {
+            await logLlmUsage(supabase, {
+              functionName: "backfill-summaries",
+              model: MODEL,
+              usage: s.usage,
+            });
+          }
           const wc = wordCount(s.summary);
           const newPub = s.publishedDate ? `${s.publishedDate}T00:00:00Z` : r.published_at;
           const { error: uErr } = await supabase

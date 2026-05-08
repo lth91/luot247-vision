@@ -1,9 +1,10 @@
 // Crawl 27 nguồn tin ngành điện VN, tóm tắt ≤150 từ bằng Claude Haiku 4.5, lưu vào electricity_news.
 // Quét TẤT CẢ nguồn mỗi lần chạy; song song SOURCE_CONCURRENCY nguồn cùng lúc để tôn trọng rate limit.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 import { DOMParser, Element } from "https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts";
 import { isElectricityTopical } from "../_shared/electricity-keywords.ts";
+import { logLlmUsage } from "../_shared/llm-usage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -180,6 +181,7 @@ async function summarizeWithClaude(
   content: string,
   apiKey: string,
   knownPublishedDate: string | null = null,
+  supabase: SupabaseClient | null = null,
 ): Promise<{ summary: string; publishedDate: string | null; relevant: boolean }> {
   const systemPrompt = `Bạn là biên tập viên tin tức chuyên ngành điện Việt Nam. Nhiệm vụ: đọc bài báo, đánh giá có thuộc ngành điện/năng lượng điện không, rồi trả về JSON.
 
@@ -233,6 +235,13 @@ VÍ DỤ MẪU:
     throw new Error(`Anthropic ${res.status}: ${txt.slice(0, 200)}`);
   }
   const data = await res.json();
+  if (supabase && data?.usage) {
+    await logLlmUsage(supabase, {
+      functionName: "crawl-electricity-news",
+      model: ANTHROPIC_MODEL,
+      usage: data.usage,
+    });
+  }
   const raw: string = (data?.content?.[0]?.text ?? "").trim();
 
   // Strip markdown code fences (```json ... ```) Claude đôi khi wrap response.
@@ -492,7 +501,7 @@ async function handleCrawl(req: Request): Promise<Response> {
           }
 
           const preSummaryDateIso = preSummaryDate ? preSummaryDate.slice(0, 10) : null;
-          const { summary, publishedDate, relevant } = await summarizeWithClaude(finalTitle, content, anthropicKey, preSummaryDateIso);
+          const { summary, publishedDate, relevant } = await summarizeWithClaude(finalTitle, content, anthropicKey, preSummaryDateIso, supabase);
           if (!summary) {
             stats.errors.push(`${src.name}: Claude trả về rỗng`);
             continue;

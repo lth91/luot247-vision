@@ -4,7 +4,8 @@
 // Flow: Fetch 15 RSS feed → dedupe vs DB → keyword pre-filter → LLM classify relevance → fetch bài pass →
 // summarize bằng Claude Haiku → insert electricity_news (source_id = virtual "RSS Discovery").
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
+import { logLlmUsage } from "../_shared/llm-usage.ts";
 import { DOMParser, Element } from "https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts";
 import { ELECTRICITY_KEYWORD_RE } from "../_shared/electricity-keywords.ts";
 
@@ -452,6 +453,7 @@ function wordCount(s: string): number {
 async function classifyBatch(
   items: RssItem[],
   apiKey: string,
+  supabase: SupabaseClient | null = null,
 ): Promise<Array<{ relevant: boolean | null; confidence: number; reason: string }>> {
   const batchSize = 10;
   const out: Array<{ relevant: boolean | null; confidence: number; reason: string }> = [];
@@ -473,6 +475,13 @@ async function classifyBatch(
     });
     if (!res.ok) throw new Error(`classify HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const data = await res.json();
+    if (supabase && data?.usage) {
+      await logLlmUsage(supabase, {
+        functionName: "discovery-rss-news:classify",
+        model: ANTHROPIC_MODEL,
+        usage: data.usage,
+      });
+    }
     const text: string = data?.content?.[0]?.text ?? "[]";
     const m = text.match(/\[[\s\S]*\]/);
     let parsed: unknown;
@@ -499,6 +508,7 @@ async function summarizeWithClaude(
   content: string,
   apiKey: string,
   knownPublishedDate: string | null = null,
+  supabase: SupabaseClient | null = null,
 ): Promise<{ summary: string; publishedDate: string | null }> {
   const todayIso = new Date().toISOString().slice(0, 10);
   const dateHint = knownPublishedDate
@@ -517,6 +527,13 @@ async function summarizeWithClaude(
   });
   if (!res.ok) throw new Error(`summarize HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const data = await res.json();
+  if (supabase && data?.usage) {
+    await logLlmUsage(supabase, {
+      functionName: "discovery-rss-news:summarize",
+      model: ANTHROPIC_MODEL,
+      usage: data.usage,
+    });
+  }
   const raw: string = (data?.content?.[0]?.text ?? "").trim();
 
   // Strip markdown fences Claude đôi khi wrap (```json ... ```)
@@ -704,7 +721,7 @@ async function handle(req?: Request): Promise<Response> {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-  const classifications = await classifyBatch(toClassify, anthropicKey);
+  const classifications = await classifyBatch(toClassify, anthropicKey, supabase);
   stats.classified = classifications.length;
   const relevant = toClassify.filter((_, i) => {
     const c = classifications[i];
@@ -765,7 +782,7 @@ async function handle(req?: Request): Promise<Response> {
       }
 
       const preDateIso = preDate ? preDate.slice(0, 10) : null;
-      const { summary, publishedDate } = await summarizeWithClaude(title, content, anthropicKey, preDateIso);
+      const { summary, publishedDate } = await summarizeWithClaude(title, content, anthropicKey, preDateIso, supabase);
       if (!summary) {
         stats.errors.push(`${it.feedName}: Claude empty summary`);
         return;

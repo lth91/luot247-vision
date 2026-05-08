@@ -7,6 +7,7 @@
 // Out of scope: tier 3 (chỉ disable, không tốn LLM cost).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { logLlmUsage } from "../_shared/llm-usage.ts";
 import { sendTelegram } from "../_shared/telegram.ts";
 
 const corsHeaders = {
@@ -75,6 +76,7 @@ async function llmSuggestPattern(
   links: string[],
   oldPattern: string | null,
   apiKey: string,
+  supabase: ReturnType<typeof createClient> | null = null,
 ): Promise<{ pattern: string | null; confidence: number; reason: string }> {
   const sample = links.slice(0, MAX_LINKS_TO_LLM).map((l) => `  ${l}`).join("\n");
   const userMsg = `Source: ${sourceName}
@@ -108,6 +110,13 @@ Yêu cầu pattern:
     return { pattern: null, confidence: 0, reason: `llm_http_${res.status}` };
   }
   const data = await res.json();
+  if (supabase && data?.usage) {
+    await logLlmUsage(supabase, {
+      functionName: "auto-fix-selector",
+      model: ANTHROPIC_MODEL,
+      usage: data.usage,
+    });
+  }
   const text: string = data?.content?.[0]?.text ?? "";
   const m = text.match(/\{[\s\S]*\}/);
   if (!m) return { pattern: null, confidence: 0, reason: "no_json" };
@@ -172,7 +181,7 @@ async function fixOne(
   }
 
   // 3. LLM suggest pattern
-  const suggestion = await llmSuggestPattern(source.name, links, source.list_link_pattern, apiKey);
+  const suggestion = await llmSuggestPattern(source.name, links, source.list_link_pattern, apiKey, supabase);
   if (!suggestion.pattern) {
     return { ...base, result: "rejected_llm_fail", llm_reason: suggestion.reason, llm_confidence: suggestion.confidence };
   }
