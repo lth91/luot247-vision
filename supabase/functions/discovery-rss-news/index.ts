@@ -7,7 +7,7 @@
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 import { logLlmUsage } from "../_shared/llm-usage.ts";
 import { DOMParser, Element } from "https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts";
-import { ELECTRICITY_KEYWORD_RE } from "../_shared/electricity-keywords.ts";
+import { ELECTRICITY_KEYWORD_RE, isOperationalScheduleNoise } from "../_shared/electricity-keywords.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -195,7 +195,12 @@ QUAN TRỌNG — MỞ ĐẦU SUMMARY BẰNG MỐC THỜI GIAN TỰ NHIÊN:
   + Nếu là xu hướng/thống kê cả kỳ: dùng "Năm 2025", "Quý I/2026", "Tuần qua", "Đầu tháng 4/2026".
   + Nếu là dự kiến: dùng "Dự kiến tháng 6/2026", "Đến 2030".
   + TUYỆT ĐỐI không dùng định dạng khô cứng "Ngày 22/04/2026" hay "Vào ngày 22/4/2026".
-  + Không lặp lại tiêu đề, không mở đầu "Bài báo nói về…", "Theo bài viết…".`;
+  + Không lặp lại tiêu đề, không mở đầu "Bài báo nói về…", "Theo bài viết…".
+
+CHẤT LƯỢNG NGÔN NGỮ — KIỂM TRA TRƯỚC KHI TRẢ:
+  + TUYỆT ĐỐI KHÔNG SAI CHÍNH TẢ tiếng Việt. Vd đúng: "cam kết", "bền vững", "phát triển". SAI: "cam krit", "bền vsustainable".
+  + KHÔNG trộn từ tiếng Anh vào giữa cụm từ tiếng Việt. Nếu cần dùng thuật ngữ nước ngoài, viết nguyên cụm bằng tiếng Anh có dấu ngoặc kép, không ghép nửa Việt nửa Anh.
+  + Đọc lại summary trước khi trả về JSON để bắt lỗi chính tả/từ ghép sai.`;
 
 // ---------- Utilities ----------
 
@@ -521,6 +526,7 @@ async function summarizeWithClaude(
     body: JSON.stringify({
       model: ANTHROPIC_MODEL,
       max_tokens: 700,
+      temperature: 0.3,
       system: SUMMARIZE_SYSTEM_PROMPT,
       messages: [{ role: "user", content: userMsg }],
     }),
@@ -695,6 +701,13 @@ async function handle(req?: Request): Promise<Response> {
       }
       continue;
     }
+    // Pre-LLM noise: "Lịch cúp/cắt điện ..." (info dịch vụ, ~13% nhiễu trong audit 07/05)
+    if (isOperationalScheduleNoise(it.title)) {
+      if (stats.blacklistedSamples.length < 5) {
+        stats.blacklistedSamples.push({ title: it.title.slice(0, 120), reason: "operational_schedule" });
+      }
+      continue;
+    }
     keywordPass.push(it);
   }
   stats.afterKeyword = keywordHits;
@@ -779,6 +792,20 @@ async function handle(req?: Request): Promise<Response> {
           stats.errors.push(`${it.feedName}: bài cũ (${preDate.slice(0, 10)})`);
           return;
         }
+      }
+
+      // Pre-LLM fuzzy dedupe (cùng tin lan ra nhiều nguồn) — tiết kiệm summarize token.
+      try {
+        const { data: simRows } = await supabase.rpc("find_similar_existing_title", {
+          candidate_title: title,
+        });
+        if (Array.isArray(simRows) && simRows.length > 0) {
+          const m = simRows[0];
+          stats.errors.push(`${it.feedName}: skip fuzzy-dup of ${m.id} (sim=${(m.similarity ?? 0).toFixed(2)})`);
+          return;
+        }
+      } catch (e) {
+        console.warn(`[fuzzy-dedupe] rpc fail: ${(e as Error).message}`);
       }
 
       const preDateIso = preDate ? preDate.slice(0, 10) : null;

@@ -22,3 +22,14 @@ export function isElectricityTopical(text: string): boolean {
   if (!text) return false;
   return ELECTRICITY_KEYWORD_RE.test(text);
 }
+
+// Operational/service-info noise — info dịch vụ tỉnh thành, không có giá trị tin tức.
+// Match: "Lịch cúp điện ...", "Lịch cắt điện ...", "Lịch mất điện ..." kèm ngày DD/MM.
+// Audit 2026-05-07: 9/71 bài là pattern này (~13% noise).
+const OPERATIONAL_SCHEDULE_RE =
+  /^\s*lịch\s+(cúp|cắt|mất)\s*điện\b/iu;
+
+export function isOperationalScheduleNoise(title: string): boolean {
+  if (!title) return false;
+  return OPERATIONAL_SCHEDULE_RE.test(title);
+}

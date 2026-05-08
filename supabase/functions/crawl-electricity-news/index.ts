@@ -3,7 +3,7 @@
 
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 import { DOMParser, Element } from "https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts";
-import { isElectricityTopical } from "../_shared/electricity-keywords.ts";
+import { isElectricityTopical, isOperationalScheduleNoise } from "../_shared/electricity-keywords.ts";
 import { logLlmUsage } from "../_shared/llm-usage.ts";
 
 const corsHeaders = {
@@ -202,6 +202,11 @@ QUAN TRỌNG — MỞ ĐẦU SUMMARY BẰNG MỐC THỜI GIAN TỰ NHIÊN:
   + TUYỆT ĐỐI không dùng định dạng khô cứng "Ngày 22/04/2026" hay "Vào ngày 22/4/2026".
   + Không lặp lại tiêu đề, không mở đầu "Bài báo nói về…", "Theo bài viết…".
 
+CHẤT LƯỢNG NGÔN NGỮ — KIỂM TRA TRƯỚC KHI TRẢ:
+  + TUYỆT ĐỐI KHÔNG SAI CHÍNH TẢ tiếng Việt. Vd đúng: "cam kết", "bền vững", "phát triển". SAI: "cam krit", "bền vsustainable".
+  + KHÔNG trộn từ tiếng Anh vào giữa cụm từ tiếng Việt. Nếu cần dùng thuật ngữ nước ngoài, viết nguyên cụm bằng tiếng Anh có dấu ngoặc kép, không ghép nửa Việt nửa Anh.
+  + Đọc lại summary trước khi trả về JSON để bắt lỗi chính tả/từ ghép sai.
+
 VÍ DỤ MẪU:
 {"published_date":"2026-04-17","summary":"Sáng 17/4, Bộ Công Thương họp tổ soạn thảo dự án Luật Điện lực sửa đổi dưới sự chủ trì của Thứ trưởng Nguyễn Hoàng Long. Dự án được tách thành nhiệm vụ lập pháp riêng, đã lấy ý kiến từ đầu tháng 2/2026 và công khai hồ sơ trên các cổng thông tin."}
 
@@ -225,6 +230,7 @@ VÍ DỤ MẪU:
     body: JSON.stringify({
       model: ANTHROPIC_MODEL,
       max_tokens: 700,
+      temperature: 0.3,
       system: systemPrompt,
       messages: [{ role: "user", content: userMsg }],
     }),
@@ -482,6 +488,28 @@ async function handleCrawl(req: Request): Promise<Response> {
             continue;
           }
           const finalTitle = (c.title || title || "").trim() || "(Không có tiêu đề)";
+
+          // Pre-LLM noise filter: bỏ "Lịch cúp/cắt điện ..." (info dịch vụ tỉnh, ~13% noise).
+          if (isOperationalScheduleNoise(finalTitle)) {
+            stats.errors.push(`${src.name}: skip operational-schedule noise — ${finalTitle.slice(0, 60)}`);
+            continue;
+          }
+
+          // Pre-LLM fuzzy dedupe: cùng tin lan ra nhiều nguồn (vd Quảng Trạch 9 nguồn/ngày).
+          // RPC dùng pg_trgm threshold 0.7, 7-day window. Skip nếu match → tiết kiệm token.
+          try {
+            const { data: simRows } = await supabase.rpc("find_similar_existing_title", {
+              candidate_title: finalTitle,
+            });
+            if (Array.isArray(simRows) && simRows.length > 0) {
+              const m = simRows[0];
+              stats.errors.push(`${src.name}: skip fuzzy-dup of ${m.id} (sim=${(m.similarity ?? 0).toFixed(2)}) — ${finalTitle.slice(0, 60)}`);
+              continue;
+            }
+          } catch (e) {
+            // Không block crawl nếu RPC lỗi — chỉ log.
+            console.warn(`[fuzzy-dedupe] rpc fail: ${(e as Error).message}`);
+          }
 
           // Xác định ngày xuất bản trước khi tốn token Claude.
           // Ưu tiên: meta tag HTML > RSS pubDate. Nếu cả hai đều không có, sẽ
