@@ -1,7 +1,8 @@
 // Báo cáo cost API Anthropic qua Telegram.
-// 2 modes (qua query param ?mode=...):
-//   - daily       → tổng hôm qua (00:00→24:00 GMT+7) + breakdown per function + so 7-day avg
-//   - hourly-check → 1h vừa qua. Alert nếu cost > $HOURLY_THRESHOLD_USD.
+// 3 modes (qua query param ?mode=...):
+//   - daily        → tổng hôm qua (00:00→24:00 GMT+7) + breakdown + so 7-day avg
+//   - 6h-report    → tổng 6h vừa qua + breakdown per function (luôn gửi, kể cả $0)
+//   - hourly-check → 1h vừa qua. Chỉ alert nếu cost > $HOURLY_THRESHOLD_USD.
 //
 // Test mode: ?test=1 gửi message ping kiểm tra Telegram + secret còn sống.
 //
@@ -138,6 +139,40 @@ async function handleDaily(
   return { ok: true, total_usd: today.totalCost, label };
 }
 
+async function handle6hReport(
+  sb: ReturnType<typeof createClient>,
+  tgToken: string,
+  tgChatId: string,
+): Promise<{ ok: boolean; total_usd: number }> {
+  const end = new Date();
+  const start = new Date(end.getTime() - 6 * 3600 * 1000);
+  const agg = await aggregate(sb, start.toISOString(), end.toISOString());
+
+  // Format giờ VN ngắn gọn cho header
+  const startVn = new Date(start.getTime() + 7 * 3600 * 1000).toISOString().slice(11, 16);
+  const endVn = new Date(end.getTime() + 7 * 3600 * 1000).toISOString().slice(11, 16);
+
+  const lines: string[] = [];
+  lines.push(`📊 *Báo cáo API cost 6h — ${startVn}→${endVn} VN*`);
+  lines.push("");
+  lines.push(`Tổng: *${fmtUsd(agg.totalCost)}* (${agg.totalCalls} calls)`);
+  lines.push(`Tokens: in ${fmtTokens(agg.totalIn)} / out ${fmtTokens(agg.totalOut)}`);
+  lines.push("");
+  if (agg.rows.length === 0) {
+    lines.push("_Không có call LLM nào trong 6h qua._");
+  } else {
+    lines.push("*Theo function:*");
+    for (const r of agg.rows) {
+      lines.push(
+        `• \`${escapeMd(r.function_name)}\` — ${fmtUsd(r.cost_usd)} (${r.call_count} calls, ${fmtTokens(r.input_tokens)}↗ / ${fmtTokens(r.output_tokens)}↘)`,
+      );
+    }
+  }
+
+  await sendTelegram(tgToken, tgChatId, lines.join("\n"));
+  return { ok: true, total_usd: agg.totalCost };
+}
+
 async function handleHourlyCheck(
   sb: ReturnType<typeof createClient>,
   tgToken: string,
@@ -210,6 +245,12 @@ Deno.serve(async (req) => {
   try {
     if (mode === "hourly-check") {
       const result = await handleHourlyCheck(sb, tgToken, tgChatId);
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (mode === "6h-report") {
+      const result = await handle6hReport(sb, tgToken, tgChatId);
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
