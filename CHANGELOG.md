@@ -1,3 +1,10 @@
+## [1.36.1](https://github.com/lth91/luot247-vision/compare/v1.36.0...v1.36.1) (2026-05-09)
+
+
+### Bug Fixes
+
+* **electricity:** bỏ ^ anchor trong pattern Báo Bắc Ninh + Bộ KHCN ([cf1e78d](https://github.com/lth91/luot247-vision/commit/cf1e78d6ca221a961dea552c0cb6a86d1946e21a))
+
 # [1.36.0](https://github.com/lth91/luot247-vision/compare/v1.35.1...v1.36.0) (2026-05-08)
 
 
