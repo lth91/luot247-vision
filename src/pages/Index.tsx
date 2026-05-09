@@ -665,13 +665,11 @@ const Index = () => {
       />
 
       <main className="w-full max-w-2xl mx-auto px-4 py-4">
-        {isLoading || !isScrollRestored ? (
+        {isLoading ? (
           <div className="text-center py-12">
             <div className="flex flex-col items-center space-y-4">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              <p className="text-muted-foreground">
-                {isLoading ? "Đang tải tin tức..." : "Đang khôi phục vị trí đọc..."}
-              </p>
+              <p className="text-muted-foreground">Đang tải tin tức...</p>
             </div>
           </div>
         ) : news.length === 0 ? (
@@ -679,7 +677,18 @@ const Index = () => {
             <p className="text-muted-foreground">Không có tin tức nào</p>
           </div>
         ) : (
-          <div className={`border rounded-lg overflow-hidden bg-card ${isScrollRestored ? 'scroll-restored' : 'scroll-restoring'}`}>
+          <>
+            {/* Spinner overlay khi đang restore scroll — cards vẫn render để
+                 querySelector tìm được, chỉ ẩn visually qua scroll-restoring class.
+                 Trước đây gate `!isScrollRestored` block cards khỏi DOM → restore
+                 không tìm được target → fallback scroll lệch vị trí. */}
+            {!isScrollRestored && (
+              <div className="text-center py-12 fixed inset-0 z-10 bg-background flex flex-col items-center justify-center space-y-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="text-muted-foreground">Đang khôi phục vị trí đọc...</p>
+              </div>
+            )}
+            <div className={`border rounded-lg overflow-hidden bg-card ${isScrollRestored ? 'scroll-restored' : 'scroll-restoring'}`}>
             {filteredNews.map((item, index) => (
               <div
                 key={item.id}
@@ -703,7 +712,8 @@ const Index = () => {
                 />
               </div>
             ))}
-          </div>
+            </div>
+          </>
         )}
       </main>
     </div>
