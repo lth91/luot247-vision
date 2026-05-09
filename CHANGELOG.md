@@ -1,3 +1,10 @@
+## [1.37.4](https://github.com/lth91/luot247-vision/compare/v1.37.3...v1.37.4) (2026-05-09)
+
+
+### Bug Fixes
+
+* **mobile:** disable RADICAL setTimeout restore — override scrollTo(0,0) ([25e942f](https://github.com/lth91/luot247-vision/commit/25e942fa2b082c08cc235d32cd6e494adb4258ef))
+
 ## [1.37.3](https://github.com/lth91/luot247-vision/compare/v1.37.2...v1.37.3) (2026-05-09)
 
 
