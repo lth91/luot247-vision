@@ -1,3 +1,10 @@
+## [1.37.1](https://github.com/lth91/luot247-vision/compare/v1.37.0...v1.37.1) (2026-05-09)
+
+
+### Bug Fixes
+
+* **mobile:** disable native scrollRestoration để iOS Chrome không giữ vị trí cũ sau refresh ([cad09d6](https://github.com/lth91/luot247-vision/commit/cad09d6a3dde828656e5ef0b4c67a5bddddc6544)), closes [#5](https://github.com/lth91/luot247-vision/issues/5) [#5](https://github.com/lth91/luot247-vision/issues/5)
+
 # [1.37.0](https://github.com/lth91/luot247-vision/compare/v1.36.1...v1.37.0) (2026-05-09)
 
 
