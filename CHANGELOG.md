@@ -1,3 +1,10 @@
+## [1.37.7](https://github.com/lth91/luot247-vision/compare/v1.37.6...v1.37.7) (2026-05-09)
+
+
+### Bug Fixes
+
+* **mobile:** scroll lock 2s trong head script — install listener trước React ([960ecd5](https://github.com/lth91/luot247-vision/commit/960ecd5b8844dc00e51f02a989f9ddaf4b3d65f4))
+
 ## [1.37.6](https://github.com/lth91/luot247-vision/compare/v1.37.5...v1.37.6) (2026-05-09)
 
 
