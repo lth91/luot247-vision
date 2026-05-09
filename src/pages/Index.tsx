@@ -480,24 +480,9 @@ const Index = () => {
         saveScrollPosition();
       }, 5000); // Save every 5 seconds
       
-      // Restore position on load
-      console.log('📱 Setting up RADICAL restore on load');
-      restoreScrollPosition();
-      
-      // Also try to restore after news are loaded
-      const checkAndRestore = () => {
-        console.log('📱 checkAndRestore called, newsItemsRef size:', newsItemsRef.current.size);
-        if (newsItemsRef.current.size > 0) {
-          console.log('📱 News loaded, calling restoreScrollPosition');
-          restoreScrollPosition();
-        } else {
-          console.log('📱 News not loaded yet, retrying in 500ms');
-          setTimeout(checkAndRestore, 500);
-        }
-      };
-      
-      // Start checking after a short delay
-      setTimeout(checkAndRestore, 200);
+      // RADICAL restore disabled 2026-05-09: replaced bởi effect "hide passed +
+      // scroll=0" ở trên. RADICAL setTimeout(1000) override scrollTo(0,0) của
+      // effect mới → user vẫn thấy scroll lệch. Save logic giữ nguyên.
       
       return () => {
         window.removeEventListener('beforeunload', saveScrollPosition);
