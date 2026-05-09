@@ -120,8 +120,7 @@ const Index = () => {
   };
 
   // Mobile restore strategy (UX 09/05): hide articles trước tin user đang đọc,
-  // scroll về top → tin đang đọc là tin đầu tiên hiển thị (giống /d).
-  // Chạy ngay khi filteredNews populate, KHÔNG đợi setTimeout(1000) của RADICAL.
+  // FORCE scroll=0 (browser không tự restore vị trí cũ).
   useEffect(() => {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
     if (!isMobile) return;
@@ -129,30 +128,31 @@ const Index = () => {
     if (isScrollRestored) return;
 
     const savedId = localStorage.getItem('luot247_last_visible_news');
-    if (!savedId) {
-      // Không có saved — hiển thị bình thường từ tin đầu
-      window.scrollTo(0, 0);
-      setIsScrollRestored(true);
-      return;
+
+    // Hide articles trước savedId (user đã lướt qua) nếu có
+    if (savedId) {
+      const idx = filteredNews.findIndex((item) => item.id === savedId);
+      if (idx > 0) {
+        const passed = new Set<string>();
+        for (let i = 0; i < idx; i++) {
+          passed.add(filteredNews[i].id);
+        }
+        setPassedNewsIds(passed);
+      }
     }
 
-    const idx = filteredNews.findIndex((item) => item.id === savedId);
-    if (idx <= 0) {
-      // Không tìm được hoặc tin saved đã ở đầu — không cần hide
-      window.scrollTo(0, 0);
-      setIsScrollRestored(true);
-      return;
-    }
+    // FORCE scroll=0 nhiều lần (iOS Chrome có thể auto-restore vị trí cũ
+    // trong vài trăm ms đầu sau load → cần override liên tục).
+    const forceTop = () => window.scrollTo(0, 0);
+    forceTop();
+    requestAnimationFrame(forceTop);
+    const timers = [50, 150, 300, 600, 1000].map((ms) => setTimeout(forceTop, ms));
 
-    // Hide tin từ index 0..idx-1 (user đã lướt qua trước khi refresh)
-    const passed = new Set<string>();
-    for (let i = 0; i < idx; i++) {
-      passed.add(filteredNews[i].id);
-    }
-    setPassedNewsIds(passed);
-    window.scrollTo(0, 0);
-    // requestAnimationFrame để đảm bảo paint sau filter render xong
-    requestAnimationFrame(() => setIsScrollRestored(true));
+    setIsScrollRestored(true);
+
+    return () => {
+      timers.forEach(clearTimeout);
+    };
   }, [isLoading, filteredNews, isScrollRestored]);
 
   // Legacy mobile RADICAL restore (giữ làm fallback, sẽ noop nếu effect trên đã set restored)
