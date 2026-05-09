@@ -1,3 +1,10 @@
+## [1.37.3](https://github.com/lth91/luot247-vision/compare/v1.37.2...v1.37.3) (2026-05-09)
+
+
+### Bug Fixes
+
+* **mobile:** hide articles trước tin đang đọc + scroll=0 sau refresh ([dabec7c](https://github.com/lth91/luot247-vision/commit/dabec7c9a08e9fc1b1e4a9c85dda9b4a9b214b20)), closes [#5](https://github.com/lth91/luot247-vision/issues/5)
+
 ## [1.37.2](https://github.com/lth91/luot247-vision/compare/v1.37.1...v1.37.2) (2026-05-09)
 
 
