@@ -1,3 +1,10 @@
+## [1.37.6](https://github.com/lth91/luot247-vision/compare/v1.37.5...v1.37.6) (2026-05-09)
+
+
+### Bug Fixes
+
+* **mobile:** multi-layer force scroll=0 sau refresh (overflow-anchor + watchdog) ([2be2045](https://github.com/lth91/luot247-vision/commit/2be2045830f7e85cad9aa413ee551d062fe9177b))
+
 ## [1.37.5](https://github.com/lth91/luot247-vision/compare/v1.37.4...v1.37.5) (2026-05-09)
 
 
