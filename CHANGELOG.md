@@ -1,3 +1,10 @@
+# [1.37.0](https://github.com/lth91/luot247-vision/compare/v1.36.1...v1.37.0) (2026-05-09)
+
+
+### Features
+
+* **discovery:** tier-1 bypass keyword filter + thêm 3 nguồn (BNews, TBTC VN, Người Đưa Tin) ([1895730](https://github.com/lth91/luot247-vision/commit/1895730220048c000ec9aaca1c1218b0fa8ccb7d))
+
 ## [1.36.1](https://github.com/lth91/luot247-vision/compare/v1.36.0...v1.36.1) (2026-05-09)
 
 
