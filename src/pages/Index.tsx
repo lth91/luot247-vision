@@ -14,6 +14,7 @@ const Index = () => {
   const [showReadNews, setShowReadNews] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isScrollRestored, setIsScrollRestored] = useState(false);
+  const [passedNewsIds, setPassedNewsIds] = useState<Set<string>>(new Set());
   const newsItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
   
   // Use ReadingContext
@@ -118,7 +119,43 @@ const Index = () => {
     }
   };
 
-  // Mobile-optimized approach: Completely hide content until scroll is 100% stable
+  // Mobile restore strategy (UX 09/05): hide articles trước tin user đang đọc,
+  // scroll về top → tin đang đọc là tin đầu tiên hiển thị (giống /d).
+  // Chạy ngay khi filteredNews populate, KHÔNG đợi setTimeout(1000) của RADICAL.
+  useEffect(() => {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+    if (!isMobile) return;
+    if (isLoading || filteredNews.length === 0) return;
+    if (isScrollRestored) return;
+
+    const savedId = localStorage.getItem('luot247_last_visible_news');
+    if (!savedId) {
+      // Không có saved — hiển thị bình thường từ tin đầu
+      window.scrollTo(0, 0);
+      setIsScrollRestored(true);
+      return;
+    }
+
+    const idx = filteredNews.findIndex((item) => item.id === savedId);
+    if (idx <= 0) {
+      // Không tìm được hoặc tin saved đã ở đầu — không cần hide
+      window.scrollTo(0, 0);
+      setIsScrollRestored(true);
+      return;
+    }
+
+    // Hide tin từ index 0..idx-1 (user đã lướt qua trước khi refresh)
+    const passed = new Set<string>();
+    for (let i = 0; i < idx; i++) {
+      passed.add(filteredNews[i].id);
+    }
+    setPassedNewsIds(passed);
+    window.scrollTo(0, 0);
+    // requestAnimationFrame để đảm bảo paint sau filter render xong
+    requestAnimationFrame(() => setIsScrollRestored(true));
+  }, [isLoading, filteredNews, isScrollRestored]);
+
+  // Legacy mobile RADICAL restore (giữ làm fallback, sẽ noop nếu effect trên đã set restored)
   useEffect(() => {
     // Detect if user is on mobile
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
@@ -689,7 +726,7 @@ const Index = () => {
               </div>
             )}
             <div className={`border rounded-lg overflow-hidden bg-card ${isScrollRestored ? 'scroll-restored' : 'scroll-restoring'}`}>
-            {filteredNews.map((item, index) => (
+            {filteredNews.filter((item) => !passedNewsIds.has(item.id)).map((item, index, arr) => (
               <div
                 key={item.id}
                 ref={(el) => {
@@ -708,7 +745,7 @@ const Index = () => {
                   url={item.url}
                   createdAt={item.updated_at}  // Use updated_at to show approval time
                   isAuthenticated={!!session}
-                  isLast={index === filteredNews.length - 1}
+                  isLast={index === arr.length - 1}
                 />
               </div>
             ))}
