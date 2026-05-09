@@ -1,3 +1,10 @@
+## [1.37.2](https://github.com/lth91/luot247-vision/compare/v1.37.1...v1.37.2) (2026-05-09)
+
+
+### Bug Fixes
+
+* **mobile:** luôn render cards khi data loaded, ẩn visually qua overlay ([362e7a1](https://github.com/lth91/luot247-vision/commit/362e7a145fce15309de19e1359e9149935cce148))
+
 ## [1.37.1](https://github.com/lth91/luot247-vision/compare/v1.37.0...v1.37.1) (2026-05-09)
 
 
