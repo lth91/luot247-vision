@@ -1,3 +1,10 @@
+## [1.37.5](https://github.com/lth91/luot247-vision/compare/v1.37.4...v1.37.5) (2026-05-09)
+
+
+### Bug Fixes
+
+* **mobile:** force scrollTo(0,0) lặp 6 lần sau refresh để override iOS auto-restore ([1caa54f](https://github.com/lth91/luot247-vision/commit/1caa54f66b37123c3ed280c3250f15c1f70583d8)), closes [#10](https://github.com/lth91/luot247-vision/issues/10)
+
 ## [1.37.4](https://github.com/lth91/luot247-vision/compare/v1.37.3...v1.37.4) (2026-05-09)
 
 
