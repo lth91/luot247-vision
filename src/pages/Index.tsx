@@ -141,17 +141,32 @@ const Index = () => {
       }
     }
 
-    // FORCE scroll=0 nhiều lần (iOS Chrome có thể auto-restore vị trí cũ
-    // trong vài trăm ms đầu sau load → cần override liên tục).
-    const forceTop = () => window.scrollTo(0, 0);
+    // FORCE scroll=0 — multi-layer để override mọi nguồn gây drift:
+    // 1. window.scrollTo + documentElement.scrollTop + body.scrollTop (cross-browser)
+    // 2. Lặp setInterval(50ms) trong 2s, monitor + reset nếu drift
+    // 3. requestAnimationFrame để chen sau paint
+    const forceTop = () => {
+      window.scrollTo(0, 0);
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    };
     forceTop();
     requestAnimationFrame(forceTop);
-    const timers = [50, 150, 300, 600, 1000].map((ms) => setTimeout(forceTop, ms));
+
+    // Watchdog: monitor scroll trong 2s, force về 0 nếu phát hiện drift.
+    // iOS Chrome có thể delay native restore tới vài trăm ms sau load.
+    const watchdog = setInterval(() => {
+      if (window.scrollY !== 0 || (document.documentElement?.scrollTop ?? 0) !== 0) {
+        forceTop();
+      }
+    }, 50);
+    const stopWatchdog = setTimeout(() => clearInterval(watchdog), 2000);
 
     setIsScrollRestored(true);
 
     return () => {
-      timers.forEach(clearTimeout);
+      clearInterval(watchdog);
+      clearTimeout(stopWatchdog);
     };
   }, [isLoading, filteredNews, isScrollRestored]);
 

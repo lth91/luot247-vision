@@ -204,6 +204,13 @@ kbd {
   }
 }
 
+/* Disable browser scroll anchor — không cho iOS/Chrome auto-adjust scroll
+   khi DOM shift (cards render, ads load v.v.). Quan trọng cho refresh UX:
+   force scrollTo(0,0) sẽ không bị overflow-anchor kéo về vị trí cũ. */
+html {
+  overflow-anchor: none;
+}
+
 /* Scroll restoration state - completely hide content during restoration */
 .scroll-restoring {
   opacity: 0 !important;
