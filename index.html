@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LƯỚT 247 - Góc nhìn Việt Nam</title>
+    <!-- Disable browser native scroll restoration TRƯỚC khi React boot.
+         iOS Chrome mặc định restore pixel cũ → ghi đè logic restore-to-news của app
+         (user thấy "page giữ nguyên vị trí" thay vì "scroll tới tin đang đọc"). -->
+    <script>
+      if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+      }
+      // Reset top ngay để tránh flash vị trí cũ trước khi React render
+      window.scrollTo(0, 0);
+    </script>
     <meta name="description" content="Ngắn gọn, dễ đọc, chọn lọc từ báo chí. Cập nhật liên tục, phục vụ cộng đồng.">
     <meta name="author" content="LƯỚT 247" />
 
