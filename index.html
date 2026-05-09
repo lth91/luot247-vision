@@ -4,16 +4,35 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LƯỚT 247 - Góc nhìn Việt Nam</title>
-    <!-- Disable browser native scroll restoration TRƯỚC khi React boot.
-         iOS Chrome/Safari mặc định restore pixel cũ → ghi đè logic restore của app. -->
+    <!-- Disable browser native scroll restoration + LOCK scroll=0 trong 2s
+         sau load. iOS Chrome/Safari restore vị trí cũ ngay cả khi
+         scrollRestoration='manual'. Listener install TRƯỚC React boot →
+         catch mọi scroll attempt từ iOS. -->
     <script>
       if ('scrollRestoration' in history) {
         history.scrollRestoration = 'manual';
       }
-      // Reset top trên multiple targets để chắc chắn cross-browser
       window.scrollTo(0, 0);
       if (document.documentElement) document.documentElement.scrollTop = 0;
       if (document.body) document.body.scrollTop = 0;
+
+      // Scroll lock: 2s window. Bất kỳ scroll event nào → force về 0.
+      // pageshow event fires cả trên bfcache restore (back/forward) → re-arm lock.
+      var __scrollLockUntil = Date.now() + 2000;
+      var __forceTop = function() {
+        window.scrollTo(0, 0);
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
+      };
+      window.addEventListener('scroll', function() {
+        if (Date.now() < __scrollLockUntil && window.scrollY !== 0) {
+          __forceTop();
+        }
+      }, { passive: true });
+      window.addEventListener('pageshow', function() {
+        __scrollLockUntil = Date.now() + 2000;
+        __forceTop();
+      });
     </script>
     <meta name="description" content="Ngắn gọn, dễ đọc, chọn lọc từ báo chí. Cập nhật liên tục, phục vụ cộng đồng.">
     <meta name="author" content="LƯỚT 247" />

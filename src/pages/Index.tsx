@@ -119,8 +119,9 @@ const Index = () => {
     }
   };
 
-  // Mobile restore strategy (UX 09/05): hide articles trước tin user đang đọc,
-  // FORCE scroll=0 (browser không tự restore vị trí cũ).
+  // Mobile restore strategy (UX 09/05): chỉ hide articles trước tin đang đọc.
+  // Scroll lock được xử lý trong head script (index.html) — install listener
+  // trước React boot để catch iOS restore.
   useEffect(() => {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
     if (!isMobile) return;
@@ -128,8 +129,6 @@ const Index = () => {
     if (isScrollRestored) return;
 
     const savedId = localStorage.getItem('luot247_last_visible_news');
-
-    // Hide articles trước savedId (user đã lướt qua) nếu có
     if (savedId) {
       const idx = filteredNews.findIndex((item) => item.id === savedId);
       if (idx > 0) {
@@ -141,33 +140,8 @@ const Index = () => {
       }
     }
 
-    // FORCE scroll=0 — multi-layer để override mọi nguồn gây drift:
-    // 1. window.scrollTo + documentElement.scrollTop + body.scrollTop (cross-browser)
-    // 2. Lặp setInterval(50ms) trong 2s, monitor + reset nếu drift
-    // 3. requestAnimationFrame để chen sau paint
-    const forceTop = () => {
-      window.scrollTo(0, 0);
-      if (document.documentElement) document.documentElement.scrollTop = 0;
-      if (document.body) document.body.scrollTop = 0;
-    };
-    forceTop();
-    requestAnimationFrame(forceTop);
-
-    // Watchdog: monitor scroll trong 2s, force về 0 nếu phát hiện drift.
-    // iOS Chrome có thể delay native restore tới vài trăm ms sau load.
-    const watchdog = setInterval(() => {
-      if (window.scrollY !== 0 || (document.documentElement?.scrollTop ?? 0) !== 0) {
-        forceTop();
-      }
-    }, 50);
-    const stopWatchdog = setTimeout(() => clearInterval(watchdog), 2000);
-
+    window.scrollTo(0, 0);
     setIsScrollRestored(true);
-
-    return () => {
-      clearInterval(watchdog);
-      clearTimeout(stopWatchdog);
-    };
   }, [isLoading, filteredNews, isScrollRestored]);
 
   // Legacy mobile RADICAL restore (giữ làm fallback, sẽ noop nếu effect trên đã set restored)

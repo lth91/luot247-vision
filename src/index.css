@@ -211,6 +211,7 @@ html {
   overflow-anchor: none;
 }
 
+
 /* Scroll restoration state - completely hide content during restoration */
 .scroll-restoring {
   opacity: 0 !important;
