@@ -62,6 +62,13 @@ const FEEDS: { name: string; url: string }[] = [
   // Phase 1 classifier (threshold 0.85 + blacklist) handle false positive.
   { name: "Báo Chính Phủ",            url: "https://baochinhphu.vn/rss" },
   { name: "SGGP - Kinh tế",           url: "https://www.sggp.org.vn/rss/kinh-te-3.rss" },
+  // Phase F2 (audit 08/05 nhân viên): bài E#11, 16, 18, 19 từ nguồn chưa có
+  { name: "BNews - Kinh tế VN",       url: "https://bnews.vn/rss/kinh-te-viet-nam-1.rss" },
+  { name: "BNews - Kinh tế Thế giới", url: "https://bnews.vn/rss/kinh-te-the-gioi-2.rss" },
+  { name: "BNews - Doanh nghiệp",     url: "https://bnews.vn/rss/doanh-nghiep-6.rss" },
+  { name: "Thời báo Tài chính VN",    url: "https://thoibaotaichinhvietnam.vn/rss_feed/" },
+  { name: "Người Đưa Tin - Kinh tế",  url: "https://www.nguoiduatin.vn/rss/kinh-te.rss" },
+  { name: "Người Đưa Tin - Công nghệ",url: "https://www.nguoiduatin.vn/rss/cong-nghe.rss" },
 ];
 
 // HTML list-page feeds: các site không có RSS. Mỗi feed có listUrl (trang section)
@@ -466,7 +473,7 @@ async function classifyBatch(
   for (let start = 0; start < items.length; start += batchSize) {
     const batch = items.slice(start, start + batchSize);
     const userMsg = `Phân loại ${batch.length} bài, trả MẢNG JSON ${batch.length} phần tử theo đúng thứ tự.\n\n`
-      + batch.map((c, i) => `[${i}] TITLE: ${c.title}\nDESC: ${(c.description || "").slice(0, 180)}`).join("\n\n");
+      + batch.map((c, i) => `[${i}] TITLE: ${c.title}\nDESC: ${(c.description || "").slice(0, 400)}`).join("\n\n");
 
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -689,10 +696,19 @@ async function handle(req?: Request): Promise<Response> {
   stats.afterWindow = byUrl.size;
 
   // 3. Keyword pre-filter + title blacklist
+  // Tier-1 trusted sources bypass KEYWORD_RE: bài chính sách Tô Lâm/Lê Minh Hưng/Bộ Công Thương
+  // thường có title protocol-style không có "điện" keyword nhưng body có nội dung quan trọng.
+  // Audit 08/05: missed 3 bài Tô Lâm Mumbai + Lê Minh Hưng ASEAN + Phan Thị Thắng MoIT.
+  // Trade-off: thêm ~100-200 classifier calls/ngày (~$0.05-0.1) đổi lấy yield chính sách.
+  const TIER1_TRUSTED_FEEDS = new Set([
+    "Báo Chính Phủ",
+    "Bộ Công Thương - Tin tức",
+  ]);
   let keywordPass: RssItem[] = [];
   let keywordHits = 0;
   for (const it of byUrl.values()) {
-    if (!KEYWORD_RE.test(`${it.title} ${it.description}`)) continue;
+    const isTier1 = TIER1_TRUSTED_FEEDS.has(it.feedName);
+    if (!isTier1 && !KEYWORD_RE.test(`${it.title} ${it.description}`)) continue;
     keywordHits++;
     const bl = classifyTitleBlacklist(it.title);
     if (bl.blacklisted) {
