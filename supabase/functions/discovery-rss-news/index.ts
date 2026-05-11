@@ -481,7 +481,10 @@ async function classifyBatch(
       body: JSON.stringify({
         model: ANTHROPIC_MODEL,
         max_tokens: 1500,
-        system: CLASSIFY_SYSTEM_PROMPT,
+        // cache_control: Haiku 4.5 cần ≥4096 tok prefix. CLASSIFY ~2000 tok
+        // → silently không cache. Giữ marker để khi mở rộng examples sau này
+        // (lên >4096) sẽ tự kích hoạt cache + tiết kiệm ~25% trên mỗi batch.
+        system: [{ type: "text", text: CLASSIFY_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
         messages: [{ role: "user", content: userMsg }],
       }),
     });
@@ -534,7 +537,10 @@ async function summarizeWithClaude(
       model: ANTHROPIC_MODEL,
       max_tokens: 700,
       temperature: 0.3,
-      system: SUMMARIZE_SYSTEM_PROMPT,
+      // cache_control: dưới threshold 4096 của Haiku 4.5 (~600 tok). Giữ
+      // marker để forward-compat. SUMMARIZE_SYSTEM_PROMPT hiện đủ rõ, không
+      // pad thêm examples vì sẽ làm output drift style.
+      system: [{ type: "text", text: SUMMARIZE_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: userMsg }],
     }),
   });

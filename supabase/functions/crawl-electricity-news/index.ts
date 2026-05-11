@@ -231,7 +231,10 @@ VÍ DỤ MẪU:
       model: ANTHROPIC_MODEL,
       max_tokens: 700,
       temperature: 0.3,
-      system: systemPrompt,
+      // cache_control trên system prompt — Haiku 4.5 yêu cầu prefix ≥4096
+      // tokens mới cache thật. Prompt hiện tại ~700 tok → cache silently
+      // ignored. Để forward-compat khi prompt nở rộng hoặc đổi model.
+      system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: userMsg }],
     }),
   });
