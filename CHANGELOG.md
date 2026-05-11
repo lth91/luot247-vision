@@ -1,3 +1,10 @@
+## [1.37.8](https://github.com/lth91/luot247-vision/compare/v1.37.7...v1.37.8) (2026-05-11)
+
+
+### Bug Fixes
+
+* **electricity:** exclude địa danh "Điện Biên/Bàn" khỏi keyword filter + cleanup 4 bài off-topic ([e01d87f](https://github.com/lth91/luot247-vision/commit/e01d87fe7759f71ef066e80ed08aadc36a7e0f5d))
+
 ## [1.37.7](https://github.com/lth91/luot247-vision/compare/v1.37.6...v1.37.7) (2026-05-09)
 
 
