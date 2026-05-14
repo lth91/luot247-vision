@@ -1,3 +1,10 @@
+# [1.38.0](https://github.com/lth91/luot247-vision/compare/v1.37.8...v1.38.0) (2026-05-14)
+
+
+### Features
+
+* **electricity:** add 13 source mới sau QA 5/14 (coverage fix) ([1161217](https://github.com/lth91/luot247-vision/commit/1161217ea612b4b5d863e821aa3f81f6b2386e4e)), closes [#2](https://github.com/lth91/luot247-vision/issues/2) [#24](https://github.com/lth91/luot247-vision/issues/24) [#4](https://github.com/lth91/luot247-vision/issues/4) [#13](https://github.com/lth91/luot247-vision/issues/13) [#26](https://github.com/lth91/luot247-vision/issues/26) [#15](https://github.com/lth91/luot247-vision/issues/15) [#25](https://github.com/lth91/luot247-vision/issues/25) [#9](https://github.com/lth91/luot247-vision/issues/9) [#8](https://github.com/lth91/luot247-vision/issues/8) [#10](https://github.com/lth91/luot247-vision/issues/10) [#3](https://github.com/lth91/luot247-vision/issues/3) [#23](https://github.com/lth91/luot247-vision/issues/23) [#22](https://github.com/lth91/luot247-vision/issues/22) [#19](https://github.com/lth91/luot247-vision/issues/19) [#1](https://github.com/lth91/luot247-vision/issues/1)
+
 ## [1.37.8](https://github.com/lth91/luot247-vision/compare/v1.37.7...v1.37.8) (2026-05-11)
 
 
