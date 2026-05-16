@@ -1,3 +1,10 @@
+# [1.39.0](https://github.com/lth91/luot247-vision/compare/v1.38.0...v1.39.0) (2026-05-16)
+
+
+### Features
+
+* **electricity:** add 2 source mới sau QA 5/16 (coverage fix) ([6bbbbf0](https://github.com/lth91/luot247-vision/commit/6bbbbf0a5234d29e93c310fa1548038bbb8b8c7e)), closes [#10](https://github.com/lth91/luot247-vision/issues/10) [#7](https://github.com/lth91/luot247-vision/issues/7)
+
 # [1.38.0](https://github.com/lth91/luot247-vision/compare/v1.37.8...v1.38.0) (2026-05-14)
 
 
