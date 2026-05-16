@@ -791,6 +791,12 @@ async function handle(req?: Request): Promise<Response> {
   const insertedUrls = new Set<string>();
   const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
 
+  // In-batch title dedup: 2 bài cùng title scan trong cùng batch (vd baotintuc +
+  // vietnamplus đăng cùng tin Bắc Ninh) — pre-LLM RPC chỉ check DB, race giữa
+  // workers concurrency 3 → cả 2 insert. Shared Set + check-then-add đồng bộ
+  // (no await giữa has/add) đảm bảo atomic trên single-thread event loop.
+  const titleHashesInBatch = new Set<string>();
+
   const processOne = async (it: RssItem) => {
     try {
       const artRes = await fetchWithTimeout(it.link, ARTICLE_FETCH_TIMEOUT_MS);
@@ -814,6 +820,21 @@ async function handle(req?: Request): Promise<Response> {
           stats.errors.push(`${it.feedName}: bài cũ (${preDate.slice(0, 10)})`);
           return;
         }
+      }
+
+      // In-batch dedup: chặn race condition giữa workers song song trong same batch.
+      // Match PG normalize_title_for_similarity: lower + unaccent NFD + đ→d + collapse space.
+      // Atomic vì has/add chạy đồng bộ, không có await ở giữa trên event loop đơn luồng.
+      const normTitle = title.toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d").replace(/Đ/g, "d")
+        .replace(/\s+/g, " ").trim();
+      if (normTitle.length >= 20) {
+        if (titleHashesInBatch.has(normTitle)) {
+          stats.errors.push(`${it.feedName}: skip in-batch dup "${title.slice(0, 60)}"`);
+          return;
+        }
+        titleHashesInBatch.add(normTitle);
       }
 
       // Pre-LLM fuzzy dedupe (cùng tin lan ra nhiều nguồn) — tiết kiệm summarize token.
@@ -909,6 +930,16 @@ async function handle(req?: Request): Promise<Response> {
     };
   });
   await supabase.from("discovery_classification_log").insert(logRows);
+
+  // Post-batch dedup: in-batch Set + pre-LLM RPC fix race trong cùng batch,
+  // nhưng vẫn còn race cross-batch (Discovery RSS chạy parallel với crawl-electricity-news,
+  // hoặc 2 invocation chồng nhau). Gọi dedup ngay → user không thấy dup trong
+  // gap cron `dedup-electricity-news-6h`. Function pg_trgm scan 14d ~vài giây.
+  try {
+    await supabase.rpc("dedup_electricity_news");
+  } catch (e) {
+    console.warn(`[post-batch-dedup] ${(e as Error).message}`);
+  }
 
   // Update last_crawled_at on virtual source
   await supabase
