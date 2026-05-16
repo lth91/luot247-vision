@@ -1,3 +1,10 @@
+## [1.39.1](https://github.com/lth91/luot247-vision/compare/v1.39.0...v1.39.1) (2026-05-16)
+
+
+### Bug Fixes
+
+* **electricity:** chặn title-duplicate trong cùng batch Discovery RSS ([4d70836](https://github.com/lth91/luot247-vision/commit/4d70836917e3e2ed7dca98c0e9e399d3fbb08441))
+
 # [1.39.0](https://github.com/lth91/luot247-vision/compare/v1.38.0...v1.39.0) (2026-05-16)
 
 
