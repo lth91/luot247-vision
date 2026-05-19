@@ -1,3 +1,10 @@
+# [1.42.0](https://github.com/lth91/luot247-vision/compare/v1.41.0...v1.42.0) (2026-05-19)
+
+
+### Features
+
+* **electricity:** add 5 Google News RSS workaround cho Mac Mini broken ([e67c41b](https://github.com/lth91/luot247-vision/commit/e67c41bb2a19ffc25c28d3b7670f5021021c00dd))
+
 # [1.41.0](https://github.com/lth91/luot247-vision/compare/v1.40.0...v1.41.0) (2026-05-19)
 
 
