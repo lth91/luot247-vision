@@ -1,3 +1,10 @@
+## [1.39.2](https://github.com/lth91/luot247-vision/compare/v1.39.1...v1.39.2) (2026-05-19)
+
+
+### Bug Fixes
+
+* **viewcount:** grant EXECUTE get_view2_stats cho anon + authenticated ([1587810](https://github.com/lth91/luot247-vision/commit/1587810d1046b3b9d17836ac492389a4d69650fc))
+
 ## [1.39.1](https://github.com/lth91/luot247-vision/compare/v1.39.0...v1.39.1) (2026-05-16)
 
 
