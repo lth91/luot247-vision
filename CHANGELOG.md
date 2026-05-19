@@ -1,3 +1,10 @@
+# [1.41.0](https://github.com/lth91/luot247-vision/compare/v1.40.0...v1.41.0) (2026-05-19)
+
+
+### Features
+
+* **electricity:** add sub nangluongvietnam "Khoa học CN Môi trường" ([#9](https://github.com/lth91/luot247-vision/issues/9) QA 19/5) ([651b7af](https://github.com/lth91/luot247-vision/commit/651b7af8e6043aa4ab22beee99da3d1f00f8fce8))
+
 # [1.40.0](https://github.com/lth91/luot247-vision/compare/v1.39.2...v1.40.0) (2026-05-19)
 
 
