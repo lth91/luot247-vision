@@ -55,11 +55,10 @@ serve(async (req) => {
       }
     }
 
-    // Tổng view mục tiêu cho cả ngày: 1000-1500 (random mỗi ngày)
-    // Chia đều cho 30 khoảng 30 phút (7AM-10PM = 15h = 30 khoảng)
-    const dailyTarget = 1000 + Math.floor(Math.random() * 501) // Random từ 1000-1500
-    const totalIntervals = 30 // 15 giờ * 2 (mỗi giờ có 2 khoảng 30 phút)
-    
+    // Tổng view mục tiêu cho cả ngày: 2000-3000 (random mỗi ngày)
+    // Chia theo trọng số giờ (7AM-10PM = 15h, mỗi giờ có 2 khoảng 30 phút).
+    const dailyTarget = 2000 + Math.floor(Math.random() * 1001) // Random từ 2000-3000
+
     // Phân bố theo giờ (peak hours)
     const hourlyWeight: { [key: number]: number } = {
       7: 0.5,   // 7-8 AM: ít
@@ -79,16 +78,18 @@ serve(async (req) => {
       21: 0.6,  // 9-10 PM
     }
 
+    // Tổng "weight-intervals" = 2 × sum(weights) vì mỗi giờ có 2 khoảng 30min cùng weight.
+    // Output 1 interval = dailyTarget × (weight / totalWeightIntervals) → cộng dồn cả ngày = dailyTarget.
     const totalWeight = Object.values(hourlyWeight).reduce((sum, w) => sum + w, 0)
-    const baseViewsPerInterval = dailyTarget / totalIntervals
+    const totalWeightIntervals = totalWeight * 2
     const currentWeight = hourlyWeight[currentHour] || 1.0
-    const weightedViews = Math.round(baseViewsPerInterval * currentWeight * (totalWeight / totalIntervals))
+    const weightedViews = Math.round(dailyTarget * (currentWeight / totalWeightIntervals))
     
     // Thêm random variation ±20%
     const variation = 0.8 + Math.random() * 0.4
     const viewsToAdd = Math.round(weightedViews * variation)
     
-    console.log(`Will add ${viewsToAdd} views for this 30-minute interval (base: ${baseViewsPerInterval.toFixed(1)}, weight: ${currentWeight})`)
+    console.log(`Will add ${viewsToAdd} views for this 30-minute interval (target: ${dailyTarget}/day, weight: ${currentWeight})`)
 
     const viewsToInsert = []
     
