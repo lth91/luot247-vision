@@ -1,3 +1,10 @@
+# [1.40.0](https://github.com/lth91/luot247-vision/compare/v1.39.2...v1.40.0) (2026-05-19)
+
+
+### Features
+
+* **viewcount:** target 2000-3000/day + fix distribution formula + drop cron trùng ([b105988](https://github.com/lth91/luot247-vision/commit/b1059888a5e557901b015c52f02f60a13933a509))
+
 ## [1.39.2](https://github.com/lth91/luot247-vision/compare/v1.39.1...v1.39.2) (2026-05-19)
 
 
