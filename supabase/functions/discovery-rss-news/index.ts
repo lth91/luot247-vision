@@ -69,6 +69,16 @@ const FEEDS: { name: string; url: string }[] = [
   { name: "Thời báo Tài chính VN",    url: "https://thoibaotaichinhvietnam.vn/rss_feed/" },
   { name: "Người Đưa Tin - Kinh tế",  url: "https://www.nguoiduatin.vn/rss/kinh-te.rss" },
   { name: "Người Đưa Tin - Công nghệ",url: "https://www.nguoiduatin.vn/rss/cong-nghe.rss" },
+  // Phase G2 (QA 19/5): 5 nguồn Mac Mini Playwright disabled timeout vì
+  // homepage SPA không có article links inline. Workaround dùng Google News
+  // site-search RSS (đã verified return RSS hợp lệ qua discover-candidates).
+  // Mỗi feed query "site:domain (điện OR năng lượng OR EVN)" để pre-filter ở
+  // Google trước khi pipe qua keyword + LLM classify của ta.
+  { name: "GN - bnews.vn",               url: "https://news.google.com/rss/search?q=site%3Abnews.vn+(%C4%91i%E1%BB%87n+OR+%22n%C4%83ng+l%C6%B0%E1%BB%A3ng%22+OR+EVN)&hl=vi&gl=VN&ceid=VN:vi" },
+  { name: "GN - plo.vn",                 url: "https://news.google.com/rss/search?q=site%3Aplo.vn+(%C4%91i%E1%BB%87n+OR+%22n%C4%83ng+l%C6%B0%E1%BB%A3ng%22+OR+EVN)&hl=vi&gl=VN&ceid=VN:vi" },
+  { name: "GN - diendandoanhnghiep.vn",  url: "https://news.google.com/rss/search?q=site%3Adiendandoanhnghiep.vn+(%C4%91i%E1%BB%87n+OR+%22n%C4%83ng+l%C6%B0%E1%BB%A3ng%22+OR+EVN)&hl=vi&gl=VN&ceid=VN:vi" },
+  { name: "GN - petrotimes.vn",          url: "https://news.google.com/rss/search?q=site%3Apetrotimes.vn+(%C4%91i%E1%BB%87n+OR+%22n%C4%83ng+l%C6%B0%E1%BB%A3ng%22+OR+EVN+OR+LNG)&hl=vi&gl=VN&ceid=VN:vi" },
+  { name: "GN - baodautu.vn",            url: "https://news.google.com/rss/search?q=site%3Abaodautu.vn+(%C4%91i%E1%BB%87n+OR+%22n%C4%83ng+l%C6%B0%E1%BB%A3ng%22+OR+EVN)&hl=vi&gl=VN&ceid=VN:vi" },
 ];
 
 // HTML list-page feeds: các site không có RSS. Mỗi feed có listUrl (trang section)
