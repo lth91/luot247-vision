@@ -1,3 +1,10 @@
+## [1.42.1](https://github.com/lth91/luot247-vision/compare/v1.42.0...v1.42.1) (2026-05-25)
+
+
+### Bug Fixes
+
+* **electricity:** chặn off-topic title "lạng lách" + "vì sức khỏe người lao động" lọt /d ([f1ac097](https://github.com/lth91/luot247-vision/commit/f1ac097d37fd0ef2f173aa30b82ddc142d309cb7))
+
 # [1.42.0](https://github.com/lth91/luot247-vision/compare/v1.41.0...v1.42.0) (2026-05-19)
 
 
