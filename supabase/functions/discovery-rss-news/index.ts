@@ -7,7 +7,7 @@
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 import { logLlmUsage } from "../_shared/llm-usage.ts";
 import { DOMParser, Element } from "https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts";
-import { ELECTRICITY_KEYWORD_RE, isOperationalScheduleNoise } from "../_shared/electricity-keywords.ts";
+import { ELECTRICITY_KEYWORD_RE, isOffTopicTitle, isOperationalScheduleNoise } from "../_shared/electricity-keywords.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -737,6 +737,12 @@ async function handle(req?: Request): Promise<Response> {
     if (isOperationalScheduleNoise(it.title)) {
       if (stats.blacklistedSamples.length < 5) {
         stats.blacklistedSamples.push({ title: it.title.slice(0, 120), reason: "operational_schedule" });
+      }
+      continue;
+    }
+    if (isOffTopicTitle(it.title)) {
+      if (stats.blacklistedSamples.length < 5) {
+        stats.blacklistedSamples.push({ title: it.title.slice(0, 120), reason: "off_topic_title" });
       }
       continue;
     }

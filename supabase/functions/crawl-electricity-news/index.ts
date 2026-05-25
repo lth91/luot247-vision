@@ -3,7 +3,7 @@
 
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 import { DOMParser, Element } from "https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts";
-import { isElectricityTopical, isOperationalScheduleNoise } from "../_shared/electricity-keywords.ts";
+import { isElectricityTopical, isOffTopicTitle, isOperationalScheduleNoise } from "../_shared/electricity-keywords.ts";
 import { logLlmUsage } from "../_shared/llm-usage.ts";
 
 const corsHeaders = {
@@ -495,6 +495,10 @@ async function handleCrawl(req: Request): Promise<Response> {
           // Pre-LLM noise filter: bỏ "Lịch cúp/cắt điện ..." (info dịch vụ tỉnh, ~13% noise).
           if (isOperationalScheduleNoise(finalTitle)) {
             stats.errors.push(`${src.name}: skip operational-schedule noise — ${finalTitle.slice(0, 60)}`);
+            continue;
+          }
+          if (isOffTopicTitle(finalTitle)) {
+            stats.errors.push(`${src.name}: skip off-topic title — ${finalTitle.slice(0, 60)}`);
             continue;
           }
 

@@ -35,3 +35,20 @@ export function isOperationalScheduleNoise(title: string): boolean {
   if (!title) return false;
   return OPERATIONAL_SCHEDULE_RE.test(title);
 }
+
+// Off-topic title patterns lọt qua keyword filter vì có substring "điện" hoặc
+// "EVN..." nhưng nội dung không phải tin ngành điện. Mỗi pattern phải có near-
+// zero false-positive với tin năng lượng — chỉ thêm sau khi xác nhận slip.
+//   - Traffic violation: "lạng lách" / "đánh võng" → 100% tin vi phạm giao
+//     thông (lọt qua keyword "xe điện" / "xe máy điện"). Audit 2026-05-25:
+//     bài plo/doisongphapluat về xe scooter trẻ em.
+//   - HR/wellness corp PR: "Vì sức khỏe người lao động ..." là tiêu đề
+//     campaign nội bộ EVN/EVN... (slip qua match "EVN"). Audit 2026-05-25.
+// Mirror in luot247-scraper/topic_filter.py — keep in sync.
+const OFF_TOPIC_TITLE_RE =
+  /(lạng\s*lách|đánh\s*võng|vì\s*sức\s*khỏe\s*(người\s*lao\s*động|công\s*nhân))/iu;
+
+export function isOffTopicTitle(title: string): boolean {
+  if (!title) return false;
+  return OFF_TOPIC_TITLE_RE.test(title);
+}
