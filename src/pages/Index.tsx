@@ -150,6 +150,40 @@ const Index = () => {
     }
   }, [shouldHideReadNews]);
 
+  // Mobile auto-mark-read bằng IntersectionObserver (sửa 24/6).
+  // Trước đây mobile chỉ blanket-hide vị trí cuối → không thực sự đánh dấu
+  // tin nào đã đọc. Giờ dùng IO chuẩn: khi card scroll lên qua khỏi top
+  // viewport (rootMargin top âm = ra ngoài), đánh dấu đã đọc.
+  // Filter dùng snapshot readNewsIdsAtMount nên KHÔNG biến mất ngay → mượt.
+  // Tin chỉ ẩn ở lần reload sau.
+  useEffect(() => {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+    if (!isMobile) return;
+    if (isLoading || filteredNews.length === 0) return;
+
+    // Map id → element vừa observe. Khi mount/unmount node, re-build observer.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          // Card đã scroll RA NGOÀI viewport phía trên (trôi qua khỏi header).
+          // boundingClientRect.bottom < 0 nghĩa là cạnh dưới đã trên top.
+          if (!entry.isIntersecting && entry.boundingClientRect.bottom < 60) {
+            const id = (entry.target as HTMLElement).dataset.newsId;
+            if (id) markNewsAsRead(id);
+          }
+        }
+      },
+      // rootMargin -60px top: bù chiều cao header. Card "out of viewport" khi
+      // qua khỏi header, không tính phần bị header che.
+      { root: null, rootMargin: '-60px 0px 0px 0px', threshold: 0 },
+    );
+
+    // Observe tất cả card hiện có
+    newsItemsRef.current.forEach((el) => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [isLoading, filteredNews, markNewsAsRead]);
+
   // Legacy mobile RADICAL restore (giữ làm fallback, sẽ noop nếu effect trên đã set restored)
   useEffect(() => {
     // Detect if user is on mobile
@@ -169,7 +203,7 @@ const Index = () => {
     
     if (isMobile) {
       dbg('📱 Mobile detected: Using radical anti-jittering approach');
-      
+
       // Save scroll position and last read news before page unload (refresh)
       const saveScrollPosition = () => {
         const scrollY = window.scrollY;
@@ -710,6 +744,7 @@ const Index = () => {
             {filteredNews.filter((item) => !passedNewsIds.has(item.id)).map((item, index, arr) => (
               <div
                 key={item.id}
+                data-news-id={item.id}
                 ref={(el) => {
                   if (el) {
                     newsItemsRef.current.set(item.id, el);
