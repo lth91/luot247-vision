@@ -125,26 +125,17 @@ const Index = () => {
     }
   };
 
-  // Mobile restore strategy (UX 09/05): chỉ hide articles trước tin đang đọc.
-  // Scroll lock được xử lý trong head script (index.html) — install listener
-  // trước React boot để catch iOS restore.
+  // Mobile restore (sửa 24/6): KHÔNG còn blanket-hide tin trước last_visible_news.
+  // Bug cũ: ẩn TẤT CẢ tin nằm trước vị trí đọc cũ → tin mới import lên đầu feed
+  // (newest) nằm phía trên vị trí cũ nên bị ẩn sạch DÙ CHƯA ĐỌC → "sau refresh
+  // tin format mới biến mất, feed bắt đầu từ tin cũ".
+  // Giờ: tin đã đọc được ẩn qua readNewsIds/shouldHideReadNews; tin chưa đọc
+  // (gồm tin mới) LUÔN hiện, mới nhất trên đầu. Bắt đầu ở đầu feed.
   useEffect(() => {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
     if (!isMobile) return;
     if (isLoading || filteredNews.length === 0) return;
     if (isScrollRestored) return;
-
-    const savedId = localStorage.getItem('luot247_last_visible_news');
-    if (savedId) {
-      const idx = filteredNews.findIndex((item) => item.id === savedId);
-      if (idx > 0) {
-        const passed = new Set<string>();
-        for (let i = 0; i < idx; i++) {
-          passed.add(filteredNews[i].id);
-        }
-        setPassedNewsIds(passed);
-      }
-    }
 
     window.scrollTo(0, 0);
     setIsScrollRestored(true);
