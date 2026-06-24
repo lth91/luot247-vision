@@ -1,3 +1,10 @@
+## [1.44.3](https://github.com/lth91/luot247-vision/compare/v1.44.2...v1.44.3) (2026-06-24)
+
+
+### Bug Fixes
+
+* **home:** sửa ẩn/hiện tin đã đọc + bug dbg tự tham chiếu ([#42](https://github.com/lth91/luot247-vision/issues/42)) ([024c4ad](https://github.com/lth91/luot247-vision/commit/024c4ad323cc8bc9619a5dc514a852079f4db1bd)), closes [#41](https://github.com/lth91/luot247-vision/issues/41)
+
 ## [1.44.2](https://github.com/lth91/luot247-vision/compare/v1.44.1...v1.44.2) (2026-06-24)
 
 
