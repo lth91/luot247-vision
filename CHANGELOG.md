@@ -1,3 +1,10 @@
+## [1.44.4](https://github.com/lth91/luot247-vision/compare/v1.44.3...v1.44.4) (2026-06-24)
+
+
+### Bug Fixes
+
+* **home:** tin mới không bị ẩn sau refresh (bỏ blanket-hide mobile) ([#43](https://github.com/lth91/luot247-vision/issues/43)) ([769a4ef](https://github.com/lth91/luot247-vision/commit/769a4efc3d83dfad25cc22f873894de25d495257))
+
 ## [1.44.3](https://github.com/lth91/luot247-vision/compare/v1.44.2...v1.44.3) (2026-06-24)
 
 
