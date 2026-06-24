@@ -1,3 +1,10 @@
+## [1.44.2](https://github.com/lth91/luot247-vision/compare/v1.44.1...v1.44.2) (2026-06-24)
+
+
+### Performance Improvements
+
+* **home:** tắt console.log production + hoist parse — fix giật khi scroll ([#41](https://github.com/lth91/luot247-vision/issues/41)) ([8be5b57](https://github.com/lth91/luot247-vision/commit/8be5b57a674ee88990c1c1ce980f1ac466314da9))
+
 ## [1.44.1](https://github.com/lth91/luot247-vision/compare/v1.44.0...v1.44.1) (2026-06-24)
 
 
