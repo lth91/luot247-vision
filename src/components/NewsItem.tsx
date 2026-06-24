@@ -93,9 +93,15 @@ export const NewsItem = ({
         data-news-id={id}
       >
         <div>
-          {/* Tiêu đề đậm (≤18 từ theo guideline). mb-3 giữ nguyên spacing cũ khi
-              tin chưa có nội dung; mb-1 khi có nội dung để sát đoạn dưới. */}
-          <p className={`text-base font-semibold leading-relaxed ${description ? "mb-1" : "mb-3"}`}>
+          {/* Tiêu đề đậm. Tin format mới (có nội dung): chữ nhỏ (text-sm) +
+              line-clamp-1 để gọn 1 dòng — nội dung đầy đủ đã nằm ngay dưới.
+              Tin cũ (description trống, title chứa cả đoạn): giữ text-base,
+              KHÔNG clamp để không cắt mất nội dung. */}
+          <p
+            className={`font-semibold leading-relaxed ${
+              description ? "text-sm line-clamp-1 mb-1" : "text-base mb-3"
+            }`}
+          >
             {title}
           </p>
 
