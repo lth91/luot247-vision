@@ -67,6 +67,10 @@ interface ReadingProviderProps {
 export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) => {
   const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
   const [readNewsIds, setReadNewsIds] = useState<Set<string>>(new Set());
+  // Snapshot read-ids tại lúc mount. Filter chỉ dùng snapshot này nên các tin
+  // mark-read TRONG SESSION (scroll qua) KHÔNG biến mất ngay → hết giật.
+  // Tin chỉ ẩn ở lần reload sau khi snapshot refresh từ localStorage.
+  const [readNewsIdsAtMount, setReadNewsIdsAtMount] = useState<Set<string>>(new Set());
   const [shouldHideReadNews, setShouldHideReadNews] = useState(false);
   const [news, setNews] = useState<any[]>([]);
   const [highlightedNewsId, setHighlightedNewsId] = useState<string | null>(null);
@@ -85,9 +89,12 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
         dbg('🔍 ReadingContext - Loading read news from localStorage:', storedReadNews);
         if (storedReadNews) {
           const readIds = JSON.parse(storedReadNews);
-          setReadNewsIds(new Set(readIds));
+          const idsSet = new Set<string>(readIds);
+          setReadNewsIds(idsSet);
+          // Snapshot ID đã đọc tại mount → filter cố định trong session.
+          setReadNewsIdsAtMount(idsSet);
           dbg('📚 ReadingContext - Loaded read news IDs:', readIds);
-          
+
           // Set shouldHideReadNews if there are read news
           if (readIds.length > 0) {
             dbg('🚀 ReadingContext - Setting shouldHideReadNews = true');
@@ -158,17 +165,18 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
     
     dbg('📖 ReadingContext - Marking news as read:', newsId);
     setReadNewsIds(prev => {
+      if (prev.has(newsId)) return prev;
       const newSet = new Set(prev);
       newSet.add(newsId);
-      dbg('📖 ReadingContext - Updated read news set:', [...newSet]);
+      dbg('📖 ReadingContext - Updated read news set size:', newSet.size);
       saveReadNewsToStorage(newSet);
-      
-      // Automatically enable hide read news when marking news as read
-      if (!shouldHideReadNews) {
-        dbg('🚀 ReadingContext - Auto-enabling shouldHideReadNews');
-        setShouldHideReadNews(true);
-      }
-      
+
+      // QUAN TRỌNG: KHÔNG tự bật shouldHideReadNews ở đây nữa. Trước đây
+      // bật ngay → filteredNews (xưa dùng readNewsIds live) recompute →
+      // tin biến mất khỏi DOM → trang nhảy giật. Giờ filter dùng snapshot
+      // readNewsIdsAtMount cố định trong session, chỉ ẩn ở reload sau.
+      // Lúc mount, nếu localStorage có read-ids thì effect load đã tự bật
+      // shouldHideReadNews=true rồi.
       return newSet;
     });
   };
@@ -179,6 +187,9 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
     localStorage.removeItem('luot247_read_news');
     localStorage.removeItem('luot247_current_index');
     setReadNewsIds(new Set());
+    // Reset snapshot luôn → filter ngay lập tức cho hiện tất cả tin trở lại
+    // (đây là behavior người dùng kỳ vọng khi bấm "Hiển thị tất cả tin đã đọc").
+    setReadNewsIdsAtMount(new Set());
     setShouldHideReadNews(false);
     setCurrentNewsIndex(0);
     dbg('🔄 ReadingContext - Cleared all read news and reset index');
@@ -190,9 +201,11 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
     saveCurrentIndexToStorage(index);
   };
 
-  // Filter news based on read status (don't filter if from shared link)
+  // Filter dựa trên SNAPSHOT readNewsIdsAtMount (không phải readNewsIds live)
+  // → mark-read mới trong session KHÔNG khiến tin biến mất khỏi DOM → hết giật.
+  // Tin chỉ ẩn ở lần tải lại trang sau khi snapshot refresh từ localStorage.
   const filteredNews = (shouldHideReadNews && !isFromSharedLink)
-    ? news.filter(item => !readNewsIds.has(item.id))
+    ? news.filter(item => !readNewsIdsAtMount.has(item.id))
     : news;
 
   // Get current news based on index
