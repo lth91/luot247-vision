@@ -1,3 +1,10 @@
+# [1.44.0](https://github.com/lth91/luot247-vision/compare/v1.43.0...v1.44.0) (2026-06-24)
+
+
+### Features
+
+* **duyet-tin:** hiển thị nội dung dưới tiêu đề khi duyệt tin ([#38](https://github.com/lth91/luot247-vision/issues/38)) ([1d64b66](https://github.com/lth91/luot247-vision/commit/1d64b665e6cfa60ed136ef60bdb2b807f9843297))
+
 # [1.43.0](https://github.com/lth91/luot247-vision/compare/v1.42.1...v1.43.0) (2026-06-24)
 
 
