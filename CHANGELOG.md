@@ -1,3 +1,10 @@
+# [1.43.0](https://github.com/lth91/luot247-vision/compare/v1.42.1...v1.43.0) (2026-06-24)
+
+
+### Features
+
+* **home:** hiển thị nội dung dưới tiêu đề trên feed trang chủ ([#37](https://github.com/lth91/luot247-vision/issues/37)) ([792e012](https://github.com/lth91/luot247-vision/commit/792e0122909892fe8f0ad0820a683580d6734142))
+
 ## [1.42.1](https://github.com/lth91/luot247-vision/compare/v1.42.0...v1.42.1) (2026-05-25)
 
 
