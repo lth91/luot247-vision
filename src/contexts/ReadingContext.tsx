@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 
 // Logger chỉ chạy ở dev; production im lặng. markNewsAsRead + save chạy mỗi lần
 // scroll đánh dấu đọc → log ở đây góp phần gây giật. Gate qua import.meta.env.DEV.
-const dbg: (...args: unknown[]) => void = import.meta.env.DEV ? dbg : () => {};
+const dbg: (...args: unknown[]) => void = import.meta.env.DEV ? console.log : () => {};
 
 interface ReadingContextType {
   // Current reading position
