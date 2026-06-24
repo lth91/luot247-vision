@@ -7,6 +7,12 @@ import { toast } from "sonner";
 import { useReadingContext } from "@/contexts/ReadingContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
 
+// Logger chỉ chạy ở dev; production (Vercel) im lặng hoàn toàn.
+// Trước đây 55 dbg rải trong scroll handler + interval 5s + loop từng
+// tin → nghẽn CPU gây giật, nhất là mobile. Gate qua import.meta.env.DEV để
+// giữ log khi debug local mà không tốn gì trên production.
+const dbg: (...args: unknown[]) => void = import.meta.env.DEV ? dbg : () => {};
+
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -73,7 +79,7 @@ const Index = () => {
     
     // Mark as no longer initial load
     setIsInitialLoad(false);
-    console.log('🚀 Page load complete - isInitialLoad = false');
+    dbg('🚀 Page load complete - isInitialLoad = false');
     
     // Expose clear function to window for debugging
     (window as any).clearReadNews = clearReadNews;
@@ -86,7 +92,7 @@ const Index = () => {
     try {
       // Insert a view log record using server time to avoid timezone issues
       await (supabase as any).from("view_logs2").insert({});
-      console.log('✅ Page view recorded to view_logs2');
+      dbg('✅ Page view recorded to view_logs2');
     } catch (error) {
       console.error('❌ Error recording page view:', error);
     }
@@ -96,14 +102,14 @@ const Index = () => {
   const loadReadNewsFromStorage = () => {
     try {
       const stored = localStorage.getItem('luot247_read_news');
-      console.log('🔍 Loading from localStorage:', stored);
+      dbg('🔍 Loading from localStorage:', stored);
       if (stored) {
         const readIds = JSON.parse(stored);
-        console.log('📚 Loaded read news IDs:', readIds);
-        console.log('📚 Loaded read news count:', readIds.length);
+        dbg('📚 Loaded read news IDs:', readIds);
+        dbg('📚 Loaded read news count:', readIds.length);
         // Note: We don't need to set readNewsIds here as it's handled by ReadingContext
       } else {
-        console.log('📚 No read news in localStorage');
+        dbg('📚 No read news in localStorage');
       }
     } catch (error) {
       console.error('❌ Error loading read news from storage:', error);
@@ -115,7 +121,7 @@ const Index = () => {
     const index = filteredNews.findIndex(item => item.id === newsId);
     if (index !== -1) {
       setCurrentNewsIndex(index);
-      console.log(`🔄 Synced current index to ${index} for news ${newsId}`);
+      dbg(`🔄 Synced current index to ${index} for news ${newsId}`);
     }
   };
 
@@ -151,25 +157,25 @@ const Index = () => {
     
     // If not mobile, show content immediately
     if (!isMobile) {
-      console.log('🖥️ Desktop detected: Showing content immediately');
+      dbg('🖥️ Desktop detected: Showing content immediately');
       setIsScrollRestored(true);
     }
     
-    console.log('🔍 Device detection:', {
+    dbg('🔍 Device detection:', {
       userAgent: navigator.userAgent,
       windowWidth: window.innerWidth,
       isMobile: isMobile
     });
     
     if (isMobile) {
-      console.log('📱 Mobile detected: Using radical anti-jittering approach');
+      dbg('📱 Mobile detected: Using radical anti-jittering approach');
       
       // Save scroll position and last read news before page unload (refresh)
       const saveScrollPosition = () => {
         const scrollY = window.scrollY;
         localStorage.setItem('luot247_scroll_position', scrollY.toString());
         
-        console.log('📱 saveScrollPosition called:', {
+        dbg('📱 saveScrollPosition called:', {
           scrollY: scrollY,
           newsItemsCount: newsItemsRef.current.size,
           timestamp: new Date().toISOString()
@@ -183,7 +189,7 @@ const Index = () => {
           const bufferZone = 100; // Large buffer for mobile
           const effectiveHeaderBottom = headerBottom + bufferZone;
           
-          console.log('📱 Header info:', {
+          dbg('📱 Header info:', {
             headerBottom: headerBottom,
             effectiveHeaderBottom: effectiveHeaderBottom,
             bufferZone: bufferZone
@@ -200,7 +206,7 @@ const Index = () => {
             const elementTop = elementRect.top;
             const elementBottom = elementRect.bottom;
             
-            console.log(`📱 News ${newsId}:`, {
+            dbg(`📱 News ${newsId}:`, {
               top: elementTop,
               bottom: elementBottom,
               distanceFromTop: Math.abs(elementTop)
@@ -215,33 +221,33 @@ const Index = () => {
             }
           });
           
-          console.log('📱 Closest news analysis:', {
+          dbg('📱 Closest news analysis:', {
             closestNewsId: closestNewsId,
             minDistance: minDistance
           });
           
           if (closestNewsId) {
             localStorage.setItem('luot247_last_visible_news', closestNewsId);
-            console.log(`📱 ✅ Saved last visible news: ${closestNewsId} at position: ${scrollY}`);
+            dbg(`📱 ✅ Saved last visible news: ${closestNewsId} at position: ${scrollY}`);
           } else {
-            console.log('📱 ❌ No visible news found to save');
+            dbg('📱 ❌ No visible news found to save');
           }
         } else {
-          console.log('📱 ❌ Header not found');
+          dbg('📱 ❌ Header not found');
         }
         
-        console.log(`📱 Saved scroll position: ${scrollY}`);
+        dbg(`📱 Saved scroll position: ${scrollY}`);
       };
       
       // RADICAL APPROACH: Hide content completely until scroll is 100% stable
       const restoreScrollPosition = () => {
-        console.log('📱 restoreScrollPosition called - RADICAL MODE');
+        dbg('📱 restoreScrollPosition called - RADICAL MODE');
         
         const savedScrollY = localStorage.getItem('luot247_scroll_position');
         const lastVisibleNewsId = localStorage.getItem('luot247_last_visible_news');
         const readNewsIds = JSON.parse(localStorage.getItem('luot247_read_news') || '[]');
         
-        console.log('📱 Restore data:', {
+        dbg('📱 Restore data:', {
           savedScrollY: savedScrollY,
           lastVisibleNewsId: lastVisibleNewsId,
           readNewsCount: readNewsIds.length,
@@ -250,18 +256,18 @@ const Index = () => {
         
         if (savedScrollY) {
           const scrollY = parseInt(savedScrollY);
-          console.log(`📱 Processing saved scroll position: ${scrollY}`);
+          dbg(`📱 Processing saved scroll position: ${scrollY}`);
           
           // Wait for news to load and DOM to be ready
           setTimeout(() => {
-            console.log('📱 Starting RADICAL restore process after timeout');
+            dbg('📱 Starting RADICAL restore process after timeout');
             
             // First try to find the last visible news from before refresh
             let targetElement = null;
             
             if (lastVisibleNewsId) {
               targetElement = document.querySelector(`[data-news-id="${lastVisibleNewsId}"]`);
-              console.log(`📱 Last visible news search:`, {
+              dbg(`📱 Last visible news search:`, {
                 newsId: lastVisibleNewsId,
                 found: !!targetElement,
                 element: targetElement
@@ -270,18 +276,18 @@ const Index = () => {
             
             // If not found, try to find the first unread news
             if (!targetElement) {
-              console.log(`📱 Looking for first unread news, read count: ${readNewsIds.length}`);
+              dbg(`📱 Looking for first unread news, read count: ${readNewsIds.length}`);
               
               // Find the first news item that is not read
               newsItemsRef.current.forEach((element, newsId) => {
                 if (!readNewsIds.includes(newsId) && !targetElement) {
                   targetElement = element;
-                  console.log(`📱 Found first unread news: ${newsId}`);
+                  dbg(`📱 Found first unread news: ${newsId}`);
                 }
               });
             }
             
-            console.log('📱 Target element:', {
+            dbg('📱 Target element:', {
               found: !!targetElement,
               element: targetElement
             });
@@ -293,7 +299,7 @@ const Index = () => {
               const targetScrollY = window.scrollY + elementRect.top - headerHeight;
               const finalScrollY = Math.max(0, targetScrollY);
               
-              console.log(`📱 RADICAL: Scrolling to target news:`, {
+              dbg(`📱 RADICAL: Scrolling to target news:`, {
                 elementRect: elementRect,
                 headerHeight: headerHeight,
                 currentScrollY: window.scrollY,
@@ -317,7 +323,7 @@ const Index = () => {
                 const scrollDiff = Math.abs(currentScrollY - finalScrollY);
                 const positionDiff = Math.abs(currentScrollY - lastScrollY);
                 
-                console.log(`📱 RADICAL stability check ${stabilityChecks}:`, {
+                dbg(`📱 RADICAL stability check ${stabilityChecks}:`, {
                   currentScrollY: currentScrollY,
                   targetScrollY: finalScrollY,
                   scrollDiff: scrollDiff,
@@ -329,19 +335,19 @@ const Index = () => {
                 // Check if position is stable (no movement) and close to target
                 if (positionDiff < 2 && scrollDiff < 10) {
                   stableCount++;
-                  console.log(`📱 RADICAL: Stable check ${stableCount}/${requiredStableChecks}`);
+                  dbg(`📱 RADICAL: Stable check ${stableCount}/${requiredStableChecks}`);
                   
                   if (stableCount >= requiredStableChecks) {
-                    console.log('📱 RADICAL: Position is stable, showing content');
+                    dbg('📱 RADICAL: Position is stable, showing content');
                     // Additional delay to ensure everything is settled
                     setTimeout(() => {
-                      console.log('📱 RADICAL: Final delay complete, showing content');
+                      dbg('📱 RADICAL: Final delay complete, showing content');
                       // One final check to ensure position hasn't changed
                       const finalScrollDiff = Math.abs(window.scrollY - finalScrollY);
                       if (finalScrollDiff < 10) {
                         setIsScrollRestored(true);
                       } else {
-                        console.log('📱 RADICAL: Position changed during final delay, restarting stability check');
+                        dbg('📱 RADICAL: Position changed during final delay, restarting stability check');
                         stableCount = 0;
                         setTimeout(checkStability, 100);
                       }
@@ -355,7 +361,7 @@ const Index = () => {
                 lastScrollY = currentScrollY;
                 
                 if (stabilityChecks >= maxStabilityChecks) {
-                  console.log('📱 RADICAL: Max stability checks reached, showing content');
+                  dbg('📱 RADICAL: Max stability checks reached, showing content');
                   setIsScrollRestored(true);
                 } else {
                   setTimeout(checkStability, 50); // Check every 50ms
@@ -367,7 +373,7 @@ const Index = () => {
               
             } else {
               // Fallback: use saved scroll position
-              console.log(`📱 RADICAL: No target news found, using saved position: ${scrollY}`);
+              dbg(`📱 RADICAL: No target news found, using saved position: ${scrollY}`);
               
               // Scroll to saved position
               window.scrollTo(0, scrollY);
@@ -385,7 +391,7 @@ const Index = () => {
                 const scrollDiff = Math.abs(currentScrollY - scrollY);
                 const positionDiff = Math.abs(currentScrollY - lastScrollY);
                 
-                console.log(`📱 RADICAL fallback stability check ${stabilityChecks}:`, {
+                dbg(`📱 RADICAL fallback stability check ${stabilityChecks}:`, {
                   currentScrollY: currentScrollY,
                   targetScrollY: scrollY,
                   scrollDiff: scrollDiff,
@@ -396,18 +402,18 @@ const Index = () => {
                 
                 if (positionDiff < 2 && scrollDiff < 10) {
                   stableCount++;
-                  console.log(`📱 RADICAL fallback: Stable check ${stableCount}/${requiredStableChecks}`);
+                  dbg(`📱 RADICAL fallback: Stable check ${stableCount}/${requiredStableChecks}`);
                   
                   if (stableCount >= requiredStableChecks) {
-                    console.log('📱 RADICAL fallback: Position is stable, showing content');
+                    dbg('📱 RADICAL fallback: Position is stable, showing content');
                     setTimeout(() => {
-                      console.log('📱 RADICAL fallback: Final delay complete, showing content');
+                      dbg('📱 RADICAL fallback: Final delay complete, showing content');
                       // One final check to ensure position hasn't changed
                       const finalScrollDiff = Math.abs(window.scrollY - scrollY);
                       if (finalScrollDiff < 10) {
                         setIsScrollRestored(true);
                       } else {
-                        console.log('📱 RADICAL fallback: Position changed during final delay, restarting stability check');
+                        dbg('📱 RADICAL fallback: Position changed during final delay, restarting stability check');
                         stableCount = 0;
                         setTimeout(checkStability, 100);
                       }
@@ -421,7 +427,7 @@ const Index = () => {
                 lastScrollY = currentScrollY;
                 
                 if (stabilityChecks >= maxStabilityChecks) {
-                  console.log('📱 RADICAL fallback: Max stability checks reached, showing content');
+                  dbg('📱 RADICAL fallback: Max stability checks reached, showing content');
                   setIsScrollRestored(true);
                 } else {
                   setTimeout(checkStability, 50);
@@ -432,9 +438,9 @@ const Index = () => {
             }
           }, 1000); // Increased delay to ensure DOM is fully ready
         } else {
-          console.log('📱 No saved scroll position found');
+          dbg('📱 No saved scroll position found');
           // No saved position, show content immediately
-          console.log('📱 No saved position, showing content immediately');
+          dbg('📱 No saved position, showing content immediately');
           // Use requestAnimationFrame to ensure this happens after initial render
           requestAnimationFrame(() => {
             setIsScrollRestored(true);
@@ -447,7 +453,7 @@ const Index = () => {
       window.addEventListener('pagehide', saveScrollPosition);
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden') {
-          console.log('📱 Page becoming hidden, saving scroll position');
+          dbg('📱 Page becoming hidden, saving scroll position');
           saveScrollPosition();
         }
       });
@@ -457,7 +463,7 @@ const Index = () => {
       const saveOnScroll = () => {
         clearTimeout(scrollSaveTimeout);
         scrollSaveTimeout = setTimeout(() => {
-          console.log('📱 Auto-saving scroll position on scroll');
+          dbg('📱 Auto-saving scroll position on scroll');
           saveScrollPosition();
         }, 1000);
       };
@@ -465,7 +471,7 @@ const Index = () => {
       
       // Save position periodically as backup
       const periodicSave = setInterval(() => {
-        console.log('📱 Periodic save of scroll position');
+        dbg('📱 Periodic save of scroll position');
         saveScrollPosition();
       }, 5000); // Save every 5 seconds
       
@@ -481,7 +487,7 @@ const Index = () => {
         clearInterval(periodicSave);
       };
     } else {
-      console.log('🖥️ Desktop detected: Using scroll detection');
+      dbg('🖥️ Desktop detected: Using scroll detection');
       
       // Desktop scroll detection (simplified)
       let scrollTimeout: ReturnType<typeof setTimeout>;
@@ -509,23 +515,24 @@ const Index = () => {
             // Find the news item that's currently most visible (closest to top of viewport)
             let mostVisibleNewsId = null;
             let minDistance = Infinity;
-            
+
+            // Parse read-news MỘT LẦN trước loop (trước đây parse lại cho từng tin
+            // → O(n) JSON.parse mỗi lần scroll, góp phần gây giật).
+            const storedRead = localStorage.getItem('luot247_read_news');
+            const readIdsSet = new Set<string>(storedRead ? JSON.parse(storedRead) : []);
+
             newsItemsRef.current.forEach((element, newsId) => {
               if (!element) return;
-              
+
               const elementRect = element.getBoundingClientRect();
               const elementTop = elementRect.top;
               const elementBottom = elementRect.bottom;
-              
+
               // Check if element is visible and mark as read if needed
               if (elementBottom < effectiveHeaderBottom) {
-              const stored = localStorage.getItem('luot247_read_news');
-              const readIds = stored ? JSON.parse(stored) : [];
-              const isAlreadyRead = readIds.includes(newsId);
-              
-              if (!isAlreadyRead) {
-                  console.log(`📖 Desktop: Marking news ${newsId} as read`);
-                markNewsAsRead(newsId);
+                if (!readIdsSet.has(newsId)) {
+                  dbg(`📖 Desktop: Marking news ${newsId} as read`);
+                  markNewsAsRead(newsId);
                 }
               }
               
@@ -542,7 +549,7 @@ const Index = () => {
             // Sync current index to the most visible news
             if (mostVisibleNewsId) {
               syncCurrentIndex(mostVisibleNewsId);
-              console.log(`🔄 Desktop: Synced to most visible news ${mostVisibleNewsId}`);
+              dbg(`🔄 Desktop: Synced to most visible news ${mostVisibleNewsId}`);
             }
             
             isProcessing = false;
@@ -586,7 +593,7 @@ const Index = () => {
       const hasNewNews = lastNewsCount && parseInt(lastNewsCount) < currentNewsCount;
       const isFirstLoad = !lastNewsCount && !lastNewsTimestamp;
       
-      console.log('📊 News check:', {
+      dbg('📊 News check:', {
         lastNewsCount,
         currentNewsCount,
         hasNewNews,
@@ -594,7 +601,7 @@ const Index = () => {
       });
       
       if (hasNewNews) {
-        console.log('🆕 New news detected! Clearing saved position to show latest news');
+        dbg('🆕 New news detected! Clearing saved position to show latest news');
         // Clear saved scroll position to force showing latest news
         localStorage.removeItem('luot247_scroll_position');
         localStorage.removeItem('luot247_last_visible_news');
@@ -609,11 +616,11 @@ const Index = () => {
         
         toast.success(`Có ${currentNewsCount - parseInt(lastNewsCount)} tin tức mới!`);
       } else if (!isFirstLoad) {
-        console.log('📰 No new news, keeping saved position');
+        dbg('📰 No new news, keeping saved position');
         // Update stored news count to track
         localStorage.setItem('luot247_last_news_count', currentNewsCount.toString());
       } else {
-        console.log('🆕 First load, storing initial count');
+        dbg('🆕 First load, storing initial count');
         // First load, store the initial count
         localStorage.setItem('luot247_last_news_count', currentNewsCount.toString());
         localStorage.setItem('luot247_last_news_timestamp', currentTimestamp);
@@ -630,7 +637,7 @@ const Index = () => {
     const newsId = pathMatch ? pathMatch[1] : null;
     
     if (newsId) {
-      console.log('🔗 Deep link detected for news:', newsId);
+      dbg('🔗 Deep link detected for news:', newsId);
       
       // Mark as coming from shared link to disable auto-hide
       setIsFromSharedLink(true);
@@ -654,9 +661,9 @@ const Index = () => {
             setHighlightedNewsId(null);
           }, 3000);
           
-          console.log('✅ Scrolled to news:', newsId);
+          dbg('✅ Scrolled to news:', newsId);
         } else {
-          console.log('❌ News element not found:', newsId);
+          dbg('❌ News element not found:', newsId);
         }
       }, 1500);
     }
