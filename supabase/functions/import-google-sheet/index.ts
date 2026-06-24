@@ -49,40 +49,48 @@ Deno.serve(async (req) => {
     const csvText = await csvResponse.text()
     console.log('CSV data fetched, length:', csvText.length)
 
-    // Parse CSV to JSON with proper CSV parsing
-    const lines = csvText.split('\n').filter(line => line.trim())
-    if (lines.length < 2) {
+    // Parser CSV chuẩn RFC-4180: xử lý TOÀN VĂN BẢN, tôn trọng dấu ngoặc kép.
+    // Phẩy/xuống dòng bên trong cell có quote là ký tự thường, KHÔNG tách cột/dòng.
+    // (Bug cũ: csvText.split('\n') tách dòng trước khi xử lý quote → cell nhiều
+    //  dòng Alt+Enter bị vỡ thành nhiều fragment, kéo theo domino tách phẩy
+    //  thập phân tiếng Việt như "0,39%". Gây 25 tin → 47 fragment.)
+    function parseCSV(text: string): string[][] {
+      if (text.charCodeAt(0) === 0xfeff) text = text.slice(1) // bỏ BOM
+      const rows: string[][] = []
+      let row: string[] = []
+      let cur = ''
+      let inQuotes = false
+      const n = text.length
+      let i = 0
+      while (i < n) {
+        const c = text[i]
+        if (inQuotes) {
+          if (c === '"') {
+            if (text[i + 1] === '"') { cur += '"'; i += 2; continue } // "" → "
+            inQuotes = false; i++; continue
+          }
+          cur += c; i++; continue
+        }
+        if (c === '"') { inQuotes = true; i++; continue }
+        if (c === ',') { row.push(cur); cur = ''; i++; continue }
+        if (c === '\r') { i++; continue } // bỏ CR, ngắt dòng theo \n
+        if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; i++; continue }
+        cur += c; i++
+      }
+      row.push(cur)
+      rows.push(row)
+      // bỏ dòng rỗng hoàn toàn + trim từng cell
+      return rows
+        .filter((r) => r.some((cell) => cell.trim() !== ''))
+        .map((r) => r.map((cell) => cell.trim()))
+    }
+
+    const allRows = parseCSV(csvText)
+    if (allRows.length < 2) {
       throw new Error('Sheet must have at least a header row and one data row')
     }
 
-    // Parse CSV properly handling quoted fields
-    function parseCSVLine(line: string): string[] {
-      const result: string[] = []
-      let current = ''
-      let inQuotes = false
-      
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i]
-        
-        if (char === '"') {
-          if (inQuotes && line[i + 1] === '"') {
-            current += '"'
-            i++
-          } else {
-            inQuotes = !inQuotes
-          }
-        } else if (char === ',' && !inQuotes) {
-          result.push(current.trim())
-          current = ''
-        } else {
-          current += char
-        }
-      }
-      result.push(current.trim())
-      return result
-    }
-
-    const headers = parseCSVLine(lines[0])
+    const headers = allRows[0]
     console.log('Headers:', headers)
 
     const newsItems: NewsItem[] = []
@@ -90,9 +98,9 @@ Deno.serve(async (req) => {
     // Valid category values
     const validCategories = ['chinh-tri', 'kinh-te', 'xa-hoi', 'the-thao', 'giai-tri', 'cong-nghe', 'khac']
     
-    for (let i = 1; i < lines.length; i++) {
-      const values = parseCSVLine(lines[i])
-      
+    for (let i = 1; i < allRows.length; i++) {
+      const values = allRows[i]
+
       // If only one column (likely just content), use it as title
       if (headers.length === 1 || values.length === 1) {
         const content = values[0] || ''
