@@ -1,3 +1,10 @@
+# [1.45.0](https://github.com/lth91/luot247-vision/compare/v1.44.4...v1.45.0) (2026-06-24)
+
+
+### Features
+
+* **home:** mobile auto-hide thật + fix giật mark-read ([#44](https://github.com/lth91/luot247-vision/issues/44)) ([6eaf2be](https://github.com/lth91/luot247-vision/commit/6eaf2bec3b547344d1a2bb74484b9e09c41109b6))
+
 ## [1.44.4](https://github.com/lth91/luot247-vision/compare/v1.44.3...v1.44.4) (2026-06-24)
 
 
