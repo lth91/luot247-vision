@@ -1,3 +1,10 @@
+## [1.44.1](https://github.com/lth91/luot247-vision/compare/v1.44.0...v1.44.1) (2026-06-24)
+
+
+### Bug Fixes
+
+* **import:** parser CSV chuẩn — fix tin bị vỡ thành fragment ([#40](https://github.com/lth91/luot247-vision/issues/40)) ([f8403c3](https://github.com/lth91/luot247-vision/commit/f8403c3febfeb0901de6db62d653d056757caed3))
+
 # [1.44.0](https://github.com/lth91/luot247-vision/compare/v1.43.0...v1.44.0) (2026-06-24)
 
 
