@@ -352,9 +352,16 @@ const Classification = () => {
             {/* News Content */}
             <Card className="p-8">
               <div className="prose max-w-none">
-                <p className="text-lg leading-relaxed whitespace-pre-wrap">
+                {/* Tiêu đề (đậm) */}
+                <p className="text-lg font-semibold leading-relaxed whitespace-pre-wrap mb-3">
                   {currentNews.title}
                 </p>
+                {/* Nội dung — hiển thị để duyệt; chỉ render khi có dữ liệu */}
+                {currentNews.description && (
+                  <p className="text-base text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                    {currentNews.description}
+                  </p>
+                )}
               </div>
             </Card>
 
