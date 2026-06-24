@@ -93,9 +93,19 @@ export const NewsItem = ({
         data-news-id={id}
       >
         <div>
-          <p className="text-base font-semibold leading-relaxed mb-3">
+          {/* Tiêu đề đậm (≤18 từ theo guideline). mb-3 giữ nguyên spacing cũ khi
+              tin chưa có nội dung; mb-1 khi có nội dung để sát đoạn dưới. */}
+          <p className={`text-base font-semibold leading-relaxed ${description ? "mb-1" : "mb-3"}`}>
             {title}
           </p>
+
+          {/* Nội dung (≤140 từ theo guideline). Chỉ render khi có dữ liệu —
+              tin cũ (description trống) hiển thị y như trước. */}
+          {description && (
+            <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+              {description}
+            </p>
+          )}
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
