@@ -8,10 +8,10 @@ import { useReadingContext } from "@/contexts/ReadingContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
 
 // Logger chỉ chạy ở dev; production (Vercel) im lặng hoàn toàn.
-// Trước đây 55 dbg rải trong scroll handler + interval 5s + loop từng
+// Trước đây 55 console.log rải trong scroll handler + interval 5s + loop từng
 // tin → nghẽn CPU gây giật, nhất là mobile. Gate qua import.meta.env.DEV để
 // giữ log khi debug local mà không tốn gì trên production.
-const dbg: (...args: unknown[]) => void = import.meta.env.DEV ? dbg : () => {};
+const dbg: (...args: unknown[]) => void = import.meta.env.DEV ? console.log : () => {};
 
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -149,6 +149,15 @@ const Index = () => {
     window.scrollTo(0, 0);
     setIsScrollRestored(true);
   }, [isLoading, filteredNews, isScrollRestored]);
+
+  // Khi user bật "Hiển thị tất cả tin đã đọc" (shouldHideReadNews=false), xóa
+  // passedNewsIds — nếu không, các tin đã ẩn lúc khôi phục (mobile) vẫn bị
+  // passedNewsIds lọc ra → "hiển thị lại" không hiện đủ tin.
+  useEffect(() => {
+    if (!shouldHideReadNews) {
+      setPassedNewsIds(new Set());
+    }
+  }, [shouldHideReadNews]);
 
   // Legacy mobile RADICAL restore (giữ làm fallback, sẽ noop nếu effect trên đã set restored)
   useEffect(() => {
@@ -713,6 +722,12 @@ const Index = () => {
                 ref={(el) => {
                   if (el) {
                     newsItemsRef.current.set(item.id, el);
+                  } else {
+                    // QUAN TRỌNG: xóa ref khi card unmount (tin bị ẩn). Trước đây
+                    // chỉ set, không xóa → Map giữ DOM node detached → scroll
+                    // handler đo getBoundingClientRect() trên node đã tháo (=0)
+                    // → chọn nhầm "tin gần đỉnh" → lưu/khôi phục sai vị trí.
+                    newsItemsRef.current.delete(item.id);
                   }
                 }}
                 style={{ display: 'block' }}
