@@ -107,11 +107,26 @@ export const NewsItem = ({
           </p>
 
           {/* Nội dung (≤140 từ theo guideline). Chỉ render khi có dữ liệu —
-              tin cũ (description trống) hiển thị y như trước. */}
+              tin cũ (description trống) hiển thị y như trước.
+              Tách theo xuống dòng (Alt+Enter trong sheet) thành các đoạn
+              riêng — trước đây 1 thẻ <p> khiến HTML gộp các dòng thành 1
+              khối, mất cách đoạn. Lọc dòng rỗng để bỏ dòng trống thừa giữa
+              2 đoạn. Tin chỉ 1 đoạn → vẫn render 1 <p>, không đổi. */}
           {description && (
-            <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-              {description}
-            </p>
+            <div className="mb-3">
+              {description
+                .split(/\r?\n/)
+                .map((para) => para.trim())
+                .filter((para) => para.length > 0)
+                .map((para, idx) => (
+                  <p
+                    key={idx}
+                    className="text-sm text-muted-foreground leading-relaxed mb-2 last:mb-0"
+                  >
+                    {para}
+                  </p>
+                ))}
+            </div>
           )}
 
           <div className="flex items-center justify-between">
