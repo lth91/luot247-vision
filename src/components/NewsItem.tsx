@@ -100,7 +100,7 @@ export const NewsItem = ({
               Tin cũ (description trống, title chứa cả đoạn): giữ text-base. */}
           <p
             className={`font-semibold leading-relaxed ${
-              description ? "text-sm md:line-clamp-2 mb-1" : "text-base mb-3"
+              description ? "text-sm md:line-clamp-2 mb-2.5" : "text-base mb-3"
             }`}
           >
             {title}
