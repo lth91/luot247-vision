@@ -1,3 +1,10 @@
+## [1.45.3](https://github.com/lth91/luot247-vision/compare/v1.45.2...v1.45.3) (2026-06-25)
+
+
+### Bug Fixes
+
+* **home:** tiêu đề desktop cho 2 dòng thay vì cắt cụt 1 dòng ([#47](https://github.com/lth91/luot247-vision/issues/47)) ([9f1aab2](https://github.com/lth91/luot247-vision/commit/9f1aab2d7eb665d5a3359376e5d74a8d497caa33)), closes [#46](https://github.com/lth91/luot247-vision/issues/46)
+
 ## [1.45.2](https://github.com/lth91/luot247-vision/compare/v1.45.1...v1.45.2) (2026-06-25)
 
 
