@@ -1,3 +1,10 @@
+## [1.45.1](https://github.com/lth91/luot247-vision/compare/v1.45.0...v1.45.1) (2026-06-25)
+
+
+### Bug Fixes
+
+* **home:** tiêu đề không bị cắt cụt trên mobile ([#45](https://github.com/lth91/luot247-vision/issues/45)) ([aa38f9a](https://github.com/lth91/luot247-vision/commit/aa38f9a3a5817c0e2053ba5a8185a55092f12f6c))
+
 # [1.45.0](https://github.com/lth91/luot247-vision/compare/v1.44.4...v1.45.0) (2026-06-24)
 
 
