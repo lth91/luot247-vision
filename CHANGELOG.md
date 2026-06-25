@@ -1,3 +1,10 @@
+# [1.46.0](https://github.com/lth91/luot247-vision/compare/v1.45.3...v1.46.0) (2026-06-25)
+
+
+### Features
+
+* **home:** tách nội dung tin thành nhiều đoạn theo sheet ([#48](https://github.com/lth91/luot247-vision/issues/48)) ([942a1ed](https://github.com/lth91/luot247-vision/commit/942a1edf465981d08d9db7080be76e60a26e0c6b))
+
 ## [1.45.3](https://github.com/lth91/luot247-vision/compare/v1.45.2...v1.45.3) (2026-06-25)
 
 
