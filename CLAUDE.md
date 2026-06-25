@@ -28,6 +28,17 @@ Local one-off function deploy: `npx supabase functions deploy <name> --project-r
 - **Use `supabase start` for local testing** if you need to validate schema changes before applying. Local stack is fine; preview branches are not.
 - DML-only fixes (UPDATE/DELETE rows) can be applied via `mcp__supabase__execute_sql` for immediacy, but the corresponding `.sql` file must still be committed under `supabase/migrations/` for git history.
 
+### Preview-before-merge workflow (mandatory)
+
+User reviews every frontend change on a Vercel preview URL **before** merge. Default loop:
+
+1. Commit on a feature branch (`claude/<short-slug>`).
+2. `git push -u origin <branch>` and open a PR (do **not** merge yet).
+3. Tell the user the PR URL and that Vercel preview is building. Stop and wait for explicit OK.
+4. If user says "OK"/"merged it"/"đẹp rồi" → merge the PR (squash). If user requests changes → commit + force-push the same branch, repeat from step 3.
+
+Do **not** merge without an explicit OK in the conversation, even when the change looks trivial or "obviously safe". Backend-only changes (Supabase migrations, edge functions, cron jobs) are exempt — they have no Vercel preview, so commit + push + merge the usual way unless the user asks otherwise.
+
 ### Releases
 
 `semantic-release` runs on push to `main` (`.github/workflows/release.yml`). It bumps `package.json`, regenerates `CHANGELOG.md`, tags, and creates a GitHub release. Commits must use Conventional Commits (`fix:`, `feat:`, `chore:`, scopes like `electricity`, `discovery`, `autonomy`). Release commits are skipped via `chore(release):` prefix to avoid loops.
