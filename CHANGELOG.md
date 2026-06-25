@@ -1,3 +1,10 @@
+## [1.45.2](https://github.com/lth91/luot247-vision/compare/v1.45.1...v1.45.2) (2026-06-25)
+
+
+### Bug Fixes
+
+* **home:** giữ line-clamp tiêu đề trên desktop, chỉ bỏ trên mobile ([#46](https://github.com/lth91/luot247-vision/issues/46)) ([d34e0b3](https://github.com/lth91/luot247-vision/commit/d34e0b3961e3608df242d1f89ff32f9678eea296)), closes [#45](https://github.com/lth91/luot247-vision/issues/45)
+
 ## [1.45.1](https://github.com/lth91/luot247-vision/compare/v1.45.0...v1.45.1) (2026-06-25)
 
 
