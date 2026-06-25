@@ -94,13 +94,13 @@ export const NewsItem = ({
       >
         <div>
           {/* Tiêu đề đậm. Tin format mới (có nội dung): chữ nhỏ (text-sm).
-              Responsive: mobile (<md) KHÔNG clamp để hiện trọn tiêu đề
-              (trước đây line-clamp-1 làm tiêu đề dài bị cắt cụt "...");
-              desktop (≥md) giữ line-clamp-1 cho gọn hàng. Tin cũ
-              (description trống, title chứa cả đoạn): giữ text-base. */}
+              Responsive: mobile (<md) KHÔNG clamp để hiện trọn tiêu đề;
+              desktop (≥md) line-clamp-2 cho tối đa 2 dòng (đủ chứa hầu hết
+              tiêu đề mà vẫn gọn hàng — trước line-clamp-1 cắt cụt nhiều tin).
+              Tin cũ (description trống, title chứa cả đoạn): giữ text-base. */}
           <p
             className={`font-semibold leading-relaxed ${
-              description ? "text-sm md:line-clamp-1 mb-1" : "text-base mb-3"
+              description ? "text-sm md:line-clamp-2 mb-1" : "text-base mb-3"
             }`}
           >
             {title}
