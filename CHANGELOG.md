@@ -1,3 +1,10 @@
+## [1.46.1](https://github.com/lth91/luot247-vision/compare/v1.46.0...v1.46.1) (2026-06-26)
+
+
+### Bug Fixes
+
+* **home:** chế độ lật mở đúng tin đang xem ở trang chủ ([#51](https://github.com/lth91/luot247-vision/issues/51)) ([5e16ec7](https://github.com/lth91/luot247-vision/commit/5e16ec7fa767aa13aa986fd244d97914595f5d08)), closes [#44](https://github.com/lth91/luot247-vision/issues/44)
+
 # [1.46.0](https://github.com/lth91/luot247-vision/compare/v1.45.3...v1.46.0) (2026-06-25)
 
 
