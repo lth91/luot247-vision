@@ -397,9 +397,20 @@ const Home2 = () => {
                   {currentNews.title}
                 </h1>
                 {currentNews.description && (
-                  <p className="text-gray-600 text-sm sm:text-base md:text-lg lg:text-xl leading-relaxed">
-                    {currentNews.description}
-                  </p>
+                  <div className="text-gray-600 text-sm sm:text-base md:text-lg lg:text-xl leading-relaxed">
+                    {/* Split theo xuống dòng (Alt+Enter trong sheet) thành các
+                        đoạn riêng — giống NewsItem ở trang chủ. Trước đây 1
+                        thẻ <p> gộp các dòng thành 1 khối, mất cách đoạn. */}
+                    {currentNews.description
+                      .split(/\r?\n/)
+                      .map((para: string) => para.trim())
+                      .filter((para: string) => para.length > 0)
+                      .map((para: string, idx: number) => (
+                        <p key={idx} className="mb-4 last:mb-0">
+                          {para}
+                        </p>
+                      ))}
+                  </div>
                 )}
               </div>
 
