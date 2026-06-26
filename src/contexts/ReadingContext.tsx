@@ -246,24 +246,19 @@ export const ReadingProvider: React.FC<ReadingProviderProps> = ({ children }) =>
       }
     }
 
-    // If we're hiding read news, start from the first unread news
-    if (shouldHideReadNews) {
-      const firstUnreadIndex = filteredNews.findIndex(item => !readNewsIds.has(item.id));
-      if (firstUnreadIndex !== -1) {
-        dbg(`📰 Setting Flip mode to first unread news at index ${firstUnreadIndex}`);
-        updateCurrentNewsIndex(firstUnreadIndex);
-      } else {
-        dbg('📰 All news are read, staying at current position');
-      }
+    // Sau PR snapshot-filter (#44): danh sách hiển thị lọc theo
+    // readNewsIdsAtMount (snapshot), nhưng trước đây flip mode lại tìm
+    // "tin chưa đọc đầu tiên" theo readNewsIds (LIVE) → lệch nhau. Tin vừa
+    // lướt-đọc trong session vẫn hiện ở trang chủ (snapshot cố định) nhưng
+    // flip mode nhảy qua chúng → mở sai tin (không khớp tin đầu feed).
+    // Giờ flip mode bám theo vị trí đang xem (currentNewsIndex — desktop sync
+    // theo scroll, mobile đã xử lý bằng last_visible_news ở trên) để luôn
+    // khớp với tin người dùng đang nhìn ở trang chủ.
+    if (currentNewsIndex >= 0 && currentNewsIndex < filteredNews.length) {
+      dbg(`📰 Flip mode: giữ vị trí đang xem index ${currentNewsIndex}`);
     } else {
-      // If showing all news, try to find the current visible news in scroll mode
-      // For now, we'll use a simple approach: if current index is valid, keep it
-      if (currentNewsIndex < filteredNews.length) {
-        dbg(`📰 Keeping current Flip mode position at index ${currentNewsIndex}`);
-      } else {
-        dbg('📰 Current index out of bounds, resetting to 0');
-        updateCurrentNewsIndex(0);
-      }
+      dbg('📰 Flip mode: index ngoài phạm vi, về đầu list (0)');
+      updateCurrentNewsIndex(0);
     }
   };
 
