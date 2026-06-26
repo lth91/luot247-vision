@@ -1,3 +1,10 @@
+# [1.47.0](https://github.com/lth91/luot247-vision/compare/v1.46.2...v1.47.0) (2026-06-26)
+
+
+### Features
+
+* **brand:** cập nhật logo Lướt 247 ([#53](https://github.com/lth91/luot247-vision/issues/53)) ([bf42aaf](https://github.com/lth91/luot247-vision/commit/bf42aafc2e8771021985fd76e0a7e96de3582709))
+
 ## [1.46.2](https://github.com/lth91/luot247-vision/compare/v1.46.1...v1.46.2) (2026-06-26)
 
 
