@@ -1,3 +1,10 @@
+## [1.46.2](https://github.com/lth91/luot247-vision/compare/v1.46.1...v1.46.2) (2026-06-26)
+
+
+### Bug Fixes
+
+* **home2:** tách nội dung thành nhiều đoạn trong chế độ lật ([#52](https://github.com/lth91/luot247-vision/issues/52)) ([8eda926](https://github.com/lth91/luot247-vision/commit/8eda926ffaa46b29ce45398a10ed4e9bc6e261e0))
+
 ## [1.46.1](https://github.com/lth91/luot247-vision/compare/v1.46.0...v1.46.1) (2026-06-26)
 
 
