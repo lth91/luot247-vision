@@ -115,9 +115,9 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
-      <div className="container flex h-16 items-center justify-center relative">
+      <div className="container flex h-20 items-center justify-center relative">
         <button onClick={() => navigate("/")} className="absolute left-1/2 -translate-x-1/2 cursor-pointer">
-          <img src={logo} alt="LƯỚT 247 - Đọc báo giúp bạn" className="h-12" />
+          <img src={logo} alt="LƯỚT 247 - Đọc báo giúp bạn" className="h-16" />
         </button>
 
         <Sheet open={open} onOpenChange={setOpen}>
