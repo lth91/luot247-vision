@@ -1,3 +1,10 @@
+# [1.48.0](https://github.com/lth91/luot247-vision/compare/v1.47.0...v1.48.0) (2026-06-26)
+
+
+### Features
+
+* **brand:** wire favicon.svg cho tab trình duyệt ([#54](https://github.com/lth91/luot247-vision/issues/54)) ([e57a0ff](https://github.com/lth91/luot247-vision/commit/e57a0ff1534e81be0c8cd92822e5f036eafffc9d))
+
 # [1.47.0](https://github.com/lth91/luot247-vision/compare/v1.46.2...v1.47.0) (2026-06-26)
 
 
