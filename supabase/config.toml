@@ -36,3 +36,5 @@ verify_jwt = false
 verify_jwt = false
 [functions.pipeline-health-check]
 verify_jwt = false
+[functions.submit-news]
+verify_jwt = false
