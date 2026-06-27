@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Mail, ArrowRight, Sparkles } from "lucide-react";
+import { Mail, ArrowRight } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 const emailSchema = z.object({
   email: z.string().email("Email không hợp lệ").max(255),
@@ -121,28 +122,20 @@ export const SignupPromptDialog = ({ session, authChecked }: SignupPromptDialogP
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {/* [&>button]: nút X mặc định của shadcn nằm trên hero đỏ → ép màu trắng
-          cho rõ (mặc định màu tối + opacity-70 gần như tàng hình trên nền đỏ) */}
-      <DialogContent className="p-0 overflow-hidden border-0 sm:max-w-md gap-0 rounded-2xl [&>button]:text-white [&>button]:opacity-90 [&>button]:hover:opacity-100 [&>button]:focus:ring-white/60">
-        {/* Hero gradient đỏ brand (token primary) + hoạ tiết blur cho cảm giác hiện đại */}
-        <div className="relative bg-gradient-to-br from-primary to-[hsl(0_72%_42%)] px-6 pt-8 pb-7 text-center overflow-hidden">
-          <div className="absolute -top-10 -right-8 h-32 w-32 rounded-full bg-white/15 blur-2xl" />
-          <div className="absolute -bottom-12 -left-10 h-32 w-32 rounded-full bg-black/10 blur-2xl" />
-          <div className="relative">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/95 shadow-lg">
-              <Sparkles className="h-7 w-7 text-primary" />
-            </div>
-            <DialogTitle className="text-2xl font-bold text-white tracking-tight">
-              Chào mừng đến Lướt 247!
-            </DialogTitle>
-            <DialogDescription className="mt-2 text-[15px] leading-relaxed text-white/90">
-              Hãy đăng ký tài khoản để tận hưởng trải nghiệm Lướt 247 trọn vẹn hơn.
-            </DialogDescription>
-          </div>
+      <DialogContent className="p-0 overflow-hidden sm:max-w-md gap-0 rounded-2xl">
+        {/* Nền trắng, logo chuẩn của site + tiêu đề/đoạn mô tả chữ tối */}
+        <div className="px-6 pt-8 pb-5 text-center">
+          <img src={logo} alt="Lướt 247 - Đọc báo giúp bạn" className="mx-auto mb-5 h-12" />
+          <DialogTitle className="text-xl sm:text-2xl font-bold text-foreground tracking-tight whitespace-nowrap">
+            Chào mừng đến Lướt 247!
+          </DialogTitle>
+          <DialogDescription className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
+            Hãy đăng ký tài khoản để tận hưởng trải nghiệm Lướt 247 trọn vẹn hơn.
+          </DialogDescription>
         </div>
 
         {/* Form: chỉ 1 ô email, nhập xong tự đăng nhập */}
-        <form onSubmit={handleSubmit} className="px-6 pt-6 pb-6 space-y-3">
+        <form onSubmit={handleSubmit} className="px-6 pb-7 space-y-3">
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
@@ -173,18 +166,6 @@ export const SignupPromptDialog = ({ session, authChecked }: SignupPromptDialogP
               </span>
             )}
           </Button>
-
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="mx-auto block text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Để sau
-          </button>
-
-          <p className="pt-1 text-center text-xs text-muted-foreground/80">
-            Chỉ cần email — chúng tôi tự tạo tài khoản và đăng nhập cho bạn.
-          </p>
         </form>
       </DialogContent>
     </Dialog>
