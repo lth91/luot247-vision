@@ -129,8 +129,13 @@ export const SignupPromptDialog = ({ session, authChecked }: SignupPromptDialogP
           <DialogTitle className="text-xl sm:text-2xl font-bold text-foreground tracking-tight whitespace-nowrap">
             Chào mừng đến Lướt 247!
           </DialogTitle>
+          {/* Ngắt 2 dòng cố định bằng <br/>. Non-breaking space giữa "Lướt"
+              và "247" (&nbsp;) đảm bảo TUYỆT ĐỐI không bao giờ tách "Lướt 247"
+              sang 2 dòng dù màn hình rộng/hẹp thế nào. */}
           <DialogDescription className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
-            Hãy đăng ký tài khoản để tận hưởng trải nghiệm Lướt 247 trọn vẹn hơn.
+            Hãy đăng ký tài khoản để trải nghiệm
+            <br />
+            Lướt&nbsp;247 trọn vẹn hơn.
           </DialogDescription>
         </div>
 
