@@ -121,14 +121,16 @@ export const SignupPromptDialog = ({ session, authChecked }: SignupPromptDialogP
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="p-0 overflow-hidden border-0 sm:max-w-md gap-0 rounded-2xl">
-        {/* Hero gradient đỏ brand + hoạ tiết blur cho cảm giác hiện đại */}
-        <div className="relative bg-gradient-to-br from-red-500 to-red-700 px-6 pt-8 pb-7 text-center overflow-hidden">
+      {/* [&>button]: nút X mặc định của shadcn nằm trên hero đỏ → ép màu trắng
+          cho rõ (mặc định màu tối + opacity-70 gần như tàng hình trên nền đỏ) */}
+      <DialogContent className="p-0 overflow-hidden border-0 sm:max-w-md gap-0 rounded-2xl [&>button]:text-white [&>button]:opacity-90 [&>button]:hover:opacity-100 [&>button]:focus:ring-white/60">
+        {/* Hero gradient đỏ brand (token primary) + hoạ tiết blur cho cảm giác hiện đại */}
+        <div className="relative bg-gradient-to-br from-primary to-[hsl(0_72%_42%)] px-6 pt-8 pb-7 text-center overflow-hidden">
           <div className="absolute -top-10 -right-8 h-32 w-32 rounded-full bg-white/15 blur-2xl" />
           <div className="absolute -bottom-12 -left-10 h-32 w-32 rounded-full bg-black/10 blur-2xl" />
           <div className="relative">
             <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/95 shadow-lg">
-              <Sparkles className="h-7 w-7 text-red-600" />
+              <Sparkles className="h-7 w-7 text-primary" />
             </div>
             <DialogTitle className="text-2xl font-bold text-white tracking-tight">
               Chào mừng đến Lướt 247!
@@ -160,7 +162,7 @@ export const SignupPromptDialog = ({ session, authChecked }: SignupPromptDialogP
           <Button
             type="submit"
             disabled={isLoading}
-            className="group h-12 w-full rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-base font-semibold text-white shadow-md transition-all hover:from-red-600 hover:to-red-700 hover:shadow-lg"
+            className="group h-12 w-full rounded-xl bg-gradient-to-r from-primary to-[hsl(0_72%_46%)] text-base font-semibold text-primary-foreground shadow-md transition-all hover:brightness-110 hover:shadow-lg"
           >
             {isLoading ? (
               "Đang xử lý..."
