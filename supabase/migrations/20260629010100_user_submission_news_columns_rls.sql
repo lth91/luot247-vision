@@ -63,6 +63,9 @@ WHERE title_normalized IS NULL;
 DROP POLICY IF EXISTS "Authenticated users can insert news" ON public.news;
 DROP POLICY IF EXISTS "Authenticated users can update news" ON public.news;
 DROP POLICY IF EXISTS "Authenticated users can delete news" ON public.news;
+DROP POLICY IF EXISTS "Admins/mods can insert news" ON public.news;
+DROP POLICY IF EXISTS "Admins/mods can update news" ON public.news;
+DROP POLICY IF EXISTS "Admins/mods can delete news" ON public.news;
 
 CREATE POLICY "Admins/mods can insert news" ON public.news
   FOR INSERT

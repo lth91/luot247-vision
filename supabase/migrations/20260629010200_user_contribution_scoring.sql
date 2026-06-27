@@ -41,10 +41,12 @@ CREATE INDEX IF NOT EXISTS idx_submission_log_user_created
 -- policy cho anon/authenticated (mặc định deny).
 ALTER TABLE public.submission_log ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own submission log" ON public.submission_log;
 CREATE POLICY "Users can view own submission log" ON public.submission_log
   FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admins can view all submission log" ON public.submission_log;
 CREATE POLICY "Admins can view all submission log" ON public.submission_log
   FOR SELECT
   USING (public.has_role(auth.uid(), 'admin'));
