@@ -21,6 +21,7 @@ import Admin from "./pages/Admin";
 import ElectricityNews from "./pages/ElectricityNews";
 import ElectricityDashboard from "./pages/ElectricityDashboard";
 import NotFound from "./pages/NotFound";
+import { SignupPromptDialog } from "@/components/SignupPromptDialog";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
@@ -29,6 +30,9 @@ const queryClient = new QueryClient();
 
 const App = () => {
   const [session, setSession] = useState<Session | null>(null);
+  // Đánh dấu đã resolve getSession() lần đầu → SignupPromptDialog mới biết
+  // chắc chắn user là khách (chưa login) thay vì "đang chờ".
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -37,6 +41,7 @@ const App = () => {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      setAuthChecked(true);
     });
 
     return () => subscription.unsubscribe();
@@ -49,6 +54,7 @@ const App = () => {
           <FavoritesProvider userId={session?.user?.id}>
             <Toaster />
             <Sonner />
+            <SignupPromptDialog session={session} authChecked={authChecked} />
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
