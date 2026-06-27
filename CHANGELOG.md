@@ -1,3 +1,10 @@
+# [1.49.0](https://github.com/lth91/luot247-vision/compare/v1.48.0...v1.49.0) (2026-06-27)
+
+
+### Features
+
+* **submission:** backend pipeline tin user gửi (migrations + edge function) ([#56](https://github.com/lth91/luot247-vision/issues/56)) ([f7c3a8f](https://github.com/lth91/luot247-vision/commit/f7c3a8f4f1161d728fa670c9f7a212829a48c508))
+
 # [1.48.0](https://github.com/lth91/luot247-vision/compare/v1.47.0...v1.48.0) (2026-06-26)
 
 
