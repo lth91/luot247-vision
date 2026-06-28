@@ -9,10 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { SUBMISSION_CATEGORIES, countWords, SUBMISSION_LIMITS } from "@/lib/newsCategories";
+import { countWords, SUBMISSION_LIMITS } from "@/lib/newsCategories";
 
 const { titleMin, titleMax, contentMin, contentMax } = SUBMISSION_LIMITS;
 
@@ -34,8 +31,6 @@ const SubmitNews = () => {
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [category, setCategory] = useState<string>("");
-  const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -68,15 +63,16 @@ const SubmitNews = () => {
   const lengthOk =
     titleWords >= titleMin && titleWords <= titleMax &&
     contentWords >= contentMin && contentWords <= contentMax;
-  const canSubmit = lengthOk && !!category && !isLoading;
+  const canSubmit = lengthOk && !isLoading;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
     setIsLoading(true);
     try {
+      // Chuyên mục do AI tự phân loại trong edge function; nguồn URL không bắt buộc.
       const { data, error } = await supabase.functions.invoke("submit-news", {
-        body: { title: title.trim(), content: content.trim(), url: url.trim() || undefined, declared_category: category },
+        body: { title: title.trim(), content: content.trim() },
       });
       if (error) {
         // Edge trả 4xx/5xx → error.context có body. Cố lấy reason.
@@ -87,7 +83,7 @@ const SubmitNews = () => {
       }
       if (data?.ok) {
         toast.success(data.message || "Tin đã được đăng. +10 điểm!");
-        setTitle(""); setContent(""); setCategory(""); setUrl("");
+        setTitle(""); setContent("");
       } else {
         toast.error(data?.reason || "Tin không được duyệt.");
       }
@@ -129,24 +125,9 @@ const SubmitNews = () => {
                   placeholder="Tóm tắt tin trong 110–140 từ, văn phong tự nhiên." rows={8} disabled={isLoading} />
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="category">Chuyên mục</Label>
-                <Select value={category} onValueChange={setCategory} disabled={isLoading}>
-                  <SelectTrigger id="category"><SelectValue placeholder="Chọn chuyên mục" /></SelectTrigger>
-                  <SelectContent>
-                    {SUBMISSION_CATEGORIES.map((c) => (
-                      <SelectItem key={c.slug} value={c.slug}>{c.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">AI sẽ tự phân loại lại nếu cần — đây chỉ là gợi ý của bạn.</p>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="url">Nguồn (URL, không bắt buộc)</Label>
-                <Input id="url" type="url" value={url} onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://..." disabled={isLoading} />
-              </div>
+              <p className="text-xs text-muted-foreground">
+                Chuyên mục do AI tự phân loại sau khi gửi — bạn không cần chọn.
+              </p>
 
               <Button type="submit" className="w-full" disabled={!canSubmit}>
                 {isLoading ? "Đang kiểm duyệt..." : "Gửi tin"}
