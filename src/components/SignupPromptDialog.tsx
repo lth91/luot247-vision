@@ -127,15 +127,10 @@ export const SignupPromptDialog = ({ session, authChecked }: SignupPromptDialogP
         <div className="px-6 pt-8 pb-5 text-center">
           <img src={logo} alt="Lướt 247 - Đọc báo giúp bạn" className="mx-auto mb-5 h-12" />
           <DialogTitle className="text-xl sm:text-2xl font-bold text-foreground tracking-tight whitespace-nowrap">
-            Chào mừng đến Lướt 247!
+            Đăng ký Lướt 247
           </DialogTitle>
-          {/* Ngắt 2 dòng cố định bằng <br/>. Non-breaking space giữa "Lướt"
-              và "247" (&nbsp;) đảm bảo TUYỆT ĐỐI không bao giờ tách "Lướt 247"
-              sang 2 dòng dù màn hình rộng/hẹp thế nào. */}
           <DialogDescription className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
-            Hãy đăng ký tài khoản để trải nghiệm
-            <br />
-            Lướt&nbsp;247 trọn vẹn hơn.
+            Nhập email để tạo tài khoản và đọc tin thuận tiện hơn.
           </DialogDescription>
         </div>
 
@@ -147,7 +142,7 @@ export const SignupPromptDialog = ({ session, authChecked }: SignupPromptDialogP
               type="email"
               inputMode="email"
               autoComplete="email"
-              placeholder="email@example.com"
+              placeholder="Email của bạn"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading}
@@ -166,7 +161,7 @@ export const SignupPromptDialog = ({ session, authChecked }: SignupPromptDialogP
               "Đang xử lý..."
             ) : (
               <span className="flex items-center justify-center gap-2">
-                Bắt đầu ngay
+                Tiếp tục
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </span>
             )}
