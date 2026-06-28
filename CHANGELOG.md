@@ -1,3 +1,10 @@
+# [1.53.0](https://github.com/lth91/luot247-vision/compare/v1.52.0...v1.53.0) (2026-06-28)
+
+
+### Features
+
+* **submission:** bỏ ô Chuyên mục + Nguồn khỏi form gửi tin ([#62](https://github.com/lth91/luot247-vision/issues/62)) ([a385f06](https://github.com/lth91/luot247-vision/commit/a385f064b8d11bccf1fdc24da248924dac341e4a))
+
 # [1.52.0](https://github.com/lth91/luot247-vision/compare/v1.51.0...v1.52.0) (2026-06-28)
 
 
