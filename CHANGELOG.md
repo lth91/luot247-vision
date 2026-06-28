@@ -1,3 +1,10 @@
+# [1.52.0](https://github.com/lth91/luot247-vision/compare/v1.51.0...v1.52.0) (2026-06-28)
+
+
+### Features
+
+* **scoring:** khóa điểm khỏi user tự sửa + phạt phân tầng khi gỡ tin ([#61](https://github.com/lth91/luot247-vision/issues/61)) ([b446874](https://github.com/lth91/luot247-vision/commit/b44687483df1093612db55ee1297ae6e6c823e5f))
+
 # [1.51.0](https://github.com/lth91/luot247-vision/compare/v1.50.0...v1.51.0) (2026-06-28)
 
 
