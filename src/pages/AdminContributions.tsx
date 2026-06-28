@@ -10,11 +10,24 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { categoryLabel } from "@/lib/newsCategories";
 import { getRelativeTime } from "@/lib/dateUtils";
+
+// Lý do gỡ tin ↔ mức ảnh hưởng điểm (khớp migration 20260629050000).
+// Tổng điểm trừ = thu hồi 10 thưởng gốc + phạt theo lý do.
+const TAKEDOWN_REASONS = [
+  { value: "system",  label: "Lỗi hệ thống / biên tập (không phải lỗi tác giả)", impact: "−10 (chỉ thu hồi thưởng, không phạt)" },
+  { value: "format",  label: "Lỗi nhẹ (sai mục, văn phong, lặp ý)",              impact: "−15 (+1 strike)" },
+  { value: "factual", label: "Sai sự thật / bịa số liệu / không kiểm chứng",     impact: "−30 (+1 strike)" },
+  { value: "severe",  label: "Bịa hoàn toàn / đạo văn / spam / nội dung cấm",    impact: "−60 (+1 strike)" },
+] as const;
 
 interface Contributor {
   id: string;
@@ -42,6 +55,11 @@ const AdminContributions = () => {
   const [news, setNews] = useState<UserNews[]>([]);
   const [nameById, setNameById] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
+  // Dialog gỡ tin: tin đang chọn + lý do + ghi chú.
+  const [pending, setPending] = useState<UserNews | null>(null);
+  const [reason, setReason] = useState<string>("format");
+  const [note, setNote] = useState("");
+  const [removing, setRemoving] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
@@ -101,13 +119,26 @@ const AdminContributions = () => {
 
   useEffect(() => { if (userRole === "admin") load(); }, [userRole]);
 
-  const takedown = async (id: string) => {
-    // is_approved=true → false: tin biến mất khỏi feed + trigger trừ 5 điểm tác giả.
-    const { error } = await supabase.from("news").update({ is_approved: false }).eq("id", id);
-    if (error) { toast.error("Không gỡ được tin."); return; }
-    toast.success("Đã gỡ tin (tác giả -5 điểm).");
-    setNews((prev) => prev.filter((n) => n.id !== id));
+  // Gỡ mềm tin kèm lý do → trigger DB tự thu hồi thưởng + phạt theo mức.
+  const confirmTakedown = async () => {
+    if (!pending) return;
+    setRemoving(true);
+    const { error } = await supabase.from("news").update({
+      is_approved: false,
+      takedown_reason: reason,
+      takedown_at: new Date().toISOString(),
+      takedown_by: session?.user.id,
+      takedown_note: note.trim() || null,
+    }).eq("id", pending.id);
+    setRemoving(false);
+    if (error) { toast.error("Không gỡ được tin: " + error.message); return; }
+    const meta = TAKEDOWN_REASONS.find((r) => r.value === reason);
+    toast.success(`Đã gỡ tin (${meta?.impact}).`);
+    setNews((prev) => prev.filter((n) => n.id !== pending.id));
+    setPending(null); setNote(""); setReason("format");
   };
+
+  const openTakedown = (n: UserNews) => { setPending(n); setReason("format"); setNote(""); };
 
   if (userRole !== "admin") {
     return (
@@ -189,23 +220,7 @@ const AdminContributions = () => {
                         <TableCell className="text-xs">{nameById[n.submitted_by] || "—"}</TableCell>
                         <TableCell className="text-right text-xs text-muted-foreground">{getRelativeTime(n.created_at)}</TableCell>
                         <TableCell className="text-right">
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-red-600">Gỡ</Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Gỡ tin này?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tin sẽ bị ẩn khỏi trang chủ và tác giả bị trừ 5 điểm. Có thể hoàn tác bằng cách duyệt lại.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Huỷ</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => takedown(n.id)}>Gỡ tin</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <Button variant="ghost" size="sm" className="text-red-600" onClick={() => openTakedown(n)}>Gỡ</Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -215,6 +230,42 @@ const AdminContributions = () => {
           </CardContent>
         </Card>
       </main>
+
+      {/* Dialog gỡ tin: bắt buộc chọn lý do → quyết mức trừ điểm */}
+      <Dialog open={!!pending} onOpenChange={(o) => { if (!o) setPending(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Gỡ tin & áp điểm phạt</DialogTitle>
+            <DialogDescription className="line-clamp-2">{pending?.title}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Lý do gỡ</Label>
+              <Select value={reason} onValueChange={setReason}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TAKEDOWN_REASONS.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Điểm: <span className="font-semibold text-red-600">{TAKEDOWN_REASONS.find((r) => r.value === reason)?.impact}</span>
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Ghi chú (tuỳ chọn)</Label>
+              <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Lý do cụ thể, để đối chiếu khi khiếu nại..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPending(null)} disabled={removing}>Huỷ</Button>
+            <Button variant="destructive" onClick={confirmTakedown} disabled={removing}>
+              {removing ? "Đang gỡ..." : "Gỡ tin"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
