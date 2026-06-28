@@ -1,3 +1,10 @@
+# [1.50.0](https://github.com/lth91/luot247-vision/compare/v1.49.0...v1.50.0) (2026-06-28)
+
+
+### Features
+
+* **views:** tăng target view giả lập lên 2700-3300/ngày từ 29/6 ([#59](https://github.com/lth91/luot247-vision/issues/59)) ([bd3ae48](https://github.com/lth91/luot247-vision/commit/bd3ae480918be467d637cf829b0f0ddcb927e336))
+
 # [1.49.0](https://github.com/lth91/luot247-vision/compare/v1.48.0...v1.49.0) (2026-06-27)
 
 
