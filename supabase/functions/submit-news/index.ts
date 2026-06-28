@@ -81,16 +81,16 @@ Deno.serve(async (req) => {
       return json({ ok: false, reason: "Vui lòng nhập đủ tiêu đề và nội dung." });
     }
 
-    // --- Rate limit ---
-    const sinceIso = new Date(Date.now() - RATE_LIMIT_WINDOW_MIN * 60_000).toISOString();
-    const { count: recentCount } = await supabase
-      .from("submission_log")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .gte("created_at", sinceIso);
-    if ((recentCount ?? 0) >= RATE_LIMIT_MAX) {
-      return json({ ok: false, reason: `Bạn gửi quá nhiều tin trong ${RATE_LIMIT_WINDOW_MIN} phút. Vui lòng thử lại sau.` }, 429);
-    }
+    // --- Rate limit: TẠM TẮT theo yêu cầu (bật lại bằng cách bỏ comment) ---
+    // const sinceIso = new Date(Date.now() - RATE_LIMIT_WINDOW_MIN * 60_000).toISOString();
+    // const { count: recentCount } = await supabase
+    //   .from("submission_log")
+    //   .select("id", { count: "exact", head: true })
+    //   .eq("user_id", user.id)
+    //   .gte("created_at", sinceIso);
+    // if ((recentCount ?? 0) >= RATE_LIMIT_MAX) {
+    //   return json({ ok: false, reason: `Bạn gửi quá nhiều tin trong ${RATE_LIMIT_WINDOW_MIN} phút. Vui lòng thử lại sau.` }, 429);
+    // }
 
     // --- 3) Validate độ dài (ký tự defense + TỪ) ---
     if (title.length > TITLE_MAX_CHARS || content.length > CONTENT_MAX_CHARS) {
