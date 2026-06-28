@@ -55,9 +55,15 @@ serve(async (req) => {
       }
     }
 
-    // Tổng view mục tiêu cho cả ngày: 2000-3000 (random mỗi ngày)
+    // Tổng view mục tiêu cho cả ngày. Tăng từ thứ 2 tuần sau (29/6/2026, GMT+7):
+    //   - Trước 29/6: 2000-3000/ngày (TB 2500)
+    //   - Từ 29/6:    2700-3300/ngày (TB 3000)
+    // So sánh theo ngày GMT+7 (vietnamTime đã +7h nên toISOString lấy đúng ngày VN).
     // Chia theo trọng số giờ (7AM-10PM = 15h, mỗi giờ có 2 khoảng 30 phút).
-    const dailyTarget = 2000 + Math.floor(Math.random() * 1001) // Random từ 2000-3000
+    const vnDateStr = vietnamTime.toISOString().slice(0, 10) // YYYY-MM-DD theo GMT+7
+    const dailyTarget = vnDateStr >= '2026-06-29'
+      ? 2700 + Math.floor(Math.random() * 601)  // 2700-3300
+      : 2000 + Math.floor(Math.random() * 1001) // 2000-3000
 
     // Phân bố theo giờ (peak hours)
     const hourlyWeight: { [key: number]: number } = {
