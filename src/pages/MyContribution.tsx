@@ -100,7 +100,9 @@ const MyContribution = () => {
         <h1 className="text-xl font-bold">🏆 Điểm của tôi</h1>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label="Điểm" value={stats?.total_points ?? 0} accent />
+          {/* Clamp ≥ 0: điểm có thể âm trong DB (phạt "cắn") nhưng hiển thị cho
+              user thì coi như 0 (không quy đổi được gì khi âm), tránh khó hiểu. */}
+          <StatCard label="Điểm" value={Math.max(0, stats?.total_points ?? 0)} accent />
           <StatCard label="Đã đăng" value={stats?.approved_count ?? 0} />
           <StatCard label="Đã gửi" value={stats?.submitted_count ?? 0} />
           <StatCard label="Tỉ lệ duyệt" value={`${passRate}%`} />

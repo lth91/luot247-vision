@@ -65,16 +65,20 @@ BEGIN
           strike_count   = strike_count + (CASE WHEN v_author_fault THEN 1 ELSE 0 END)
       WHERE id = NEW.submitted_by;
 
-    -- KHÔI PHỤC tin: false → true (admin gỡ nhầm rồi duyệt lại) → hoàn nguyên
+    -- DUYỆT tin: false → true.
     ELSIF OLD.is_approved = false AND NEW.is_approved = true THEN
-      v_pen := public.takedown_penalty(OLD.takedown_reason);
-      v_author_fault := COALESCE(OLD.takedown_reason, '') NOT IN ('system', '');
-      UPDATE public.profiles
-      SET total_points   = total_points + (10 + v_pen),
-          approved_count = approved_count + 1,
-          rejected_count = GREATEST(0, rejected_count - (CASE WHEN v_author_fault THEN 1 ELSE 0 END)),
-          strike_count   = GREATEST(0, strike_count - (CASE WHEN v_author_fault THEN 1 ELSE 0 END))
-      WHERE id = NEW.submitted_by;
+      IF OLD.takedown_reason IS NULL THEN
+        -- Duyệt LẦN ĐẦU (chưa từng bị gỡ) — phục vụ "queue mode" tương lai
+        -- (tin insert is_approved=false, admin duyệt sau). Auto-publish hiện
+        -- tại không vào nhánh này. Thưởng +10 như khi đăng.
+        UPDATE public.profiles
+        SET approved_count = approved_count + 1,
+            total_points   = total_points + 10
+        WHERE id = NEW.submitted_by;
+      END IF;
+      -- KHÔI PHỤC sau khi đã gỡ (OLD.takedown_reason IS NOT NULL): CỐ Ý không
+      -- tự hoàn điểm. Hoàn chính xác cần ledger (giai đoạn sau) — nếu gỡ nhầm,
+      -- admin chỉnh tay. Tránh logic reversible dễ sai/bị lợi dụng.
     END IF;
   END IF;
 
