@@ -164,6 +164,39 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                     className="justify-start"
                     onClick={() => {
                       setOpen(false);
+                      navigate("/gui-tin");
+                    }}
+                  >
+                    ✍️ Gửi tin
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => {
+                      setOpen(false);
+                      navigate("/diem-cua-toi");
+                    }}
+                  >
+                    🏆 Điểm của tôi
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => {
+                      setOpen(false);
+                      navigate("/bang-xep-hang");
+                    }}
+                  >
+                    📊 Bảng xếp hạng
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => {
+                      setOpen(false);
                       navigate("/about");
                     }}
                   >
@@ -236,6 +269,16 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                             >
                               👥 Quản lý người dùng
                             </Button>
+                            <Button
+                              variant="ghost"
+                              className="justify-start"
+                              onClick={() => {
+                                setOpen(false);
+                                navigate("/quan-ly-dong-gop");
+                              }}
+                            >
+                              🗂️ Quản lý đóng góp
+                            </Button>
                           </>
                         )}
                       </div>
@@ -279,6 +322,17 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                     }}
                   >
                     🔐 Đăng nhập
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    className="justify-start"
+                    onClick={() => {
+                      setOpen(false);
+                      navigate("/bang-xep-hang");
+                    }}
+                  >
+                    📊 Bảng xếp hạng
                   </Button>
 
                   <Button

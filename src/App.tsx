@@ -21,6 +21,10 @@ import Admin from "./pages/Admin";
 import ElectricityNews from "./pages/ElectricityNews";
 import ElectricityDashboard from "./pages/ElectricityDashboard";
 import NotFound from "./pages/NotFound";
+import SubmitNews from "./pages/SubmitNews";
+import MyContribution from "./pages/MyContribution";
+import Leaderboard from "./pages/Leaderboard";
+import AdminContributions from "./pages/AdminContributions";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
@@ -68,6 +72,10 @@ const App = () => {
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/d" element={<ElectricityNews />} />
                 <Route path="/ddashboard" element={<ElectricityDashboard />} />
+                <Route path="/gui-tin" element={<SubmitNews />} />
+                <Route path="/diem-cua-toi" element={<MyContribution />} />
+                <Route path="/bang-xep-hang" element={<Leaderboard />} />
+                <Route path="/quan-ly-dong-gop" element={<AdminContributions />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
