@@ -1,3 +1,15 @@
+# [1.51.0](https://github.com/lth91/luot247-vision/compare/v1.50.0...v1.51.0) (2026-06-28)
+
+
+### Bug Fixes
+
+* **news:** khôi phục feed sau khi backfill migration đẩy updated_at toàn bảng ([#58](https://github.com/lth91/luot247-vision/issues/58)) ([73c5a15](https://github.com/lth91/luot247-vision/commit/73c5a15b44ac20eb7655a257dadf9f0ae2d2dd90))
+
+
+### Features
+
+* **submission:** frontend pipeline tin user gửi (4 trang + menu) ([#57](https://github.com/lth91/luot247-vision/issues/57)) ([5436425](https://github.com/lth91/luot247-vision/commit/5436425bc64157ace6a2a7f0bb35464b4030767b))
+
 # [1.50.0](https://github.com/lth91/luot247-vision/compare/v1.49.0...v1.50.0) (2026-06-28)
 
 
