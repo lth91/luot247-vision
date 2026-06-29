@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { countWords, SUBMISSION_LIMITS, categoryLabel } from "@/lib/newsCategories";
+import { countWords, SUBMISSION_LIMITS } from "@/lib/newsCategories";
 
 const { titleMin, titleMax, contentMin, contentMax } = SUBMISSION_LIMITS;
 
@@ -39,35 +39,52 @@ const SubmitNews = () => {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkResult, setBulkResult] = useState<any | null>(null);
 
-  // Lịch sử tin đã đăng (lọc theo chính user qua submitted_by; SELECT news là public).
-  const [history, setHistory] = useState<any[] | null>(null);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [stats, setStats] = useState<{ total_points: number; approved_count: number } | null>(null);
+  // Lịch sử TIN BỊ LOẠI (từ submission_log; RLS chỉ cho đọc log của chính mình).
+  const [rejects, setRejects] = useState<any[] | null>(null);
+  const [rejectsLoading, setRejectsLoading] = useState(false);
 
-  const loadHistory = async () => {
+  const loadRejects = async () => {
     if (!session?.user) return;
-    setHistoryLoading(true);
+    setRejectsLoading(true);
     try {
-      const [{ data: rows }, { data: prof }] = await Promise.all([
-        supabase
-          .from("news")
-          .select("id, title, category, created_at")
-          .eq("submitted_by", session.user.id)
-          .order("created_at", { ascending: false })
-          .limit(300),
-        supabase
-          .from("profiles")
-          .select("total_points, approved_count")
-          .eq("id", session.user.id)
-          .maybeSingle(),
-      ]);
-      setHistory(rows || []);
-      if (prof) setStats({ total_points: prof.total_points ?? 0, approved_count: prof.approved_count ?? 0 });
+      const { data } = await supabase
+        .from("submission_log")
+        .select("id, title, status, reject_reason, created_at")
+        .eq("user_id", session.user.id) // admin có thể đọc all → lọc về chính mình
+        .neq("status", "accepted")
+        .eq("dismissed", false)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      // Gộp trùng theo tiêu đề (import lại nhiều lần → giữ bản mới nhất).
+      const seen = new Set<string>();
+      const deduped = (data || []).filter((r: any) => {
+        const k = r.title ? `t:${r.title}` : `id:${r.id}`;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+      setRejects(deduped);
     } catch {
-      setHistory([]);
+      setRejects([]);
     } finally {
-      setHistoryLoading(false);
+      setRejectsLoading(false);
     }
+  };
+
+  // Ẩn 1 dòng đã xử lý (ẩn mọi dòng cùng tiêu đề).
+  const dismissReject = async (it: any) => {
+    await supabase.rpc("dismiss_submission_log", { _title: it.title ?? null });
+    setRejects((prev) => (prev || []).filter((r: any) => (it.title ? r.title !== it.title : r.id !== it.id)));
+  };
+
+  // Nhãn thân thiện cho từng loại lỗi.
+  const REJECT_LABEL: Record<string, string> = {
+    rejected_length: "Sai độ dài",
+    rejected_ai: "Dấu hiệu AI",
+    rejected_implausible: "Khả nghi",
+    rejected_duplicate: "Đã có trên hệ thống",
+    rejected_similar: "Trùng tin đã có",
+    error: "Lỗi xử lý",
   };
 
   useEffect(() => {
@@ -170,11 +187,11 @@ const SubmitNews = () => {
             </p>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="single" onValueChange={(v) => { if (v === "history" && history === null) loadHistory(); }}>
+            <Tabs defaultValue="single" onValueChange={(v) => { if (v === "rejects" && rejects === null) loadRejects(); }}>
               <TabsList className="grid w-full grid-cols-3 mb-5">
                 <TabsTrigger value="single">Gửi 1 tin</TabsTrigger>
                 <TabsTrigger value="bulk">Import Google Sheet</TabsTrigger>
-                <TabsTrigger value="history">Tin đã đăng</TabsTrigger>
+                <TabsTrigger value="rejects">Tin bị loại</TabsTrigger>
               </TabsList>
 
               {/* TAB 1 — gửi lẻ */}
@@ -262,47 +279,48 @@ const SubmitNews = () => {
                 )}
               </TabsContent>
 
-              {/* TAB 3 — lịch sử tin đã đăng của chính nhân viên */}
-              <TabsContent value="history" className="space-y-4">
-                <div className="flex items-center justify-between">
+              {/* TAB 3 — tin bị loại của chính nhân viên (để sửa) */}
+              <TabsContent value="rejects" className="space-y-4">
+                <div className="flex items-center justify-between gap-2">
                   <p className="text-sm text-muted-foreground">
-                    Danh sách tin bạn đã đăng thành công (mới nhất lên đầu).
+                    Tin bị loại cần sửa (mới nhất lên đầu). Sửa xong & đăng lại thì bấm "Ẩn".
                   </p>
-                  <Button variant="outline" size="sm" onClick={loadHistory} disabled={historyLoading}>
-                    {historyLoading ? "Đang tải..." : "Làm mới"}
+                  <Button variant="outline" size="sm" onClick={loadRejects} disabled={rejectsLoading}>
+                    {rejectsLoading ? "Đang tải..." : "Làm mới"}
                   </Button>
                 </div>
 
-                {stats && (
-                  <div className="rounded-lg bg-muted/50 p-3 text-sm flex flex-wrap gap-x-6 gap-y-1">
-                    <span>Tin đã đăng: <b className="text-green-600">{stats.approved_count}</b></span>
-                    <span>Tổng điểm: <b className="text-primary">{stats.total_points}</b></span>
-                  </div>
+                {rejectsLoading && rejects === null && (
+                  <p className="text-sm text-muted-foreground py-6 text-center">Đang tải...</p>
                 )}
 
-                {historyLoading && history === null && (
-                  <p className="text-sm text-muted-foreground py-6 text-center">Đang tải lịch sử...</p>
-                )}
-
-                {history !== null && history.length === 0 && !historyLoading && (
+                {rejects !== null && rejects.length === 0 && !rejectsLoading && (
                   <p className="text-sm text-muted-foreground py-6 text-center">
-                    Bạn chưa đăng tin nào. Gửi tin ở tab "Gửi 1 tin" hoặc "Import Google Sheet".
+                    Không có tin nào bị loại. 🎉
                   </p>
                 )}
 
-                {history !== null && history.length > 0 && (
+                {rejects !== null && rejects.length > 0 && (
                   <ul className="divide-y rounded-lg border">
-                    {history.map((it: any) => (
-                      <li key={it.id} className="p-3 space-y-1">
-                        <p className="text-sm font-medium leading-snug">{it.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(it.created_at).toLocaleString("vi-VN", {
-                            day: "2-digit", month: "2-digit", year: "numeric",
-                            hour: "2-digit", minute: "2-digit",
-                          })}
-                          {" · "}
-                          {categoryLabel(it.category)}
-                        </p>
+                    {rejects.map((it: any) => (
+                      <li key={it.id} className="p-3 flex items-start justify-between gap-3">
+                        <div className="space-y-1 min-w-0">
+                          <p className="text-sm font-medium leading-snug">{it.title || "(không có tiêu đề)"}</p>
+                          <p className="text-xs text-red-600">
+                            {REJECT_LABEL[it.status] || "Bị loại"}
+                            {it.reject_reason ? ` — ${it.reject_reason}` : ""}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(it.created_at).toLocaleString("vi-VN", {
+                              day: "2-digit", month: "2-digit", year: "numeric",
+                              hour: "2-digit", minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
+                        <Button variant="ghost" size="sm" className="shrink-0 text-xs"
+                          onClick={() => dismissReject(it)}>
+                          Ẩn
+                        </Button>
                       </li>
                     ))}
                   </ul>
