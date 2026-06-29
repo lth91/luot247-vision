@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { countWords, SUBMISSION_LIMITS } from "@/lib/newsCategories";
+import { countWords, SUBMISSION_LIMITS, categoryLabel } from "@/lib/newsCategories";
 
 const { titleMin, titleMax, contentMin, contentMax } = SUBMISSION_LIMITS;
 
@@ -38,6 +38,37 @@ const SubmitNews = () => {
   const [sheetUrl, setSheetUrl] = useState("");
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkResult, setBulkResult] = useState<any | null>(null);
+
+  // Lịch sử tin đã đăng (lọc theo chính user qua submitted_by; SELECT news là public).
+  const [history, setHistory] = useState<any[] | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [stats, setStats] = useState<{ total_points: number; approved_count: number } | null>(null);
+
+  const loadHistory = async () => {
+    if (!session?.user) return;
+    setHistoryLoading(true);
+    try {
+      const [{ data: rows }, { data: prof }] = await Promise.all([
+        supabase
+          .from("news")
+          .select("id, title, category, created_at")
+          .eq("submitted_by", session.user.id)
+          .order("created_at", { ascending: false })
+          .limit(300),
+        supabase
+          .from("profiles")
+          .select("total_points, approved_count")
+          .eq("id", session.user.id)
+          .maybeSingle(),
+      ]);
+      setHistory(rows || []);
+      if (prof) setStats({ total_points: prof.total_points ?? 0, approved_count: prof.approved_count ?? 0 });
+    } catch {
+      setHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
@@ -139,10 +170,11 @@ const SubmitNews = () => {
             </p>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="single">
-              <TabsList className="grid w-full grid-cols-2 mb-5">
+            <Tabs defaultValue="single" onValueChange={(v) => { if (v === "history" && history === null) loadHistory(); }}>
+              <TabsList className="grid w-full grid-cols-3 mb-5">
                 <TabsTrigger value="single">Gửi 1 tin</TabsTrigger>
                 <TabsTrigger value="bulk">Import Google Sheet</TabsTrigger>
+                <TabsTrigger value="history">Tin đã đăng</TabsTrigger>
               </TabsList>
 
               {/* TAB 1 — gửi lẻ */}
@@ -227,6 +259,53 @@ const SubmitNews = () => {
                       </div>
                     )}
                   </div>
+                )}
+              </TabsContent>
+
+              {/* TAB 3 — lịch sử tin đã đăng của chính nhân viên */}
+              <TabsContent value="history" className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Danh sách tin bạn đã đăng thành công (mới nhất lên đầu).
+                  </p>
+                  <Button variant="outline" size="sm" onClick={loadHistory} disabled={historyLoading}>
+                    {historyLoading ? "Đang tải..." : "Làm mới"}
+                  </Button>
+                </div>
+
+                {stats && (
+                  <div className="rounded-lg bg-muted/50 p-3 text-sm flex flex-wrap gap-x-6 gap-y-1">
+                    <span>Tin đã đăng: <b className="text-green-600">{stats.approved_count}</b></span>
+                    <span>Tổng điểm: <b className="text-primary">{stats.total_points}</b></span>
+                  </div>
+                )}
+
+                {historyLoading && history === null && (
+                  <p className="text-sm text-muted-foreground py-6 text-center">Đang tải lịch sử...</p>
+                )}
+
+                {history !== null && history.length === 0 && !historyLoading && (
+                  <p className="text-sm text-muted-foreground py-6 text-center">
+                    Bạn chưa đăng tin nào. Gửi tin ở tab "Gửi 1 tin" hoặc "Import Google Sheet".
+                  </p>
+                )}
+
+                {history !== null && history.length > 0 && (
+                  <ul className="divide-y rounded-lg border">
+                    {history.map((it: any) => (
+                      <li key={it.id} className="p-3 space-y-1">
+                        <p className="text-sm font-medium leading-snug">{it.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(it.created_at).toLocaleString("vi-VN", {
+                            day: "2-digit", month: "2-digit", year: "numeric",
+                            hour: "2-digit", minute: "2-digit",
+                          })}
+                          {" · "}
+                          {categoryLabel(it.category)}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </TabsContent>
             </Tabs>
