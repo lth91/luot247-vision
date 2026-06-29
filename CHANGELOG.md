@@ -1,3 +1,10 @@
+# [1.56.0](https://github.com/lth91/luot247-vision/compare/v1.55.0...v1.56.0) (2026-06-29)
+
+
+### Features
+
+* **security:** khóa đọc raw view_logs2 (Mức A — chỉ admin) ([#67](https://github.com/lth91/luot247-vision/issues/67)) ([23fb1c3](https://github.com/lth91/luot247-vision/commit/23fb1c3951f65a5a3fcea0e84b740fe6dfab0e63))
+
 # [1.55.0](https://github.com/lth91/luot247-vision/compare/v1.54.1...v1.55.0) (2026-06-29)
 
 
