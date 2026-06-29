@@ -39,6 +39,54 @@ const SubmitNews = () => {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkResult, setBulkResult] = useState<any | null>(null);
 
+  // Lịch sử TIN BỊ LOẠI (từ submission_log; RLS chỉ cho đọc log của chính mình).
+  const [rejects, setRejects] = useState<any[] | null>(null);
+  const [rejectsLoading, setRejectsLoading] = useState(false);
+
+  const loadRejects = async () => {
+    if (!session?.user) return;
+    setRejectsLoading(true);
+    try {
+      const { data } = await supabase
+        .from("submission_log")
+        .select("id, title, status, reject_reason, created_at")
+        .eq("user_id", session.user.id) // admin có thể đọc all → lọc về chính mình
+        .neq("status", "accepted")
+        .eq("dismissed", false)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      // Gộp trùng theo tiêu đề (import lại nhiều lần → giữ bản mới nhất).
+      const seen = new Set<string>();
+      const deduped = (data || []).filter((r: any) => {
+        const k = r.title ? `t:${r.title}` : `id:${r.id}`;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+      setRejects(deduped);
+    } catch {
+      setRejects([]);
+    } finally {
+      setRejectsLoading(false);
+    }
+  };
+
+  // Ẩn 1 dòng đã xử lý (ẩn mọi dòng cùng tiêu đề).
+  const dismissReject = async (it: any) => {
+    await supabase.rpc("dismiss_submission_log", { _title: it.title ?? null });
+    setRejects((prev) => (prev || []).filter((r: any) => (it.title ? r.title !== it.title : r.id !== it.id)));
+  };
+
+  // Nhãn thân thiện cho từng loại lỗi.
+  const REJECT_LABEL: Record<string, string> = {
+    rejected_length: "Sai độ dài",
+    rejected_ai: "Dấu hiệu AI",
+    rejected_implausible: "Khả nghi",
+    rejected_duplicate: "Đã có trên hệ thống",
+    rejected_similar: "Trùng tin đã có",
+    error: "Lỗi xử lý",
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s); setSessionChecked(true);
@@ -139,10 +187,11 @@ const SubmitNews = () => {
             </p>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="single">
-              <TabsList className="grid w-full grid-cols-2 mb-5">
+            <Tabs defaultValue="single" onValueChange={(v) => { if (v === "rejects" && rejects === null) loadRejects(); }}>
+              <TabsList className="grid w-full grid-cols-3 mb-5">
                 <TabsTrigger value="single">Gửi 1 tin</TabsTrigger>
                 <TabsTrigger value="bulk">Import Google Sheet</TabsTrigger>
+                <TabsTrigger value="rejects">Tin bị loại</TabsTrigger>
               </TabsList>
 
               {/* TAB 1 — gửi lẻ */}
@@ -227,6 +276,54 @@ const SubmitNews = () => {
                       </div>
                     )}
                   </div>
+                )}
+              </TabsContent>
+
+              {/* TAB 3 — tin bị loại của chính nhân viên (để sửa) */}
+              <TabsContent value="rejects" className="space-y-4">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm text-muted-foreground">
+                    Tin bị loại cần sửa (mới nhất lên đầu). Sửa xong & đăng lại thì bấm "Ẩn".
+                  </p>
+                  <Button variant="outline" size="sm" onClick={loadRejects} disabled={rejectsLoading}>
+                    {rejectsLoading ? "Đang tải..." : "Làm mới"}
+                  </Button>
+                </div>
+
+                {rejectsLoading && rejects === null && (
+                  <p className="text-sm text-muted-foreground py-6 text-center">Đang tải...</p>
+                )}
+
+                {rejects !== null && rejects.length === 0 && !rejectsLoading && (
+                  <p className="text-sm text-muted-foreground py-6 text-center">
+                    Không có tin nào bị loại. 🎉
+                  </p>
+                )}
+
+                {rejects !== null && rejects.length > 0 && (
+                  <ul className="divide-y rounded-lg border">
+                    {rejects.map((it: any) => (
+                      <li key={it.id} className="p-3 flex items-start justify-between gap-3">
+                        <div className="space-y-1 min-w-0">
+                          <p className="text-sm font-medium leading-snug">{it.title || "(không có tiêu đề)"}</p>
+                          <p className="text-xs text-red-600">
+                            {REJECT_LABEL[it.status] || "Bị loại"}
+                            {it.reject_reason ? ` — ${it.reject_reason}` : ""}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(it.created_at).toLocaleString("vi-VN", {
+                              day: "2-digit", month: "2-digit", year: "numeric",
+                              hour: "2-digit", minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
+                        <Button variant="ghost" size="sm" className="shrink-0 text-xs"
+                          onClick={() => dismissReject(it)}>
+                          Ẩn
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </TabsContent>
             </Tabs>

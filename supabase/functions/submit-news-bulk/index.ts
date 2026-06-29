@@ -115,11 +115,19 @@ Deno.serve(async (req) => {
   const user = userData?.user;
   if (userErr || !user) return json({ ok: false, reason: "Phiên đăng nhập không hợp lệ." }, 401);
 
-  const logRow = (status: string, opts: { news_id?: string | null; reject_reason?: string; ai_score?: unknown } = {}) =>
+  const logRow = (status: string, opts: { news_id?: string | null; reject_reason?: string; ai_score?: unknown; title?: string } = {}) =>
     supabase.from("submission_log").insert({
       user_id: user.id, news_id: opts.news_id ?? null, status,
+      title: opts.title ?? null,
       reject_reason: opts.reject_reason ?? null, ai_score: opts.ai_score ?? null,
     });
+
+  // Log các tin BỊ LOẠI để tab "Tin bị loại" xem lại sau (kèm tiêu đề + lý do).
+  // penalized=false → trigger phạt KHÔNG trừ điểm (bulk không phạt). Không log
+  // tin trùng/đã-có (đó là "thành công, bỏ qua", không phải lỗi cần sửa).
+  const rejectLogs: Array<{ user_id: string; status: string; title: string; reject_reason: string; penalized: false }> = [];
+  const logReject = (status: string, title: string, reason: string) =>
+    rejectLogs.push({ user_id: user.id, status, title: title.slice(0, 200), reject_reason: reason, penalized: false });
 
   try {
     if (!anthropicKey) return json({ ok: false, reason: "Hệ thống chưa sẵn sàng (thiếu cấu hình AI)." }, 500);
@@ -161,7 +169,9 @@ Deno.serve(async (req) => {
       if (!title || !content || title.length > TITLE_MAX_CHARS || content.length > CONTENT_MAX_CHARS ||
           tw < TITLE_MIN || tw > TITLE_MAX || cw < CONTENT_MIN || cw > CONTENT_MAX) {
         summary.rejected_length++;
-        issues.push({ row: rowNum, title: title.slice(0, 60), reason: `Sai độ dài: tiêu đề ${tw} từ (cần 10–18), nội dung ${cw} từ (cần 110–140)` });
+        const reason = `Sai độ dài: tiêu đề ${tw} từ (cần 10–18), nội dung ${cw} từ (cần 110–140)`;
+        issues.push({ row: rowNum, title: title.slice(0, 60), reason });
+        logReject("rejected_length", title || "(trống)", reason);
         continue;
       }
       lenValid.push(row);
@@ -210,12 +220,16 @@ Deno.serve(async (req) => {
       }
       if (v.is_ai_generated === true && (v.ai_confidence ?? 0) >= 0.8) {
         summary.rejected_ai++;
-        issues.push({ row: rowNum, title: title.slice(0, 60), reason: "Dấu hiệu nội dung do AI viết — viết lại văn phong tự nhiên" });
+        const reason = "Dấu hiệu nội dung do AI viết — viết lại văn phong tự nhiên";
+        issues.push({ row: rowNum, title: title.slice(0, 60), reason });
+        logReject("rejected_ai", title, reason);
         continue;
       }
       if (v.is_plausible === false) {
         summary.rejected_implausible++;
-        issues.push({ row: rowNum, title: title.slice(0, 60), reason: "Nội dung khả nghi/khó kiểm chứng — xem lại" });
+        const reason = "Nội dung khả nghi/khó kiểm chứng — xem lại";
+        issues.push({ row: rowNum, title: title.slice(0, 60), reason });
+        logReject("rejected_implausible", title, reason);
         continue;
       }
       const category = isValidCategory(v.category) ? v.category : "xa-hoi-van-hoa";
@@ -225,7 +239,13 @@ Deno.serve(async (req) => {
       }).select("id").single();
       if (insErr || !ins) { summary.error++; continue; }
       summary.accepted++;
-      await logRow("accepted", { news_id: ins.id });
+      await logRow("accepted", { news_id: ins.id, title });
+    }
+
+    // Ghi 1 lượt các tin bị loại (để tab "Tin bị loại" xem lại). Best-effort.
+    if (rejectLogs.length > 0) {
+      const { error: logErr } = await supabase.from("submission_log").insert(rejectLogs);
+      if (logErr) console.error("reject log insert error:", logErr);
     }
 
     return json({

@@ -56,12 +56,15 @@ Deno.serve(async (req) => {
   const user = userData?.user;
   if (userErr || !user) return json({ ok: false, reason: "Phiên đăng nhập không hợp lệ." }, 401);
 
+  // Tiêu đề tin (để tab "Tin bị loại" hiển thị) — set sau khi parse body.
+  let logTitle: string | null = null;
   // Ghi log + (best-effort) trả về. status thuộc CHECK constraint của submission_log.
   const log = async (status: string, opts: { news_id?: string | null; reject_reason?: string; ai_score?: unknown } = {}) => {
     await supabase.from("submission_log").insert({
       user_id: user.id,
       news_id: opts.news_id ?? null,
       status,
+      title: logTitle,
       reject_reason: opts.reject_reason ?? null,
       ai_score: opts.ai_score ?? null,
     });
@@ -75,6 +78,7 @@ Deno.serve(async (req) => {
     const content = String(body.content ?? "").trim();
     const rawUrl = body.url ? String(body.url).trim() : "";
     const declaredCategory = String(body.declared_category ?? "").trim();
+    logTitle = title ? title.slice(0, 200) : null;
 
     if (!title || !content) {
       await log("rejected_length", { reject_reason: "Thiếu tiêu đề hoặc nội dung." });
