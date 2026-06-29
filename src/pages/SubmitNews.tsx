@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { countWords, SUBMISSION_LIMITS } from "@/lib/newsCategories";
 
 const { titleMin, titleMax, contentMin, contentMax } = SUBMISSION_LIMITS;
@@ -32,6 +33,11 @@ const SubmitNews = () => {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Import hàng loạt từ Google Sheet
+  const [sheetUrl, setSheetUrl] = useState("");
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkResult, setBulkResult] = useState<any | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
@@ -94,6 +100,33 @@ const SubmitNews = () => {
     }
   };
 
+  const handleBulkImport = async () => {
+    if (!sheetUrl.trim() || bulkLoading) return;
+    setBulkLoading(true);
+    setBulkResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("submit-news-bulk", {
+        body: { sheetUrl: sheetUrl.trim() },
+      });
+      if (error) {
+        let reason = "Import thất bại, vui lòng thử lại.";
+        try { const j = await (error as any)?.context?.json?.(); if (j?.reason) reason = j.reason; } catch { /* ignore */ }
+        toast.error(reason);
+        return;
+      }
+      if (data?.ok) {
+        toast.success(data.message || "Đã import xong.");
+        setBulkResult(data.summary);
+      } else {
+        toast.error(data?.reason || "Import không thành công.");
+      }
+    } catch (err) {
+      toast.error("Có lỗi xảy ra, vui lòng thử lại.");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header user={session?.user} userRole={userRole} />
@@ -106,38 +139,81 @@ const SubmitNews = () => {
             </p>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="title">Tiêu đề</Label>
-                  <WordHint count={titleWords} min={titleMin} max={titleMax} />
+            <Tabs defaultValue="single">
+              <TabsList className="grid w-full grid-cols-2 mb-5">
+                <TabsTrigger value="single">Gửi 1 tin</TabsTrigger>
+                <TabsTrigger value="bulk">Import Google Sheet</TabsTrigger>
+              </TabsList>
+
+              {/* TAB 1 — gửi lẻ */}
+              <TabsContent value="single">
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="title">Tiêu đề</Label>
+                      <WordHint count={titleWords} min={titleMin} max={titleMax} />
+                    </div>
+                    <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Tiêu đề ngắn gọn, đúng trọng tâm" disabled={isLoading} />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="content">Nội dung</Label>
+                      <WordHint count={contentWords} min={contentMin} max={contentMax} />
+                    </div>
+                    <Textarea id="content" value={content} onChange={(e) => setContent(e.target.value)}
+                      placeholder="Tóm tắt tin trong 110–140 từ, văn phong tự nhiên." rows={8} disabled={isLoading} />
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    Chuyên mục do AI tự phân loại sau khi gửi — bạn không cần chọn.
+                  </p>
+
+                  <Button type="submit" className="w-full" disabled={!canSubmit}>
+                    {isLoading ? "Đang kiểm duyệt..." : "Gửi tin"}
+                  </Button>
+                  {!lengthOk && (title || content) && (
+                    <p className="text-xs text-center text-muted-foreground">
+                      Cần đúng độ dài tiêu đề ({titleMin}–{titleMax} từ) và nội dung ({contentMin}–{contentMax} từ) để gửi.
+                    </p>
+                  )}
+                </form>
+              </TabsContent>
+
+              {/* TAB 2 — import hàng loạt từ Google Sheet */}
+              <TabsContent value="bulk" className="space-y-4">
+                <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
+                  <p className="font-medium text-foreground">Cách dùng:</p>
+                  <p>• Sheet có <b>2 cột</b>: cột A = <b>Tiêu đề</b> (10–18 từ), cột B = <b>Nội dung</b> (110–140 từ). Dòng 1 là tiêu đề cột.</p>
+                  <p>• Đặt quyền chia sẻ Sheet: <b>Anyone with the link → Viewer</b>.</p>
+                  <p>• Tối đa <b>100 tin/lần</b>. Mỗi tin qua kiểm duyệt AI như gửi lẻ; tin đạt được đăng + 10đ.</p>
                 </div>
-                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Tiêu đề ngắn gọn, đúng trọng tâm" disabled={isLoading} />
-              </div>
 
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="content">Nội dung</Label>
-                  <WordHint count={contentWords} min={contentMin} max={contentMax} />
+                <div className="space-y-1.5">
+                  <Label htmlFor="sheetUrl">Link Google Sheet</Label>
+                  <Input id="sheetUrl" type="url" value={sheetUrl} onChange={(e) => setSheetUrl(e.target.value)}
+                    placeholder="https://docs.google.com/spreadsheets/d/..." disabled={bulkLoading} />
                 </div>
-                <Textarea id="content" value={content} onChange={(e) => setContent(e.target.value)}
-                  placeholder="Tóm tắt tin trong 110–140 từ, văn phong tự nhiên." rows={8} disabled={isLoading} />
-              </div>
 
-              <p className="text-xs text-muted-foreground">
-                Chuyên mục do AI tự phân loại sau khi gửi — bạn không cần chọn.
-              </p>
+                <Button className="w-full" onClick={handleBulkImport} disabled={!sheetUrl.trim() || bulkLoading}>
+                  {bulkLoading ? "Đang xử lý (có thể mất 30–60 giây)..." : "Import & gửi hàng loạt"}
+                </Button>
 
-              <Button type="submit" className="w-full" disabled={!canSubmit}>
-                {isLoading ? "Đang kiểm duyệt..." : "Gửi tin"}
-              </Button>
-              {!lengthOk && (title || content) && (
-                <p className="text-xs text-center text-muted-foreground">
-                  Cần đúng độ dài tiêu đề ({titleMin}–{titleMax} từ) và nội dung ({contentMin}–{contentMax} từ) để gửi.
-                </p>
-              )}
-            </form>
+                {bulkResult && (
+                  <div className="rounded-lg border p-3 text-sm space-y-1">
+                    <p className="font-semibold">Kết quả import:</p>
+                    <p>✅ Đăng thành công: <b className="text-green-600">{bulkResult.accepted}</b>/{bulkResult.total} tin (+{bulkResult.accepted * 10} điểm)</p>
+                    {bulkResult.rejected_length > 0 && <p>• Sai độ dài: {bulkResult.rejected_length}</p>}
+                    {bulkResult.rejected_similar > 0 && <p>• Trùng tiêu đề: {bulkResult.rejected_similar}</p>}
+                    {bulkResult.rejected_ai > 0 && <p>• Dấu hiệu AI: {bulkResult.rejected_ai}</p>}
+                    {bulkResult.rejected_implausible > 0 && <p>• Khả nghi: {bulkResult.rejected_implausible}</p>}
+                    {bulkResult.error > 0 && <p>• Lỗi xử lý: {bulkResult.error}</p>}
+                    {bulkResult.truncated && <p className="text-amber-600">⚠️ Sheet vượt 100 dòng — phần dư chưa xử lý, import lại để gửi tiếp.</p>}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </main>
