@@ -1,3 +1,10 @@
+# [1.57.0](https://github.com/lth91/luot247-vision/compare/v1.56.0...v1.57.0) (2026-06-29)
+
+
+### Features
+
+* **submission:** báo đúng dòng/tin bị loại khi import sheet ([#68](https://github.com/lth91/luot247-vision/issues/68)) ([121b059](https://github.com/lth91/luot247-vision/commit/121b05921b1eb742ccfac5d2e177342de50293d0))
+
 # [1.56.0](https://github.com/lth91/luot247-vision/compare/v1.55.0...v1.56.0) (2026-06-29)
 
 
