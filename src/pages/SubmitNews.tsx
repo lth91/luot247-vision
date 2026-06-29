@@ -116,7 +116,7 @@ const SubmitNews = () => {
       }
       if (data?.ok) {
         toast.success(data.message || "Đã import xong.");
-        setBulkResult(data.summary);
+        setBulkResult({ ...data.summary, issues: data.issues || [] });
       } else {
         toast.error(data?.reason || "Import không thành công.");
       }
@@ -212,6 +212,20 @@ const SubmitNews = () => {
                     {bulkResult.error > 0 && <p>• Lỗi xử lý: {bulkResult.error}</p>}
                     {bulkResult.skipped > 0 && <p className="text-amber-600">• Chưa kịp xử lý (quá thời gian): {bulkResult.skipped} — import lại để gửi tiếp.</p>}
                     {bulkResult.truncated && <p className="text-amber-600">⚠️ Sheet vượt 100 dòng — phần dư chưa xử lý, import lại để gửi tiếp.</p>}
+
+                    {bulkResult.issues && bulkResult.issues.length > 0 && (
+                      <div className="mt-2 pt-2 border-t">
+                        <p className="font-semibold text-red-600">Tin cần sửa ({bulkResult.issues.length}):</p>
+                        <ul className="mt-1 space-y-1 max-h-60 overflow-y-auto">
+                          {bulkResult.issues.map((it: any, idx: number) => (
+                            <li key={idx} className="text-xs">
+                              <b>Dòng {it.row}</b>: {it.title || "(trống)"} — <span className="text-red-600">{it.reason}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="mt-1 text-xs text-muted-foreground">Sửa các dòng trên trong Google Sheet rồi import lại — tin đã đăng tự bỏ qua.</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </TabsContent>
