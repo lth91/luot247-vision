@@ -188,6 +188,7 @@ const SubmitNews = () => {
                   <p>• Sheet có <b>2 cột</b>: cột A = <b>Tiêu đề</b> (10–18 từ), cột B = <b>Nội dung</b> (110–140 từ). Dòng 1 là tiêu đề cột.</p>
                   <p>• Đặt quyền chia sẻ Sheet: <b>Anyone with the link → Viewer</b>.</p>
                   <p>• Tối đa <b>100 tin/lần</b>. Mỗi tin qua kiểm duyệt AI như gửi lẻ; tin đạt được đăng + 10đ.</p>
+                  <p>• <b>Import lại an toàn</b>: tin đã đăng sẽ tự bỏ qua (không trừ điểm, không tốn phí). Sửa tin lỗi rồi import lại cả sheet là được.</p>
                 </div>
 
                 <div className="space-y-1.5">
@@ -204,8 +205,8 @@ const SubmitNews = () => {
                   <div className="rounded-lg border p-3 text-sm space-y-1">
                     <p className="font-semibold">Kết quả import:</p>
                     <p>✅ Đăng thành công: <b className="text-green-600">{bulkResult.accepted}</b>/{bulkResult.total} tin (+{bulkResult.accepted * 10} điểm)</p>
-                    {bulkResult.rejected_length > 0 && <p>• Sai độ dài: {bulkResult.rejected_length}</p>}
-                    {bulkResult.rejected_similar > 0 && <p>• Trùng tiêu đề: {bulkResult.rejected_similar}</p>}
+                    {bulkResult.rejected_length > 0 && <p>• Sai độ dài (sửa rồi import lại): {bulkResult.rejected_length}</p>}
+                    {bulkResult.duplicate > 0 && <p>• Đã có trên hệ thống, bỏ qua: {bulkResult.duplicate}</p>}
                     {bulkResult.rejected_ai > 0 && <p>• Dấu hiệu AI: {bulkResult.rejected_ai}</p>}
                     {bulkResult.rejected_implausible > 0 && <p>• Khả nghi: {bulkResult.rejected_implausible}</p>}
                     {bulkResult.error > 0 && <p>• Lỗi xử lý: {bulkResult.error}</p>}

@@ -143,15 +143,14 @@ Deno.serve(async (req) => {
     const rows = dataRows.slice(0, MAX_ROWS).map((r) => ({ title: (r[0] ?? "").trim(), content: (r[1] ?? "").trim() }));
     if (rows.length === 0) return json({ ok: false, reason: "Sheet không có dòng dữ liệu (dòng 1 coi là tiêu đề cột)." }, 400);
 
-    const summary = { total: rows.length, accepted: 0, rejected_length: 0, rejected_similar: 0, rejected_ai: 0, rejected_implausible: 0, error: 0, skipped: 0, truncated };
+    const summary = { total: rows.length, accepted: 0, rejected_length: 0, duplicate: 0, rejected_ai: 0, rejected_implausible: 0, error: 0, skipped: 0, truncated };
     // Chống timeout: dừng nhận thêm khi gần chạm giới hạn edge function (~150s).
     const START = Date.now();
     const TIME_BUDGET_MS = 110_000;
 
-    // 3) Lọc độ dài (local, không tốn LLM). LƯU Ý: bulk KHÔNG ghi log phạt cho
-    // dòng bị loại (tránh -1đ/dòng → import sheet lỗi không bị trừ điểm oan);
+    // 3) Lọc độ dài (local, không tốn LLM). Bulk KHÔNG phạt điểm dòng bị loại —
     // chỉ đếm trong summary. Dòng được đăng vẫn +10 (qua trigger news insert).
-    const valid: { title: string; content: string }[] = [];
+    const lenValid: { title: string; content: string }[] = [];
     for (const { title, content } of rows) {
       const tw = countWords(title), cw = countWords(content);
       if (!title || !content || title.length > TITLE_MAX_CHARS || content.length > CONTENT_MAX_CHARS ||
@@ -159,41 +158,52 @@ Deno.serve(async (req) => {
         summary.rejected_length++;
         continue;
       }
-      valid.push({ title, content });
+      lenValid.push({ title, content });
     }
 
-    // 4) LLM phân loại theo lô. Verdict để undefined = chưa kịp xử lý (timeout);
-    // {} = LLM lỗi (thiếu field → error bên dưới).
-    const verdicts: (Verdict | undefined)[] = new Array(valid.length);
-    for (let b = 0; b < valid.length; b += LLM_BATCH) {
-      if (Date.now() - START > TIME_BUDGET_MS) break; // hết giờ → phần còn lại tính skipped
-      const slice = valid.slice(b, b + LLM_BATCH);
+    // 4) BỎ QUA tin ĐÃ CÓ — làm TRƯỚC khi gọi LLM để IMPORT LẠI không tốn token
+    //    (vd: sửa 1 tin lỗi rồi import lại cả sheet → các tin cũ tự bỏ qua, rẻ).
+    //    - Trùng trong cùng sheet (paste lặp): so tiêu đề chuẩn hoá (lower+trim).
+    //    - Trùng với tin đã có trên hệ thống: RPC trigram ngưỡng 0.7.
+    const seen = new Set<string>();
+    const fresh: { title: string; content: string }[] = [];
+    for (const row of lenValid) {
+      if (Date.now() - START > TIME_BUDGET_MS) { summary.skipped++; continue; }
+      const key = row.title.trim().toLowerCase();
+      if (seen.has(key)) { summary.duplicate++; continue; }
+      seen.add(key);
+      const { data: dupId } = await supabase.rpc("find_similar_news_title", { _title: row.title, _threshold: 0.7 });
+      if ((dupId as string | null) ?? null) { summary.duplicate++; continue; }
+      fresh.push(row);
+    }
+
+    // 5) LLM phân loại theo lô (CHỈ tin mới). undefined = chưa kịp (timeout); {} = LLM lỗi.
+    const verdicts: (Verdict | undefined)[] = new Array(fresh.length);
+    for (let b = 0; b < fresh.length; b += LLM_BATCH) {
+      if (Date.now() - START > TIME_BUDGET_MS) break;
+      const slice = fresh.slice(b, b + LLM_BATCH);
       let vs: Verdict[];
       try {
         vs = await classifyBatch(anthropicKey, supabase, slice);
       } catch (e) {
         console.error("classifyBatch error:", e);
-        vs = slice.map(() => ({})); // lỗi LLM cả lô → {} → xử lý như error
+        vs = slice.map(() => ({}));
       }
       for (let k = 0; k < slice.length; k++) verdicts[b + k] = vs[k] ?? {};
     }
 
-    // 5) Áp ngưỡng + dedup + insert (tuần tự để bắt cả trùng TRONG sheet).
-    for (let i = 0; i < valid.length; i++) {
+    // 6) Áp ngưỡng + insert (đã dedup ở bước 4).
+    for (let i = 0; i < fresh.length; i++) {
       if (verdicts[i] === undefined || Date.now() - START > TIME_BUDGET_MS) {
-        summary.skipped += valid.length - i; break; // hết giờ
+        summary.skipped += fresh.length - i; break;
       }
-      const { title, content } = valid[i];
+      const { title, content } = fresh[i];
       const v = verdicts[i]!;
-      // Verdict phải đủ field, nếu không → error (không đăng, không phạt).
       if (v.category === undefined || v.is_plausible === undefined || v.is_ai_generated === undefined) {
         summary.error++; continue;
       }
       if (v.is_ai_generated === true && (v.ai_confidence ?? 0) >= 0.8) { summary.rejected_ai++; continue; }
       if (v.is_plausible === false) { summary.rejected_implausible++; continue; }
-      // Dedup tiêu đề (RPC trigram) — bắt cả trùng với tin vừa insert trong vòng lặp.
-      const { data: dupId } = await supabase.rpc("find_similar_news_title", { _title: title, _threshold: 0.7 });
-      if ((dupId as string | null) ?? null) { summary.rejected_similar++; continue; }
       const category = isValidCategory(v.category) ? v.category : "xa-hoi-van-hoa";
       const { data: ins, error: insErr } = await supabase.from("news").insert({
         title, description: content, category, is_approved: true, submitted_by: user.id,
@@ -201,7 +211,7 @@ Deno.serve(async (req) => {
       }).select("id").single();
       if (insErr || !ins) { summary.error++; continue; }
       summary.accepted++;
-      await logRow("accepted", { news_id: ins.id }); // chỉ log dòng được đăng
+      await logRow("accepted", { news_id: ins.id });
     }
 
     return json({
