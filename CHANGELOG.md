@@ -1,3 +1,10 @@
+# [1.58.0](https://github.com/lth91/luot247-vision/compare/v1.57.0...v1.58.0) (2026-06-29)
+
+
+### Features
+
+* **submission:** tab "Tin bị loại" xem lại tin bị loại để sửa ([#70](https://github.com/lth91/luot247-vision/issues/70)) ([4a6bd66](https://github.com/lth91/luot247-vision/commit/4a6bd6608030284aba47277603a471722f204725))
+
 # [1.57.0](https://github.com/lth91/luot247-vision/compare/v1.56.0...v1.57.0) (2026-06-29)
 
 
