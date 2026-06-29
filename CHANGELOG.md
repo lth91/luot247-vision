@@ -1,3 +1,10 @@
+## [1.58.2](https://github.com/lth91/luot247-vision/compare/v1.58.1...v1.58.2) (2026-06-29)
+
+
+### Bug Fixes
+
+* **views:** get_view2_stats đếm theo ngày lịch (00:00) thay vì mốc 7h ([#72](https://github.com/lth91/luot247-vision/issues/72)) ([9ab6645](https://github.com/lth91/luot247-vision/commit/9ab6645c2a05f037e304a161d8e6de7d6866e2f8))
+
 ## [1.58.1](https://github.com/lth91/luot247-vision/compare/v1.58.0...v1.58.1) (2026-06-29)
 
 
