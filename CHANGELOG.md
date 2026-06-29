@@ -1,3 +1,10 @@
+## [1.54.1](https://github.com/lth91/luot247-vision/compare/v1.54.0...v1.54.1) (2026-06-29)
+
+
+### Bug Fixes
+
+* **submission:** import lại sheet an toàn + rẻ (dedup trước LLM) ([#65](https://github.com/lth91/luot247-vision/issues/65)) ([a16add2](https://github.com/lth91/luot247-vision/commit/a16add261dd1784ba552484e2ac6309a3b74ec5b))
+
 # [1.54.0](https://github.com/lth91/luot247-vision/compare/v1.53.0...v1.54.0) (2026-06-29)
 
 
