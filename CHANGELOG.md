@@ -1,3 +1,10 @@
+# [1.54.0](https://github.com/lth91/luot247-vision/compare/v1.53.0...v1.54.0) (2026-06-29)
+
+
+### Features
+
+* **submission:** import hàng loạt tin từ Google Sheet ([#64](https://github.com/lth91/luot247-vision/issues/64)) ([53b9aa1](https://github.com/lth91/luot247-vision/commit/53b9aa153aed3a151daeb2da45d36523be5978d0))
+
 # [1.53.0](https://github.com/lth91/luot247-vision/compare/v1.52.0...v1.53.0) (2026-06-28)
 
 
