@@ -38,3 +38,5 @@ verify_jwt = false
 verify_jwt = false
 [functions.submit-news]
 verify_jwt = false
+[functions.submit-news-bulk]
+verify_jwt = false
