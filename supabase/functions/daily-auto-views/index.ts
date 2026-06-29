@@ -6,6 +6,36 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// ---- Mô phỏng traffic "thật" ----
+// PRNG có seed: mọi interval 30 phút TRONG CÙNG NGÀY phải tính ra cùng dailyTarget
+// / hệ số cuối tuần / spike / jitter đường cong → nếu không, mỗi lần cron chạy lại
+// random khác nhau và spike/Gaussian bị trung bình hoá mất. Seed = hash của ngày.
+function hashStr(s: string): number {
+  let h = 2166136261
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) }
+  return h >>> 0
+}
+function mulberry32(seed: number): () => number {
+  return function () {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+function gaussian(rng: () => number, mean: number, sd: number): number {
+  const u = 1 - rng(), v = rng()
+  return mean + sd * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v)
+}
+// Đường cong 24h CƠ SỞ (trọng số tương đối). Đêm (22h–6h) THẤP nhưng > 0 — không
+// trang nào thật mà ban đêm = 0 view. Ban ngày giữ peak sáng/trưa/tối.
+const BASE_CURVE: number[] = [
+  0.08, 0.05, 0.04, 0.03, 0.04, 0.08, 0.20, // 0-6h (đêm/rạng sáng)
+  0.50, 1.20, 1.50, 1.00, 0.80, 1.30, 1.20, // 7-13h (sáng + trưa)
+  0.90, 0.70, 0.70, 0.90, 1.20, 1.40, 1.10, // 14-20h (chiều + tối)
+  0.60, 0.30, 0.15,                           // 21-23h (tối muộn)
+]
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -27,20 +57,7 @@ serve(async (req) => {
     
     console.log(`Current Vietnam time: ${vietnamTime.toISOString()}, Hour: ${currentHour}:${currentMinute}`)
 
-    // Chỉ chạy từ 7 AM đến 10 PM (giờ Việt Nam)
-    if (currentHour < 7 || currentHour >= 22) {
-      console.log('Outside active hours (7 AM - 10 PM Vietnam time), skipping...')
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'Outside active hours, no views added'
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200 
-        }
-      )
-    }
+    // Chạy 24/7: ban đêm vẫn có baseline thấp (qua BASE_CURVE) cho tự nhiên.
 
     // CRITICAL: Reset daily stats at 7:00 AM (first interval of the day)
     if (currentHour === 7 && currentMinute < 30) {
@@ -55,47 +72,42 @@ serve(async (req) => {
       }
     }
 
-    // Tổng view mục tiêu cho cả ngày. Tăng từ thứ 2 tuần sau (29/6/2026, GMT+7):
-    //   - Trước 29/6: 2000-3000/ngày (TB 2500)
-    //   - Từ 29/6:    2700-3300/ngày (TB 3000)
-    // So sánh theo ngày GMT+7 (vietnamTime đã +7h nên toISOString lấy đúng ngày VN).
-    // Chia theo trọng số giờ (7AM-10PM = 15h, mỗi giờ có 2 khoảng 30 phút).
+    // ====== Tính mục tiêu NGÀY (seed theo ngày → mọi interval nhất quán) ======
     const vnDateStr = vietnamTime.toISOString().slice(0, 10) // YYYY-MM-DD theo GMT+7
-    const dailyTarget = vnDateStr >= '2026-06-29'
-      ? 2700 + Math.floor(Math.random() * 601)  // 2700-3300
-      : 2000 + Math.floor(Math.random() * 1001) // 2000-3000
+    const dayRng = mulberry32(hashStr(vnDateStr))
+    const dow = vietnamTime.getUTCDay() // 0=CN..6=T7 (theo giờ VN)
 
-    // Phân bố theo giờ (peak hours)
-    const hourlyWeight: { [key: number]: number } = {
-      7: 0.5,   // 7-8 AM: ít
-      8: 1.2,   // 8-9 AM: peak morning
-      9: 1.5,   // 9-10 AM: peak morning
-      10: 1.0,  // 10-11 AM
-      11: 0.8,  // 11-12 AM
-      12: 1.3,  // 12-1 PM: lunch peak
-      13: 1.2,  // 1-2 PM: lunch peak
-      14: 0.9,  // 2-3 PM
-      15: 0.7,  // 3-4 PM
-      16: 0.7,  // 4-5 PM
-      17: 0.9,  // 5-6 PM
-      18: 1.2,  // 6-7 PM: evening peak
-      19: 1.4,  // 7-8 PM: evening peak
-      20: 1.1,  // 8-9 PM: evening peak
-      21: 0.6,  // 9-10 PM
+    // Hướng 2: tổng/ngày theo phân phối chuông (TB 3000, lệch chuẩn 250).
+    let dailyTarget = gaussian(dayRng, 3000, 250)
+    // Hướng 3a: cuối tuần thấp hơn ~12-18%.
+    const dowMult = (dow === 0 || dow === 6) ? (0.82 + dayRng() * 0.06) : (0.96 + dayRng() * 0.12)
+    dailyTarget *= dowMult
+    // Hướng 3b: ngày spike hiếm (~7%) — mô phỏng tin viral, ×1.3-1.8.
+    const isSpike = dayRng() < 0.07
+    if (isSpike) dailyTarget *= 1.3 + dayRng() * 0.5
+    // Kẹp biên cho khỏi cực đoan.
+    dailyTarget = Math.round(Math.max(2200, Math.min(isSpike ? 5200 : 3600, dailyTarget)))
+
+    // Hướng 5: đường cong 24h + jitter mỗi giờ (mean≈1, ±15%) → hình dạng đổi mỗi
+    // ngày nhưng tổng vẫn chuẩn (vì normalize theo chính curve đã jitter).
+    const curve = BASE_CURVE.map((w) => w * (0.85 + dayRng() * 0.30))
+    // Mỗi giờ = 2 interval 30 phút → tổng weight-interval = sum(curve) × 2.
+    const totalWeightIntervals = curve.reduce((s, w) => s + w, 0) * 2
+    const currentWeight = curve[currentHour] ?? 0.1
+    const baseForInterval = dailyTarget * (currentWeight / totalWeightIntervals)
+
+    // Hướng 4: nhiễu mỗi interval theo Gaussian (mean 1, sd 0.15), kẹp 0.6-1.5
+    // — dùng random KHÔNG seed (biến thiên thật theo từng lần chạy).
+    const noise = Math.max(0.6, Math.min(1.5, gaussian(Math.random, 1, 0.15)))
+    const viewsToAdd = Math.max(0, Math.round(baseForInterval * noise))
+    
+    console.log(`Will add ${viewsToAdd} views for this 30-minute interval (target: ${dailyTarget}/day, dow: ${dow}, spike: ${isSpike})`)
+
+    // Interval đêm trọng số thấp → có thể ra 0 view; bỏ qua, không insert mảng rỗng.
+    if (viewsToAdd <= 0) {
+      return new Response(JSON.stringify({ success: true, message: 'No views for this interval (low-traffic window)' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 })
     }
-
-    // Tổng "weight-intervals" = 2 × sum(weights) vì mỗi giờ có 2 khoảng 30min cùng weight.
-    // Output 1 interval = dailyTarget × (weight / totalWeightIntervals) → cộng dồn cả ngày = dailyTarget.
-    const totalWeight = Object.values(hourlyWeight).reduce((sum, w) => sum + w, 0)
-    const totalWeightIntervals = totalWeight * 2
-    const currentWeight = hourlyWeight[currentHour] || 1.0
-    const weightedViews = Math.round(dailyTarget * (currentWeight / totalWeightIntervals))
-    
-    // Thêm random variation ±20%
-    const variation = 0.8 + Math.random() * 0.4
-    const viewsToAdd = Math.round(weightedViews * variation)
-    
-    console.log(`Will add ${viewsToAdd} views for this 30-minute interval (target: ${dailyTarget}/day, weight: ${currentWeight})`)
 
     const viewsToInsert = []
     
@@ -112,14 +124,18 @@ serve(async (req) => {
     
     console.log(`Time range: ${intervalStartUTC.toISOString()} to ${intervalEndUTC.toISOString()}`)
 
-    // Tạo views với random timestamps trong 30 phút này
-    for (let i = 0; i < viewsToAdd; i++) {
-      const randomMs = Math.floor(Math.random() * 30 * 60 * 1000) // Random trong 30 phút
-      const timestamp = new Date(intervalStartUTC.getTime() + randomMs)
-      
-      viewsToInsert.push({
-        viewed_at: timestamp.toISOString()
-      })
+    // Hướng 4: arrivals BÙNG CỤM theo "phiên" thay vì rải đều — 1 khách xem 1-3
+    // trang gần nhau (trong ~3 phút). Phút đông phút vắng → tự nhiên hơn rải uniform.
+    const WINDOW_MS = 30 * 60 * 1000
+    let remaining = viewsToAdd
+    while (remaining > 0) {
+      const sessionViews = Math.min(remaining, 1 + Math.floor(Math.random() * 3)) // 1-3 trang/phiên
+      const sessionStart = Math.floor(Math.random() * WINDOW_MS)
+      for (let j = 0; j < sessionViews; j++) {
+        const offset = Math.min(WINDOW_MS - 1, sessionStart + Math.floor(Math.random() * 3 * 60 * 1000))
+        viewsToInsert.push({ viewed_at: new Date(intervalStartUTC.getTime() + offset).toISOString() })
+      }
+      remaining -= sessionViews
     }
 
     console.log(`Generated ${viewsToInsert.length} view logs`)
