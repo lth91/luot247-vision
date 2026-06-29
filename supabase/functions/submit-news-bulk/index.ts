@@ -3,6 +3,7 @@
 // → LLM giọng-AI + plausibility + phân loại 5 mục) → đăng + +10đ/tin.
 // LLM gộp theo LÔ 10 dòng/call để tránh timeout + giảm chi phí.
 // Deploy --no-verify-jwt → verify JWT thủ công.
+// (re-trigger deploy: lần trước esm.sh lỗi 522 transient → bundle fail.)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 import { logLlmUsage } from "../_shared/llm-usage.ts";
