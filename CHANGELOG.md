@@ -1,3 +1,10 @@
+# [1.55.0](https://github.com/lth91/luot247-vision/compare/v1.54.1...v1.55.0) (2026-06-29)
+
+
+### Features
+
+* **views:** mô phỏng auto-views thật hơn (5 hướng) ([#66](https://github.com/lth91/luot247-vision/issues/66)) ([85d2e20](https://github.com/lth91/luot247-vision/commit/85d2e201f3ff4a64e34d53ea9c75136817177dc3))
+
 ## [1.54.1](https://github.com/lth91/luot247-vision/compare/v1.54.0...v1.54.1) (2026-06-29)
 
 
