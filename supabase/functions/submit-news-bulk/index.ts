@@ -140,25 +140,30 @@ Deno.serve(async (req) => {
     // Bỏ dòng tiêu đề cột (header), lấy tối đa MAX_ROWS dòng dữ liệu.
     const dataRows = allRows.slice(1);
     const truncated = dataRows.length > MAX_ROWS;
-    const rows = dataRows.slice(0, MAX_ROWS).map((r) => ({ title: (r[0] ?? "").trim(), content: (r[1] ?? "").trim() }));
+    // rowNum = số dòng THẬT trong Google Sheet (dòng 1 = header → data bắt đầu dòng 2).
+    const rows = dataRows.slice(0, MAX_ROWS).map((r, i) => ({ rowNum: i + 2, title: (r[0] ?? "").trim(), content: (r[1] ?? "").trim() }));
     if (rows.length === 0) return json({ ok: false, reason: "Sheet không có dòng dữ liệu (dòng 1 coi là tiêu đề cột)." }, 400);
 
     const summary = { total: rows.length, accepted: 0, rejected_length: 0, duplicate: 0, rejected_ai: 0, rejected_implausible: 0, error: 0, skipped: 0, truncated };
+    // Danh sách tin BỊ LOẠI cần sửa (báo cho nhân viên đúng dòng + tiêu đề + lý do).
+    const issues: { row: number; title: string; reason: string }[] = [];
     // Chống timeout: dừng nhận thêm khi gần chạm giới hạn edge function (~150s).
     const START = Date.now();
     const TIME_BUDGET_MS = 110_000;
 
     // 3) Lọc độ dài (local, không tốn LLM). Bulk KHÔNG phạt điểm dòng bị loại —
     // chỉ đếm trong summary. Dòng được đăng vẫn +10 (qua trigger news insert).
-    const lenValid: { title: string; content: string }[] = [];
-    for (const { title, content } of rows) {
+    const lenValid: { rowNum: number; title: string; content: string }[] = [];
+    for (const row of rows) {
+      const { rowNum, title, content } = row;
       const tw = countWords(title), cw = countWords(content);
       if (!title || !content || title.length > TITLE_MAX_CHARS || content.length > CONTENT_MAX_CHARS ||
           tw < TITLE_MIN || tw > TITLE_MAX || cw < CONTENT_MIN || cw > CONTENT_MAX) {
         summary.rejected_length++;
+        issues.push({ row: rowNum, title: title.slice(0, 60), reason: `Sai độ dài: tiêu đề ${tw} từ (cần 10–18), nội dung ${cw} từ (cần 110–140)` });
         continue;
       }
-      lenValid.push({ title, content });
+      lenValid.push(row);
     }
 
     // 4) BỎ QUA tin ĐÃ CÓ — làm TRƯỚC khi gọi LLM để IMPORT LẠI không tốn token
@@ -166,7 +171,7 @@ Deno.serve(async (req) => {
     //    - Trùng trong cùng sheet (paste lặp): so tiêu đề chuẩn hoá (lower+trim).
     //    - Trùng với tin đã có trên hệ thống: RPC trigram ngưỡng 0.7.
     const seen = new Set<string>();
-    const fresh: { title: string; content: string }[] = [];
+    const fresh: { rowNum: number; title: string; content: string }[] = [];
     for (const row of lenValid) {
       if (Date.now() - START > TIME_BUDGET_MS) { summary.skipped++; continue; }
       const key = row.title.trim().toLowerCase();
@@ -197,13 +202,21 @@ Deno.serve(async (req) => {
       if (verdicts[i] === undefined || Date.now() - START > TIME_BUDGET_MS) {
         summary.skipped += fresh.length - i; break;
       }
-      const { title, content } = fresh[i];
+      const { rowNum, title, content } = fresh[i];
       const v = verdicts[i]!;
       if (v.category === undefined || v.is_plausible === undefined || v.is_ai_generated === undefined) {
         summary.error++; continue;
       }
-      if (v.is_ai_generated === true && (v.ai_confidence ?? 0) >= 0.8) { summary.rejected_ai++; continue; }
-      if (v.is_plausible === false) { summary.rejected_implausible++; continue; }
+      if (v.is_ai_generated === true && (v.ai_confidence ?? 0) >= 0.8) {
+        summary.rejected_ai++;
+        issues.push({ row: rowNum, title: title.slice(0, 60), reason: "Dấu hiệu nội dung do AI viết — viết lại văn phong tự nhiên" });
+        continue;
+      }
+      if (v.is_plausible === false) {
+        summary.rejected_implausible++;
+        issues.push({ row: rowNum, title: title.slice(0, 60), reason: "Nội dung khả nghi/khó kiểm chứng — xem lại" });
+        continue;
+      }
       const category = isValidCategory(v.category) ? v.category : "xa-hoi-van-hoa";
       const { data: ins, error: insErr } = await supabase.from("news").insert({
         title, description: content, category, is_approved: true, submitted_by: user.id,
@@ -217,6 +230,7 @@ Deno.serve(async (req) => {
     return json({
       ok: true,
       summary,
+      issues: issues.slice(0, 80), // danh sách tin cần sửa (dòng + tiêu đề + lý do)
       points_awarded: summary.accepted * 10,
       message: `Đã đăng ${summary.accepted}/${summary.total} tin (+${summary.accepted * 10} điểm).`
         + (truncated ? ` Sheet vượt ${MAX_ROWS} dòng — phần dư chưa xử lý.` : "")
