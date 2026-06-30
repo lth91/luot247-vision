@@ -7,7 +7,9 @@ import { toast } from "sonner";
 import { useReadingContext } from "@/contexts/ReadingContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { useSearchParams } from "react-router-dom";
-import { SUBMISSION_CATEGORIES } from "@/lib/newsCategories";
+import { SUBMISSION_CATEGORIES, categoryLabel } from "@/lib/newsCategories";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ListFilter } from "lucide-react";
 
 // Logger chỉ chạy ở dev; production (Vercel) im lặng hoàn toàn.
 // Trước đây 55 console.log rải trong scroll handler + interval 5s + loop từng
@@ -55,6 +57,21 @@ const Index = () => {
     else next.delete("chuyen-muc");
     setSearchParams(next, { replace: true });
     window.scrollTo(0, 0);
+  };
+
+  // Nút nổi đổi chuyên mục khi đang cuộn (mở bottom sheet). Chỉ hiện sau khi
+  // cuộn qua khỏi bộ lọc đầu trang để khỏi che nội dung lúc ở trên cùng.
+  const [catSheetOpen, setCatSheetOpen] = useState(false);
+  const [showCatFab, setShowCatFab] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShowCatFab(window.scrollY > 320);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  const selectCategoryAndClose = (slug: string) => {
+    setCatSheetOpen(false);
+    selectCategory(slug);
   };
   const chipCls = (active: boolean) =>
     `whitespace-nowrap rounded-full border px-3 py-1 text-xs transition-colors ${
@@ -831,6 +848,43 @@ const Index = () => {
           </>
         )}
       </main>
+
+      {/* Nút nổi đổi chuyên mục khi đang cuộn — mở bottom sheet chọn nhanh. */}
+      {showCatFab && (
+        <button
+          type="button"
+          onClick={() => setCatSheetOpen(true)}
+          aria-label="Chọn chuyên mục"
+          className="fixed bottom-5 right-5 z-30 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-lg"
+        >
+          <ListFilter className="h-4 w-4" />
+          <span className="max-w-[150px] truncate">
+            {activeCategory ? categoryLabel(activeCategory) : "Chuyên mục"}
+          </span>
+        </button>
+      )}
+
+      <Sheet open={catSheetOpen} onOpenChange={setCatSheetOpen}>
+        <SheetContent side="bottom" className="rounded-t-2xl">
+          <SheetHeader>
+            <SheetTitle>Chọn chuyên mục</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 space-y-2 pb-2">
+            <div className="flex justify-center">
+              <button type="button" onClick={() => selectCategoryAndClose("")} className={`${chipCls(!activeCategory)} px-6`}>
+                Tất cả
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {availableCategories.map((c) => (
+                <button key={c.slug} type="button" onClick={() => selectCategoryAndClose(c.slug)} className={`${chipCls(activeCategory === c.slug)} w-full text-center`}>
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
