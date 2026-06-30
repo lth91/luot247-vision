@@ -79,7 +79,7 @@ const Index = () => {
       active ? "bg-primary text-primary-foreground" : "hover:bg-muted"
     }`;
   const chipCls = (active: boolean) =>
-    `whitespace-nowrap rounded-full border px-3 py-1 text-xs transition-colors ${
+    `rounded-full border px-2.5 py-1.5 text-[11px] leading-tight transition-colors ${
       active
         ? "bg-primary text-primary-foreground border-primary"
         : "bg-background text-muted-foreground border-border hover:bg-muted"
