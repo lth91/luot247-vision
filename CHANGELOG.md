@@ -1,3 +1,10 @@
+# [1.62.0](https://github.com/lth91/luot247-vision/compare/v1.61.0...v1.62.0) (2026-06-30)
+
+
+### Features
+
+* **electricity:** /d user gửi tin + giống hệt trang chủ ([#79](https://github.com/lth91/luot247-vision/issues/79)) ([f6f3972](https://github.com/lth91/luot247-vision/commit/f6f3972ff7f602df4d486bcf649dbb10036f52f7))
+
 # [1.61.0](https://github.com/lth91/luot247-vision/compare/v1.60.0...v1.61.0) (2026-06-30)
 
 
