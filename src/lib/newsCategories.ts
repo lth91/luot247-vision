@@ -7,6 +7,7 @@ export const SUBMISSION_CATEGORIES = [
   { slug: "chinh-sach-phap-luat", label: "Chính sách, pháp luật kinh doanh" },
   { slug: "xa-hoi-van-hoa", label: "Xã hội, văn hóa, đời sống" },
   { slug: "an-ninh-trat-tu", label: "An ninh, trật tự" },
+  { slug: "khoa-hoc-cong-nghe", label: "Khoa học, công nghệ" },
   { slug: "the-gioi", label: "Thế giới" },
 ] as const;
 
