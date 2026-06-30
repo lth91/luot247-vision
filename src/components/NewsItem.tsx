@@ -19,6 +19,7 @@ interface NewsItemProps {
   createdAt: string;
   isAuthenticated: boolean;
   isLast?: boolean;
+  shareUrl?: string; // override link chia sẻ (tin điện trỏ về /d)
 }
 
 export const NewsItem = ({
@@ -28,6 +29,7 @@ export const NewsItem = ({
   createdAt,
   isAuthenticated,
   isLast = false,
+  shareUrl,
 }: NewsItemProps) => {
   const navigate = useNavigate();
   const [disliked, setDisliked] = useState(false);
@@ -177,6 +179,7 @@ export const NewsItem = ({
         onClose={() => setShareDialogOpen(false)}
         newsId={id}
         newsTitle={title}
+        shareUrl={shareUrl}
       />
     </>
   );

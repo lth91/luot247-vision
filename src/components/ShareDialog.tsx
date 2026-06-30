@@ -14,10 +14,11 @@ interface ShareDialogProps {
   onClose: () => void;
   newsId: string;
   newsTitle: string;
+  shareUrl?: string; // override link chia sẻ (vd tin điện → /d, không có /tin/:id)
 }
 
-export const ShareDialog = ({ isOpen, onClose, newsId, newsTitle }: ShareDialogProps) => {
-  const shareUrl = `${window.location.origin}/tin/${newsId}`;
+export const ShareDialog = ({ isOpen, onClose, newsId, newsTitle, shareUrl: shareUrlOverride }: ShareDialogProps) => {
+  const shareUrl = shareUrlOverride ?? `${window.location.origin}/tin/${newsId}`;
   const encodedUrl = encodeURIComponent(shareUrl);
   const encodedTitle = encodeURIComponent(newsTitle);
 
