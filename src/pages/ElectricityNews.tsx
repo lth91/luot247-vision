@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { Header } from "@/components/Header";
-import { ElectricityNewsCard } from "@/components/ElectricityNewsCard";
+import { NewsItem } from "@/components/NewsItem";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -480,8 +480,8 @@ const ElectricityNews = () => {
                 <p>Bạn đã đọc hết tin. Nhấn "Hiện đã đọc" để xem lại.</p>
               </div>
             ) : (
-              <div ref={listRef} className="border rounded-lg overflow-hidden bg-card divide-y divide-gray-200">
-                {allRows.map((item) => {
+              <div ref={listRef} className="border rounded-lg overflow-hidden bg-card">
+                {allRows.map((item, index) => {
                   const isHidden =
                     shouldHideReadElectricityNews &&
                     (readElectricityNewsIds.has(item.id) || passedNewsIds.has(item.id));
@@ -497,12 +497,20 @@ const ElectricityNews = () => {
                       className={isHidden ? "hidden" : ""}
                       aria-hidden={isHidden ? true : undefined}
                     >
-                      <ElectricityNewsCard
+                      {/* Card y hệt trang chủ (NewsItem): tiêu đề + nội dung +
+                          Thích/Chia sẻ/Tìm. Chia sẻ trỏ về /d (tin điện không có
+                          deep-link /tin/:id). */}
+                      <NewsItem
+                        id={item.id}
                         title={item.title}
-                        summary={item.summary}
-                        originalUrl={item.original_url}
-                        publishedAt={item.published_at}
-                        crawledAt={item.crawled_at}
+                        description={item.summary || ""}
+                        category=""
+                        viewCount={0}
+                        url={item.original_url}
+                        createdAt={item.crawled_at}
+                        isAuthenticated={!!session}
+                        isLast={index === allRows.length - 1}
+                        shareUrl={`${window.location.origin}/d`}
                       />
                     </div>
                   );

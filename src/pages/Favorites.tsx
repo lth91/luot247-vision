@@ -37,6 +37,7 @@ interface NewsData {
   url: string;
   created_at: string;
   liked_at?: string; // Thời gian like
+  is_electricity?: boolean; // tin điện (id ở electricity_news) → share trỏ /d
 }
 
 type SortOption = 'like_time_desc' | 'like_time_asc' | 'news_time_desc' | 'news_time_asc';
@@ -132,13 +133,25 @@ const Favorites = () => {
 
       if (newsError) throw newsError;
 
-      // Merge news data with like time
-      const mergedData = (newsData || []).map(news => {
-        const favoriteInfo = favoriteData.find(fav => fav.news_id === news.id);
-        return {
-          ...news,
-          liked_at: favoriteInfo?.created_at
-        };
+      // Tin điện (id ở electricity_news, không nằm trong news) → fetch riêng + map.
+      const foundIds = new Set((newsData || []).map((n: any) => n.id));
+      const missingIds = newsIds.filter((id) => !foundIds.has(id));
+      let elecData: NewsData[] = [];
+      if (missingIds.length > 0) {
+        const { data: ed } = await supabase
+          .from("electricity_news" as never)
+          .select("id, title, summary, original_url, crawled_at")
+          .in("id", missingIds);
+        elecData = ((ed as any[]) || []).map((e) => ({
+          id: e.id, title: e.title, description: e.summary || "", category: "",
+          view_count: 0, url: e.original_url, created_at: e.crawled_at, is_electricity: true,
+        }));
+      }
+
+      // Merge news + electricity với thời gian like
+      const mergedData = [...((newsData as any[]) || []), ...elecData].map((news) => {
+        const favoriteInfo = favoriteData.find((fav) => fav.news_id === news.id);
+        return { ...news, liked_at: favoriteInfo?.created_at };
       });
 
       setFavorites(mergedData);
@@ -312,6 +325,7 @@ const Favorites = () => {
                 createdAt={news.created_at}
                 isAuthenticated={!!session}
                 isLast={index === sortedFavorites.length - 1}
+                shareUrl={news.is_electricity ? `${window.location.origin}/d` : undefined}
               />
             ))}
           </div>
