@@ -1,3 +1,10 @@
+# [1.61.0](https://github.com/lth91/luot247-vision/compare/v1.60.0...v1.61.0) (2026-06-30)
+
+
+### Features
+
+* **electricity:** chuyển /d sang user gửi tin — backend ([#78](https://github.com/lth91/luot247-vision/issues/78)) ([484c150](https://github.com/lth91/luot247-vision/commit/484c150d4743d478c5788e79e1318b0b5542b1fd))
+
 # [1.60.0](https://github.com/lth91/luot247-vision/compare/v1.59.1...v1.60.0) (2026-06-30)
 
 
