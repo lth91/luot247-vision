@@ -1,3 +1,10 @@
+# [1.59.0](https://github.com/lth91/luot247-vision/compare/v1.58.2...v1.59.0) (2026-06-30)
+
+
+### Features
+
+* **submission:** thêm chuyên mục Khoa học - Công nghệ ([#73](https://github.com/lth91/luot247-vision/issues/73)) ([40f4e16](https://github.com/lth91/luot247-vision/commit/40f4e16cc933375d5d1cd267ccc5b33d56c3794d))
+
 ## [1.58.2](https://github.com/lth91/luot247-vision/compare/v1.58.1...v1.58.2) (2026-06-29)
 
 
