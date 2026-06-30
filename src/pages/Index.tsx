@@ -8,7 +8,7 @@ import { useReadingContext } from "@/contexts/ReadingContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { useSearchParams } from "react-router-dom";
 import { SUBMISSION_CATEGORIES, categoryLabel } from "@/lib/newsCategories";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { ListFilter } from "lucide-react";
 
 // Logger chỉ chạy ở dev; production (Vercel) im lặng hoàn toàn.
@@ -59,9 +59,9 @@ const Index = () => {
     window.scrollTo(0, 0);
   };
 
-  // Nút nổi đổi chuyên mục khi đang cuộn (mở bottom sheet). Chỉ hiện sau khi
-  // cuộn qua khỏi bộ lọc đầu trang để khỏi che nội dung lúc ở trên cùng.
-  const [catSheetOpen, setCatSheetOpen] = useState(false);
+  // Nút nổi đổi chuyên mục khi đang cuộn — bấm bật menu nhỏ ngay từ nút. Chỉ
+  // hiện sau khi cuộn qua khỏi bộ lọc đầu trang để khỏi che nội dung lúc ở trên.
+  const [catMenuOpen, setCatMenuOpen] = useState(false);
   const [showCatFab, setShowCatFab] = useState(false);
   useEffect(() => {
     const onScroll = () => setShowCatFab(window.scrollY > 320);
@@ -70,9 +70,14 @@ const Index = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
   const selectCategoryAndClose = (slug: string) => {
-    setCatSheetOpen(false);
+    setCatMenuOpen(false);
     selectCategory(slug);
   };
+  // Item trong menu nổi — danh sách dọc gọn.
+  const menuItemCls = (active: boolean) =>
+    `w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
+      active ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+    }`;
   const chipCls = (active: boolean) =>
     `whitespace-nowrap rounded-full border px-3 py-1 text-xs transition-colors ${
       active
@@ -849,42 +854,37 @@ const Index = () => {
         )}
       </main>
 
-      {/* Nút nổi đổi chuyên mục khi đang cuộn — mở bottom sheet chọn nhanh. */}
+      {/* Nút nổi đổi chuyên mục khi đang cuộn — menu nhỏ bật lên ngay từ nút. */}
       {showCatFab && (
-        <button
-          type="button"
-          onClick={() => setCatSheetOpen(true)}
-          aria-label="Chọn chuyên mục"
-          className="fixed bottom-5 right-5 z-30 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-lg"
-        >
-          <ListFilter className="h-4 w-4" />
-          <span className="max-w-[150px] truncate">
-            {activeCategory ? categoryLabel(activeCategory) : "Chuyên mục"}
-          </span>
-        </button>
-      )}
-
-      <Sheet open={catSheetOpen} onOpenChange={setCatSheetOpen}>
-        <SheetContent side="bottom" className="rounded-t-2xl">
-          <SheetHeader>
-            <SheetTitle>Chọn chuyên mục</SheetTitle>
-          </SheetHeader>
-          <div className="mt-4 space-y-2 pb-2">
-            <div className="flex justify-center">
-              <button type="button" onClick={() => selectCategoryAndClose("")} className={`${chipCls(!activeCategory)} px-6`}>
-                Tất cả
+        <div className="fixed bottom-5 right-5 z-30">
+          <Popover open={catMenuOpen} onOpenChange={setCatMenuOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="Chọn chuyên mục"
+                className="flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-lg"
+              >
+                <ListFilter className="h-4 w-4" />
+                <span className="max-w-[150px] truncate">
+                  {activeCategory ? categoryLabel(activeCategory) : "Chuyên mục"}
+                </span>
               </button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {availableCategories.map((c) => (
-                <button key={c.slug} type="button" onClick={() => selectCategoryAndClose(c.slug)} className={`${chipCls(activeCategory === c.slug)} w-full text-center`}>
-                  {c.label}
+            </PopoverTrigger>
+            <PopoverContent side="top" align="end" sideOffset={8} className="w-52 p-1">
+              <div className="flex flex-col">
+                <button type="button" onClick={() => selectCategoryAndClose("")} className={menuItemCls(!activeCategory)}>
+                  Tất cả
                 </button>
-              ))}
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+                {availableCategories.map((c) => (
+                  <button key={c.slug} type="button" onClick={() => selectCategoryAndClose(c.slug)} className={menuItemCls(activeCategory === c.slug)}>
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+      )}
     </div>
   );
 };
