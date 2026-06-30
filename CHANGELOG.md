@@ -1,3 +1,10 @@
+# [1.60.0](https://github.com/lth91/luot247-vision/compare/v1.59.1...v1.60.0) (2026-06-30)
+
+
+### Features
+
+* **submission:** phân loại lại tin cũ theo 6 mục ([#76](https://github.com/lth91/luot247-vision/issues/76)) ([62a72ec](https://github.com/lth91/luot247-vision/commit/62a72ec327f0b831e747680ed556c8f27e83e08a))
+
 ## [1.59.1](https://github.com/lth91/luot247-vision/compare/v1.59.0...v1.59.1) (2026-06-30)
 
 
