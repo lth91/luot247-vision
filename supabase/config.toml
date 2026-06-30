@@ -40,3 +40,7 @@ verify_jwt = false
 verify_jwt = false
 [functions.submit-news-bulk]
 verify_jwt = false
+[functions.submit-electricity-news]
+verify_jwt = false
+[functions.submit-electricity-bulk]
+verify_jwt = false
