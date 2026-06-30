@@ -7,6 +7,7 @@ export const SUBMISSION_CATEGORIES = [
   { slug: "chinh-sach-phap-luat", label: "Chính sách, pháp luật kinh doanh" },
   { slug: "xa-hoi-van-hoa", label: "Xã hội, văn hóa, đời sống" },
   { slug: "an-ninh-trat-tu", label: "An ninh, trật tự" },
+  { slug: "khoa-hoc-cong-nghe", label: "Khoa học, công nghệ" },
   { slug: "the-gioi", label: "Thế giới" },
 ] as const;
 
@@ -35,4 +36,7 @@ Tin về giáo dục, y tế, giao thông, môi trường, thời tiết, đô t
 Tin về điều tra, bắt giữ, khởi tố, xét xử, truy nã, lừa đảo, trộm cắp, ma túy, buôn lậu, đánh bạc, vi phạm trật tự xã hội, tai nạn nghiêm trọng CÓ yếu tố điều tra, đường dây tội phạm — do công an/cơ quan tố tụng xử lý. Ví dụ: "phát hiện nhóm dùng tài khoản giả để lừa đảo", "công an triệt phá đường dây tiêu thụ xe gian", "bắt nhóm vận chuyển ma túy", "điều tra vụ cháy có dấu hiệu vi phạm". ƯU TIÊN: nếu vụ việc liên quan doanh nghiệp nhưng trọng tâm là HÀNH VI VI PHẠM / bắt giữ / điều tra / khởi tố → xếp vào đây, KHÔNG vào mục 1 (vd "Giám đốc công ty bị bắt vì lừa đảo trái phiếu"). Nhưng "DN bị xử phạt hành chính vì chậm công bố thông tin" → mục 2 hoặc 1 tùy góc.
 
 5. "the-gioi" — THẾ GIỚI
-Tin quốc tế có chủ thể, địa điểm và tác động chính Ở NGOÀI Việt Nam: chính trị quốc tế, xung đột, bầu cử, thiên tai, dịch bệnh, kinh tế toàn cầu, thị trường quốc tế, doanh nghiệp nước ngoài, công nghệ/thể thao/văn hóa quốc tế. MẶC ĐỊNH: nếu sự kiện xảy ra ở nước ngoài VÀ không có chủ thể Việt Nam trực tiếp → xếp vào đây. NGOẠI LỆ: tin về doanh nghiệp Việt đầu tư ra nước ngoài, hoặc chính sách nước ngoài tác động trực tiếp đến hàng hóa/DN Việt → xếp mục 1 hoặc 2 tùy trọng tâm (vd "DN Việt mở kho logistics tại Campuchia" → mục 1).`;
+Tin quốc tế có chủ thể, địa điểm và tác động chính Ở NGOÀI Việt Nam: chính trị quốc tế, xung đột, bầu cử, thiên tai, dịch bệnh, kinh tế toàn cầu, thị trường quốc tế, doanh nghiệp nước ngoài, công nghệ/thể thao/văn hóa quốc tế. MẶC ĐỊNH: nếu sự kiện xảy ra ở nước ngoài VÀ không có chủ thể Việt Nam trực tiếp → xếp vào đây. NGOẠI LỆ: tin về doanh nghiệp Việt đầu tư ra nước ngoài, hoặc chính sách nước ngoài tác động trực tiếp đến hàng hóa/DN Việt → xếp mục 1 hoặc 2 tùy trọng tâm (vd "DN Việt mở kho logistics tại Campuchia" → mục 1).
+
+6. "khoa-hoc-cong-nghe" — KHOA HỌC, CÔNG NGHỆ
+Tin có trọng tâm là hoạt động nghiên cứu, đổi mới sáng tạo, ứng dụng công nghệ, chuyển đổi số, phát triển hạ tầng số, sản phẩm công nghệ, trí tuệ nhân tạo (AI), bán dẫn, dữ liệu, viễn thông, an ninh mạng, công nghệ môi trường, công nghệ y tế và các thành tựu khoa học – công nghệ của Việt Nam hoặc có liên quan trực tiếp đến Việt Nam. Ví dụ: "Việt Nam thử nghiệm ứng dụng AI trong chẩn đoán bệnh", "Doanh nghiệp công nghệ Việt ra mắt nền tảng trí tuệ nhân tạo mới", "Bộ, ngành triển khai cơ sở dữ liệu dùng chung phục vụ chuyển đổi số", "Một trường đại học công bố nghiên cứu về pin thế hệ mới". PHÂN BIỆT với mục 5 (Thế giới): nếu tin trả lời "công nghệ này được nghiên cứu, ứng dụng hoặc tác động THẾ NÀO đối với Việt Nam, doanh nghiệp Việt hoặc người dùng Việt?" → mục này. Nếu sự kiện/sản phẩm/nghiên cứu diễn ra HOÀN TOÀN ở nước ngoài, không có chủ thể Việt Nam tham gia và không có tác động trực tiếp rõ ràng đến Việt Nam → chuyển sang mục 5 (Thế giới).`;
