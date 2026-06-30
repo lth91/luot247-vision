@@ -749,9 +749,11 @@ const Index = () => {
             nút lẻ, không cuộn ngang. */}
         {!isLoading && (
           <div className="mb-3 space-y-2">
-            <button type="button" onClick={() => selectCategory("")} className={`${chipCls(!activeCategory)} w-full text-center`}>
-              Tất cả
-            </button>
+            <div className="flex justify-center">
+              <button type="button" onClick={() => selectCategory("")} className={`${chipCls(!activeCategory)} px-6`}>
+                Tất cả
+              </button>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {availableCategories.map((c) => (
                 <button key={c.slug} type="button" onClick={() => selectCategory(c.slug)} className={`${chipCls(activeCategory === c.slug)} w-full text-center`}>
