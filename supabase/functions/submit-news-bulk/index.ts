@@ -51,7 +51,7 @@ function parseCSV(text: string): string[][] {
   return rows.filter((r) => r.some((cell) => cell.trim() !== "")).map((r) => r.map((cell) => cell.trim()));
 }
 
-interface Verdict { is_ai_generated?: boolean; ai_confidence?: number; is_plausible?: boolean; category?: string; }
+interface Verdict { is_ai_generated?: boolean; ai_confidence?: number; is_plausible?: boolean; category?: string; category_confidence?: number; }
 
 // Gọi LLM phân loại 1 LÔ. Trả mảng verdict theo index 0..items.length-1.
 async function classifyBatch(
@@ -235,7 +235,15 @@ Deno.serve(async (req) => {
       const category = isValidCategory(v.category) ? v.category : "xa-hoi-van-hoa";
       const { data: ins, error: insErr } = await supabase.from("news").insert({
         title, description: content, category, is_approved: true, submitted_by: user.id,
-        ai_classification: { category, is_ai_generated: v.is_ai_generated, ai_confidence: v.ai_confidence ?? 0, is_plausible: v.is_plausible, bulk: true },
+        ai_classification: {
+          category,
+          category_confidence: v.category_confidence ?? 0,
+          category_confidence_low: (v.category_confidence ?? 0) < 0.5,
+          is_ai_generated: v.is_ai_generated,
+          ai_confidence: v.ai_confidence ?? 0,
+          is_plausible: v.is_plausible,
+          bulk: true,
+        },
       }).select("id").single();
       if (insErr || !ins) { summary.error++; continue; }
       summary.accepted++;

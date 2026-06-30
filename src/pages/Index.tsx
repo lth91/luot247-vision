@@ -6,6 +6,10 @@ import { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { useReadingContext } from "@/contexts/ReadingContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
+import { useSearchParams } from "react-router-dom";
+import { SUBMISSION_CATEGORIES, categoryLabel } from "@/lib/newsCategories";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { ListFilter } from "lucide-react";
 
 // Logger chỉ chạy ở dev; production (Vercel) im lặng hoàn toàn.
 // Trước đây 55 console.log rải trong scroll handler + interval 5s + loop từng
@@ -40,6 +44,51 @@ const Index = () => {
   
   // Use FavoritesContext
   const { favoriteIds } = useFavorites();
+
+  // Lọc theo chuyên mục — đồng bộ URL (?chuyen-muc=slug) để chia sẻ được.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeCategory = searchParams.get("chuyen-muc") || "";
+  // Hiện CỐ ĐỊNH cả 6 chuyên mục (kể cả mục chưa có tin) — bấm mục rỗng sẽ ra
+  // màn "Chưa có tin...". Đồng nhất, người đọc luôn thấy đủ danh mục.
+  const availableCategories = SUBMISSION_CATEGORIES;
+  const selectCategory = (slug: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (slug) next.set("chuyen-muc", slug);
+    else next.delete("chuyen-muc");
+    setSearchParams(next, { replace: true });
+    window.scrollTo(0, 0);
+  };
+
+  // Nút nổi đổi chuyên mục khi đang cuộn — bấm bật menu nhỏ ngay từ nút. Chỉ
+  // hiện sau khi cuộn qua khỏi bộ lọc đầu trang để khỏi che nội dung lúc ở trên.
+  const [catMenuOpen, setCatMenuOpen] = useState(false);
+  const [showCatFab, setShowCatFab] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShowCatFab(window.scrollY > 320);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  const selectCategoryAndClose = (slug: string) => {
+    setCatMenuOpen(false);
+    selectCategory(slug);
+  };
+  // Item trong menu nổi — danh sách dọc gọn.
+  const menuItemCls = (active: boolean) =>
+    `w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
+      active ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+    }`;
+  const chipCls = (active: boolean) =>
+    `whitespace-nowrap rounded-full border px-3 py-1 text-xs transition-colors ${
+      active
+        ? "bg-primary text-primary-foreground border-primary"
+        : "bg-background text-muted-foreground border-border hover:bg-muted"
+    }`;
+
+  // Danh sách tin hiển thị: bỏ tin đã "trôi qua" + lọc theo chuyên mục đang chọn.
+  const visibleNews = filteredNews
+    .filter((item) => !passedNewsIds.has(item.id))
+    .filter((item) => !activeCategory || item.category === activeCategory);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -717,6 +766,26 @@ const Index = () => {
       />
 
       <main className="w-full max-w-2xl mx-auto px-4 py-4">
+        {/* Bộ lọc chuyên mục — lưới cân đối: "Tất cả" trải ngang trên cùng, 6
+            mục xếp lưới đều (2 cột mobile / 3 cột desktop) → mọi hàng đầy, không
+            nút lẻ, không cuộn ngang. */}
+        {!isLoading && (
+          <div className="mb-3 space-y-2">
+            <div className="flex justify-center">
+              <button type="button" onClick={() => selectCategory("")} className={`${chipCls(!activeCategory)} px-6`}>
+                Tất cả
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {availableCategories.map((c) => (
+                <button key={c.slug} type="button" onClick={() => selectCategory(c.slug)} className={`${chipCls(activeCategory === c.slug)} w-full text-center`}>
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="text-center py-12">
             <div className="flex flex-col items-center space-y-4">
@@ -740,8 +809,16 @@ const Index = () => {
                 <p className="text-muted-foreground">Đang khôi phục vị trí đọc...</p>
               </div>
             )}
+            {activeCategory && visibleNews.length === 0 ? (
+              <div className="text-center py-12 space-y-3">
+                <p className="text-muted-foreground">Chưa có tin trong chuyên mục này.</p>
+                <button type="button" onClick={() => selectCategory("")} className={chipCls(false)}>
+                  ← Xem tất cả
+                </button>
+              </div>
+            ) : (
             <div className={`border rounded-lg overflow-hidden bg-card ${isScrollRestored ? 'scroll-restored' : 'scroll-restoring'}`}>
-            {filteredNews.filter((item) => !passedNewsIds.has(item.id)).map((item, index, arr) => (
+            {visibleNews.map((item, index, arr) => (
               <div
                 key={item.id}
                 data-news-id={item.id}
@@ -772,9 +849,42 @@ const Index = () => {
               </div>
             ))}
             </div>
+            )}
           </>
         )}
       </main>
+
+      {/* Nút nổi đổi chuyên mục khi đang cuộn — menu nhỏ bật lên ngay từ nút. */}
+      {showCatFab && (
+        <div className="fixed bottom-5 right-5 z-30">
+          <Popover open={catMenuOpen} onOpenChange={setCatMenuOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="Chọn chuyên mục"
+                className="flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-lg"
+              >
+                <ListFilter className="h-4 w-4" />
+                <span className="max-w-[150px] truncate">
+                  {activeCategory ? categoryLabel(activeCategory) : "Chuyên mục"}
+                </span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent side="top" align="end" sideOffset={8} className="w-52 p-1">
+              <div className="flex flex-col">
+                <button type="button" onClick={() => selectCategoryAndClose("")} className={menuItemCls(!activeCategory)}>
+                  Tất cả
+                </button>
+                {availableCategories.map((c) => (
+                  <button key={c.slug} type="button" onClick={() => selectCategoryAndClose(c.slug)} className={menuItemCls(activeCategory === c.slug)}>
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+      )}
     </div>
   );
 };
