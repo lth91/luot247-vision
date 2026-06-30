@@ -79,7 +79,7 @@ const Index = () => {
       active ? "bg-primary text-primary-foreground" : "hover:bg-muted"
     }`;
   const chipCls = (active: boolean) =>
-    `rounded-full border px-2.5 py-1.5 text-[11px] leading-tight transition-colors ${
+    `whitespace-nowrap rounded-full border px-3 py-1.5 text-xs leading-tight transition-colors ${
       active
         ? "bg-primary text-primary-foreground border-primary"
         : "bg-background text-muted-foreground border-border hover:bg-muted"
@@ -776,7 +776,7 @@ const Index = () => {
                 Tất cả
               </button>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {availableCategories.map((c) => (
                 <button key={c.slug} type="button" onClick={() => selectCategory(c.slug)} className={`${chipCls(activeCategory === c.slug)} w-full text-center`}>
                   {c.label}
