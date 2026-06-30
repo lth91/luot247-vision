@@ -70,7 +70,8 @@ const About = () => {
                     <div>
                       <p className="font-medium mb-1">Địa chỉ</p>
                       <p className="text-muted-foreground">
-                        135 Tirriki Street, Charlestown NSW 2290, Australia
+                        50 Womerah Ave<br />
+                        Darlinghurst NSW 2010, Australia
                       </p>
                     </div>
                   </div>
