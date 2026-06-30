@@ -8,7 +8,6 @@ import { useReadingContext } from "@/contexts/ReadingContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { ShareDialog } from "@/components/ShareDialog";
 import { getRelativeTime } from "@/lib/dateUtils";
-import { categoryLabel, CATEGORY_LABEL } from "@/lib/newsCategories";
 
 interface NewsItemProps {
   id: string;
@@ -26,7 +25,6 @@ export const NewsItem = ({
   id,
   title,
   description,
-  category,
   createdAt,
   isAuthenticated,
   isLast = false,
@@ -95,14 +93,6 @@ export const NewsItem = ({
         data-news-id={id}
       >
         <div>
-          {/* Nhãn chuyên mục (chỉ tin do user gửi, có category hợp lệ trong 6 mục).
-              Tin cũ/import không khớp → ẩn, không hiện nhãn lạ. */}
-          {category && CATEGORY_LABEL[category] && (
-            <span className="inline-block mb-2 rounded px-2 py-0.5 text-[11px] font-medium text-primary bg-primary/10">
-              {categoryLabel(category)}
-            </span>
-          )}
-
           {/* Tiêu đề đậm. Tin format mới (có nội dung): chữ nhỏ (text-sm).
               Responsive: mobile (<md) KHÔNG clamp để hiện trọn tiêu đề;
               desktop (≥md) line-clamp-2 cho tối đa 2 dòng (đủ chứa hầu hết
