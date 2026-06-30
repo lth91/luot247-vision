@@ -6,6 +6,8 @@ import { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { useReadingContext } from "@/contexts/ReadingContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
+import { useSearchParams } from "react-router-dom";
+import { SUBMISSION_CATEGORIES } from "@/lib/newsCategories";
 
 // Logger chỉ chạy ở dev; production (Vercel) im lặng hoàn toàn.
 // Trước đây 55 console.log rải trong scroll handler + interval 5s + loop từng
@@ -40,6 +42,32 @@ const Index = () => {
   
   // Use FavoritesContext
   const { favoriteIds } = useFavorites();
+
+  // Lọc theo chuyên mục — đồng bộ URL (?chuyen-muc=slug) để chia sẻ được.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeCategory = searchParams.get("chuyen-muc") || "";
+  // Chỉ hiện chip cho chuyên mục THỰC SỰ có tin (tránh tab rỗng).
+  const availableCategories = SUBMISSION_CATEGORIES.filter((c) =>
+    news.some((n: any) => n.category === c.slug)
+  );
+  const selectCategory = (slug: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (slug) next.set("chuyen-muc", slug);
+    else next.delete("chuyen-muc");
+    setSearchParams(next, { replace: true });
+    window.scrollTo(0, 0);
+  };
+  const chipCls = (active: boolean) =>
+    `whitespace-nowrap rounded-full border px-3 py-1 text-xs transition-colors ${
+      active
+        ? "bg-primary text-primary-foreground border-primary"
+        : "bg-background text-muted-foreground border-border hover:bg-muted"
+    }`;
+
+  // Danh sách tin hiển thị: bỏ tin đã "trôi qua" + lọc theo chuyên mục đang chọn.
+  const visibleNews = filteredNews
+    .filter((item) => !passedNewsIds.has(item.id))
+    .filter((item) => !activeCategory || item.category === activeCategory);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -717,6 +745,20 @@ const Index = () => {
       />
 
       <main className="w-full max-w-2xl mx-auto px-4 py-4">
+        {/* Bộ lọc chuyên mục — hàng chip cuộn ngang, tối giản. */}
+        {!isLoading && availableCategories.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-3 mb-1 -mx-1 px-1">
+            <button type="button" onClick={() => selectCategory("")} className={chipCls(!activeCategory)}>
+              Tất cả
+            </button>
+            {availableCategories.map((c) => (
+              <button key={c.slug} type="button" onClick={() => selectCategory(c.slug)} className={chipCls(activeCategory === c.slug)}>
+                {c.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {isLoading ? (
           <div className="text-center py-12">
             <div className="flex flex-col items-center space-y-4">
@@ -740,8 +782,16 @@ const Index = () => {
                 <p className="text-muted-foreground">Đang khôi phục vị trí đọc...</p>
               </div>
             )}
+            {activeCategory && visibleNews.length === 0 ? (
+              <div className="text-center py-12 space-y-3">
+                <p className="text-muted-foreground">Chưa có tin trong chuyên mục này.</p>
+                <button type="button" onClick={() => selectCategory("")} className={chipCls(false)}>
+                  ← Xem tất cả
+                </button>
+              </div>
+            ) : (
             <div className={`border rounded-lg overflow-hidden bg-card ${isScrollRestored ? 'scroll-restored' : 'scroll-restoring'}`}>
-            {filteredNews.filter((item) => !passedNewsIds.has(item.id)).map((item, index, arr) => (
+            {visibleNews.map((item, index, arr) => (
               <div
                 key={item.id}
                 data-news-id={item.id}
@@ -772,6 +822,7 @@ const Index = () => {
               </div>
             ))}
             </div>
+            )}
           </>
         )}
       </main>
