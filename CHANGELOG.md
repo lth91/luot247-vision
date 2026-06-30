@@ -1,3 +1,10 @@
+## [1.62.1](https://github.com/lth91/luot247-vision/compare/v1.62.0...v1.62.1) (2026-06-30)
+
+
+### Bug Fixes
+
+* **feed:** nhãn 6 chuyên mục IN HOA đầy đủ + chip 1 dòng ([#80](https://github.com/lth91/luot247-vision/issues/80)) ([e727b32](https://github.com/lth91/luot247-vision/commit/e727b32a34f7c555d5fe9793e782521fe9445bf6))
+
 # [1.62.0](https://github.com/lth91/luot247-vision/compare/v1.61.0...v1.62.0) (2026-06-30)
 
 
