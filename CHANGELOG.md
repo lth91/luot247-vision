@@ -1,3 +1,10 @@
+## [1.59.1](https://github.com/lth91/luot247-vision/compare/v1.59.0...v1.59.1) (2026-06-30)
+
+
+### Bug Fixes
+
+* **submission:** bulk lưu category_confidence để đo được độ tin cậy ([#75](https://github.com/lth91/luot247-vision/issues/75)) ([2063100](https://github.com/lth91/luot247-vision/commit/20631002089b7233b96c3a325a05d93b25e4adb4))
+
 # [1.59.0](https://github.com/lth91/luot247-vision/compare/v1.58.2...v1.59.0) (2026-06-30)
 
 
