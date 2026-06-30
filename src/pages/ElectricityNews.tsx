@@ -403,6 +403,12 @@ const ElectricityNews = () => {
           isMobile && !isScrollRestored ? "opacity-0" : "opacity-100"
         }`}
       >
+        <div className="flex justify-end mb-3">
+          <Button asChild size="sm">
+            <Link to="/gui-tin?loai=dien">⚡ Gửi tin điện</Link>
+          </Button>
+        </div>
+
         {isError && (
           <Alert variant="destructive" className="mb-4">
             <AlertDescription>Lỗi tải tin: {(error as Error).message}</AlertDescription>
