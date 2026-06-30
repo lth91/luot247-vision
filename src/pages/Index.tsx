@@ -46,10 +46,9 @@ const Index = () => {
   // Lọc theo chuyên mục — đồng bộ URL (?chuyen-muc=slug) để chia sẻ được.
   const [searchParams, setSearchParams] = useSearchParams();
   const activeCategory = searchParams.get("chuyen-muc") || "";
-  // Chỉ hiện chip cho chuyên mục THỰC SỰ có tin (tránh tab rỗng).
-  const availableCategories = SUBMISSION_CATEGORIES.filter((c) =>
-    news.some((n: any) => n.category === c.slug)
-  );
+  // Hiện CỐ ĐỊNH cả 6 chuyên mục (kể cả mục chưa có tin) — bấm mục rỗng sẽ ra
+  // màn "Chưa có tin...". Đồng nhất, người đọc luôn thấy đủ danh mục.
+  const availableCategories = SUBMISSION_CATEGORIES;
   const selectCategory = (slug: string) => {
     const next = new URLSearchParams(searchParams);
     if (slug) next.set("chuyen-muc", slug);
