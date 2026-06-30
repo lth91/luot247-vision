@@ -3,12 +3,12 @@
 // Slug khớp enum news_category (migration 20260629010000).
 
 export const SUBMISSION_CATEGORIES = [
-  { slug: "kinh-te-dau-tu", label: "Đầu tư - Kinh doanh" },
-  { slug: "chinh-sach-phap-luat", label: "Pháp luật" },
-  { slug: "xa-hoi-van-hoa", label: "Văn hoá - Xã hội" },
-  { slug: "an-ninh-trat-tu", label: "Hình sự" },
-  { slug: "the-gioi", label: "Thế giới" },
-  { slug: "khoa-hoc-cong-nghe", label: "Khoa học công nghệ" },
+  { slug: "kinh-te-dau-tu", label: "KINH TẾ, ĐẦU TƯ, KINH DOANH" },
+  { slug: "chinh-sach-phap-luat", label: "CHÍNH SÁCH, PHÁP LUẬT KINH DOANH" },
+  { slug: "xa-hoi-van-hoa", label: "XÃ HỘI, VĂN HÓA, ĐỜI SỐNG" },
+  { slug: "an-ninh-trat-tu", label: "AN NINH, TRẬT TỰ" },
+  { slug: "the-gioi", label: "THẾ GIỚI" },
+  { slug: "khoa-hoc-cong-nghe", label: "KHOA HỌC CÔNG NGHỆ" },
 ] as const;
 
 export const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
