@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { ReadingProvider } from "@/contexts/ReadingContext";
 import { FavoritesProvider } from "@/contexts/FavoritesContext";
 import Index from "./pages/Index";
@@ -28,8 +28,20 @@ import AdminContributions from "./pages/AdminContributions";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
+import { initAnalytics, trackPageview } from "@/lib/analytics";
 
 const queryClient = new QueryClient();
+
+// Gửi page_view GA4 + Meta Pixel mỗi lần đổi route (SPA không tự reload).
+// initAnalytics idempotent → chạy 1 lần; no-op nếu chưa cấu hình ID.
+const AnalyticsListener = () => {
+  const location = useLocation();
+  useEffect(() => { initAnalytics(); }, []);
+  useEffect(() => {
+    trackPageview(location.pathname + location.search);
+  }, [location.pathname, location.search]);
+  return null;
+};
 
 const App = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -54,6 +66,7 @@ const App = () => {
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <AnalyticsListener />
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
