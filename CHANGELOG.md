@@ -1,3 +1,10 @@
+## [1.64.1](https://github.com/lth91/luot247-vision/compare/v1.64.0...v1.64.1) (2026-07-01)
+
+
+### Bug Fixes
+
+* **analytics:** GA4 gtag tĩnh trong head (Search Console verify được) ([#84](https://github.com/lth91/luot247-vision/issues/84)) ([2c8c991](https://github.com/lth91/luot247-vision/commit/2c8c99145234dc5b329b30c3c0b3cbe36b6a87fc))
+
 # [1.64.0](https://github.com/lth91/luot247-vision/compare/v1.63.0...v1.64.0) (2026-07-01)
 
 
