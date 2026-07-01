@@ -1,3 +1,10 @@
+# [1.63.0](https://github.com/lth91/luot247-vision/compare/v1.62.1...v1.63.0) (2026-07-01)
+
+
+### Features
+
+* **analytics:** đo traffic thật — GA4 + Meta Pixel ([#82](https://github.com/lth91/luot247-vision/issues/82)) ([a7ec042](https://github.com/lth91/luot247-vision/commit/a7ec0425de7c2f53f50ce450bb3dac26111018c3))
+
 ## [1.62.1](https://github.com/lth91/luot247-vision/compare/v1.62.0...v1.62.1) (2026-06-30)
 
 
