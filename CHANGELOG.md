@@ -1,3 +1,10 @@
+# [1.64.0](https://github.com/lth91/luot247-vision/compare/v1.63.0...v1.64.0) (2026-07-01)
+
+
+### Features
+
+* **seo:** sitemap.xml + robots.txt cho Google index ([#83](https://github.com/lth91/luot247-vision/issues/83)) ([3081395](https://github.com/lth91/luot247-vision/commit/3081395721fbda4d925875c70df513eb697b0ca6))
+
 # [1.63.0](https://github.com/lth91/luot247-vision/compare/v1.62.1...v1.63.0) (2026-07-01)
 
 
