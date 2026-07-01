@@ -1,3 +1,10 @@
+## [1.67.1](https://github.com/lth91/luot247-vision/compare/v1.67.0...v1.67.1) (2026-07-01)
+
+
+### Bug Fixes
+
+* **electricity:** nhận tin điện/năng lượng quốc tế + bỏ ngưỡng tin cậy ([#89](https://github.com/lth91/luot247-vision/issues/89)) ([a184043](https://github.com/lth91/luot247-vision/commit/a184043a4b1af4f47ae5e70d1a9d7bbeeec086c8))
+
 # [1.67.0](https://github.com/lth91/luot247-vision/compare/v1.66.1...v1.67.0) (2026-07-01)
 
 
