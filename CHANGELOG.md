@@ -1,3 +1,10 @@
+# [1.66.0](https://github.com/lth91/luot247-vision/compare/v1.65.0...v1.66.0) (2026-07-01)
+
+
+### Features
+
+* **seo:** OG động per-bài cho /tin/:id ([#86](https://github.com/lth91/luot247-vision/issues/86)) ([006e30d](https://github.com/lth91/luot247-vision/commit/006e30de3cbd9f25ecbc834004a06d8a43a4006f))
+
 # [1.65.0](https://github.com/lth91/luot247-vision/compare/v1.64.1...v1.65.0) (2026-07-01)
 
 
