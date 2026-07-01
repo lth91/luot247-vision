@@ -1,3 +1,11 @@
+# [1.68.0](https://github.com/lth91/luot247-vision/compare/v1.67.1...v1.68.0) (2026-07-01)
+
+
+### Features
+
+* **feed:** nhãn 9 chuyên mục IN HOA + lưới cân đối ([#91](https://github.com/lth91/luot247-vision/issues/91)) ([0093027](https://github.com/lth91/luot247-vision/commit/0093027e1d165744277e08c7c4c6e376bf2b8ebd))
+* **submission:** phân loại tin 6 → 9 mục — backend ([#90](https://github.com/lth91/luot247-vision/issues/90)) ([0abda87](https://github.com/lth91/luot247-vision/commit/0abda87bf6b3a2a79a3c9fac5e466d1458c3690a))
+
 ## [1.67.1](https://github.com/lth91/luot247-vision/compare/v1.67.0...v1.67.1) (2026-07-01)
 
 
