@@ -6,7 +6,9 @@
 // SPA không tự reload nên page_view được gửi THỦ CÔNG theo mỗi lần đổi route.
 
 const env = import.meta.env as Record<string, string | undefined>;
-export const GA_ID = (env.VITE_GA_ID ?? "").trim();
+// GA4 property luot247.com (Stream ID 15179179582). Env VITE_GA_ID override được.
+export const GA_ID = (env.VITE_GA_ID ?? "G-B376EPJ51P").trim();
+// Meta Pixel: chưa tạo → để trống (no-op). Điền khi chạy Facebook Ads.
 export const META_PIXEL_ID = (env.VITE_META_PIXEL_ID ?? "").trim();
 
 declare global {
