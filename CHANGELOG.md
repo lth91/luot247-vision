@@ -1,3 +1,10 @@
+## [1.66.1](https://github.com/lth91/luot247-vision/compare/v1.66.0...v1.66.1) (2026-07-01)
+
+
+### Bug Fixes
+
+* **home:** deep-link /tin/:id cuộn tới đúng bài ([#87](https://github.com/lth91/luot247-vision/issues/87)) ([3ec639f](https://github.com/lth91/luot247-vision/commit/3ec639f588eed9274474e72f228d563137d6178f))
+
 # [1.66.0](https://github.com/lth91/luot247-vision/compare/v1.65.0...v1.66.0) (2026-07-01)
 
 
