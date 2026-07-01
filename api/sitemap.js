@@ -10,7 +10,6 @@ const LIMIT = 5000;
 
 const STATIC = [
   { loc: "/", changefreq: "hourly", priority: "1.0" },
-  { loc: "/d", changefreq: "hourly", priority: "0.9" },
   { loc: "/bang-xep-hang", changefreq: "daily", priority: "0.5" },
   { loc: "/about", changefreq: "monthly", priority: "0.3" },
 ];

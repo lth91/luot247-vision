@@ -18,8 +18,6 @@ import Home2 from "./pages/Home2";
 import About from "./pages/About";
 import Favorites from "./pages/Favorites";
 import Admin from "./pages/Admin";
-import ElectricityNews from "./pages/ElectricityNews";
-import ElectricityDashboard from "./pages/ElectricityDashboard";
 import NotFound from "./pages/NotFound";
 import SubmitNews from "./pages/SubmitNews";
 import MyContribution from "./pages/MyContribution";
@@ -83,8 +81,6 @@ const App = () => {
                 <Route path="/about" element={<About />} />
                 <Route path="/favorites" element={<Favorites />} />
                 <Route path="/admin" element={<Admin />} />
-                <Route path="/d" element={<ElectricityNews />} />
-                <Route path="/ddashboard" element={<ElectricityDashboard />} />
                 <Route path="/gui-tin" element={<SubmitNews />} />
                 <Route path="/diem-cua-toi" element={<MyContribution />} />
                 <Route path="/bang-xep-hang" element={<Leaderboard />} />
