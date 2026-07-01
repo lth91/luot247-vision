@@ -53,6 +53,17 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5326950408851102"
      crossorigin="anonymous"></script>
 
+    <!-- Google Analytics 4 (gtag) — đặt TĨNH trong HTML để GA nạp sớm + Google
+         Search Console verify được (GSC đọc HTML thô, không chạy JS). page_view
+         gửi thủ công theo route SPA (send_page_view=false) qua AnalyticsListener. -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-B376EPJ51P"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-B376EPJ51P', { send_page_view: false });
+    </script>
+
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
 
