@@ -1,3 +1,10 @@
+# [1.67.0](https://github.com/lth91/luot247-vision/compare/v1.66.1...v1.67.0) (2026-07-01)
+
+
+### Features
+
+* **seo:** sitemap động liệt kê từng bài (/tin/:id) ([#88](https://github.com/lth91/luot247-vision/issues/88)) ([92c4dce](https://github.com/lth91/luot247-vision/commit/92c4dce7e027315a2f273867d7ee0f600b9019ff))
+
 ## [1.66.1](https://github.com/lth91/luot247-vision/compare/v1.66.0...v1.66.1) (2026-07-01)
 
 
