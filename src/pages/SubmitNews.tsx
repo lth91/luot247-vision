@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
@@ -26,17 +26,9 @@ function WordHint({ count, min, max }: { count: number; min: number; max: number
 
 const SubmitNews = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
-
-  // Đích gửi: tin tổng hợp (trang chủ) hay tin ngành điện (/d). Deep-link ?loai=dien.
-  const [target, setTarget] = useState<"home" | "electricity">(
-    searchParams.get("loai") === "dien" ? "electricity" : "home",
-  );
-  const isElec = target === "electricity";
-  const switchTarget = (t: "home" | "electricity") => { setTarget(t); setBulkResult(null); };
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -133,10 +125,9 @@ const SubmitNews = () => {
     setIsLoading(true);
     try {
       // Chuyên mục do AI tự phân loại trong edge function; nguồn URL không bắt buộc.
-      const { data, error } = await supabase.functions.invoke(
-        isElec ? "submit-electricity-news" : "submit-news",
-        { body: { title: title.trim(), content: content.trim() } },
-      );
+      const { data, error } = await supabase.functions.invoke("submit-news", {
+        body: { title: title.trim(), content: content.trim() },
+      });
       if (error) {
         // Edge trả 4xx/5xx → error.context có body. Cố lấy reason.
         let reason = "Gửi tin thất bại, vui lòng thử lại.";
@@ -162,10 +153,9 @@ const SubmitNews = () => {
     setBulkLoading(true);
     setBulkResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke(
-        isElec ? "submit-electricity-bulk" : "submit-news-bulk",
-        { body: { sheetUrl: sheetUrl.trim() } },
-      );
+      const { data, error } = await supabase.functions.invoke("submit-news-bulk", {
+        body: { sheetUrl: sheetUrl.trim() },
+      });
       if (error) {
         let reason = "Import thất bại, vui lòng thử lại.";
         try { const j = await (error as any)?.context?.json?.(); if (j?.reason) reason = j.reason; } catch { /* ignore */ }
@@ -197,22 +187,6 @@ const SubmitNews = () => {
             </p>
           </CardHeader>
           <CardContent>
-            {/* Chọn đích: tin tổng hợp (trang chủ) hay tin ngành điện (/d). */}
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <button type="button" onClick={() => switchTarget("home")}
-                className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${!isElec ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground hover:bg-muted"}`}>
-                📰 Tin tổng hợp
-              </button>
-              <button type="button" onClick={() => switchTarget("electricity")}
-                className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${isElec ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground hover:bg-muted"}`}>
-                ⚡ Tin ngành điện
-              </button>
-            </div>
-            {isElec && (
-              <p className="mb-4 rounded-md bg-amber-50 text-amber-800 text-xs px-3 py-2">
-                Tin gửi ở đây hiển thị tại trang <b>/d</b> và <b>phải thuộc ngành điện/năng lượng</b> (sản xuất, giá điện, EVN, điện gió/mặt trời/hạt nhân, lưới điện, năng lượng tái tạo…). Tin lạc đề sẽ bị loại.
-              </p>
-            )}
             <Tabs defaultValue="single" onValueChange={(v) => { if (v === "rejects" && rejects === null) loadRejects(); }}>
               <TabsList className="grid w-full grid-cols-3 mb-5">
                 <TabsTrigger value="single">Gửi 1 tin</TabsTrigger>
@@ -284,7 +258,6 @@ const SubmitNews = () => {
                     {bulkResult.duplicate > 0 && <p>• Đã có trên hệ thống, bỏ qua: {bulkResult.duplicate}</p>}
                     {bulkResult.rejected_ai > 0 && <p>• Dấu hiệu AI: {bulkResult.rejected_ai}</p>}
                     {bulkResult.rejected_implausible > 0 && <p>• Khả nghi: {bulkResult.rejected_implausible}</p>}
-                    {bulkResult.rejected_offtopic > 0 && <p>• Không thuộc ngành điện: {bulkResult.rejected_offtopic}</p>}
                     {bulkResult.error > 0 && <p>• Lỗi xử lý: {bulkResult.error}</p>}
                     {bulkResult.skipped > 0 && <p className="text-amber-600">• Chưa kịp xử lý (quá thời gian): {bulkResult.skipped} — import lại để gửi tiếp.</p>}
                     {bulkResult.truncated && <p className="text-amber-600">⚠️ Sheet vượt 100 dòng — phần dư chưa xử lý, import lại để gửi tiếp.</p>}
