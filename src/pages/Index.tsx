@@ -761,23 +761,18 @@ const Index = () => {
       />
 
       <main className="w-full max-w-2xl mx-auto px-4 py-4">
-        {/* Bộ lọc chuyên mục — lưới cân đối: "Tất cả" trải ngang trên cùng, 6
-            mục xếp lưới đều (2 cột mobile / 3 cột desktop) → mọi hàng đầy, không
-            nút lẻ, không cuộn ngang. */}
+        {/* Bộ lọc chuyên mục — "TẤT CẢ" + 9 mục = 10 nút xếp lưới 2 cột đều
+            (5 nút/cột) trên desktop; mobile 1 cột (mỗi nhãn 1 dòng). */}
         {!isLoading && (
-          <div className="mb-3 space-y-2">
-            <div className="flex justify-center">
-              <button type="button" onClick={() => selectCategory("")} className={`${chipCls(!activeCategory)} px-6`}>
-                Tất cả
+          <div className="mb-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button type="button" onClick={() => selectCategory("")} className={`${chipCls(!activeCategory)} w-full text-center`}>
+              TẤT CẢ
+            </button>
+            {availableCategories.map((c) => (
+              <button key={c.slug} type="button" onClick={() => selectCategory(c.slug)} className={`${chipCls(activeCategory === c.slug)} w-full text-center`}>
+                {c.label}
               </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {availableCategories.map((c) => (
-                <button key={c.slug} type="button" onClick={() => selectCategory(c.slug)} className={`${chipCls(activeCategory === c.slug)} w-full text-center`}>
-                  {c.label}
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
         )}
 
