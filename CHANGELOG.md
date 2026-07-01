@@ -1,3 +1,10 @@
+# [1.65.0](https://github.com/lth91/luot247-vision/compare/v1.64.1...v1.65.0) (2026-07-01)
+
+
+### Features
+
+* **seo:** og:image mặc định + ảnh thương hiệu ([#85](https://github.com/lth91/luot247-vision/issues/85)) ([45264c3](https://github.com/lth91/luot247-vision/commit/45264c3d0a4c8b568872daa6d5dc1c641d112f1f))
+
 ## [1.64.1](https://github.com/lth91/luot247-vision/compare/v1.64.0...v1.64.1) (2026-07-01)
 
 
