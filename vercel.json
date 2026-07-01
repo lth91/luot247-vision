@@ -1,5 +1,16 @@
 {
   "rewrites": [
+    {
+      "source": "/tin/:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|Twitterbot|Slackbot|LinkedInBot|WhatsApp|TelegramBot|Telegram|Discordbot|Zalo|zalo|Pinterest|redditbot|Googlebot|bingbot|Applebot).*"
+        }
+      ],
+      "destination": "/api/og?id=:id"
+    },
     { "source": "/(.*)", "destination": "/" }
   ]
 }
