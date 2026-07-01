@@ -721,34 +721,29 @@ const Index = () => {
     
     if (newsId) {
       dbg('🔗 Deep link detected for news:', newsId);
-      
+
       // Mark as coming from shared link to disable auto-hide
       setIsFromSharedLink(true);
-      
-      // Wait for news to load
-      setTimeout(() => {
+
+      // Feed tải bất định (đôi khi hàng nghìn tin) → THỬ LẠI tới khi thấy phần tử
+      // bài, thay vì đặt cứng 1.5s (dễ trượt). Tối đa ~6s.
+      let attempts = 0;
+      const tryScroll = () => {
         const newsElement = document.querySelector(`[data-news-id="${newsId}"]`);
         if (newsElement) {
           const headerHeight = 60;
           const targetPosition = newsElement.getBoundingClientRect().top + window.scrollY - headerHeight;
-          
-          window.scrollTo({
-            top: targetPosition,
-            behavior: 'smooth'
-          });
-          
-          // Highlight the news item
+          window.scrollTo({ top: targetPosition, behavior: 'smooth' });
           setHighlightedNewsId(newsId);
-          
-          setTimeout(() => {
-            setHighlightedNewsId(null);
-          }, 3000);
-          
+          setTimeout(() => setHighlightedNewsId(null), 3000);
           dbg('✅ Scrolled to news:', newsId);
+        } else if (attempts++ < 20) {
+          setTimeout(tryScroll, 300);
         } else {
-          dbg('❌ News element not found:', newsId);
+          dbg('❌ News element not found after retries:', newsId);
         }
-      }, 1500);
+      };
+      setTimeout(tryScroll, 600);
     }
   };
 
