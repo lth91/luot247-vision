@@ -6,8 +6,9 @@
 // SPA không tự reload nên page_view được gửi THỦ CÔNG theo mỗi lần đổi route.
 
 const env = import.meta.env as Record<string, string | undefined>;
-// GA4 property luot247.com (Stream ID 15179179582). Env VITE_GA_ID override được.
-export const GA_ID = (env.VITE_GA_ID ?? "G-B376EPJ51P").trim();
+// GA4 nạp TĨNH trong index.html (để Search Console verify được). Hằng số này chỉ
+// dùng để bật gửi page_view theo route; đồng bộ với gtag config ở index.html.
+export const GA_ID = "G-B376EPJ51P";
 // Meta Pixel: chưa tạo → để trống (no-op). Điền khi chạy Facebook Ads.
 export const META_PIXEL_ID = (env.VITE_META_PIXEL_ID ?? "").trim();
 
@@ -22,25 +23,11 @@ declare global {
 
 let initialized = false;
 
-// Nạp script GA4 + Pixel 1 lần. KHÔNG bắn page_view ở đây — để trackPageview lo
-// (tránh đếm trùng lần tải đầu).
+// Nạp Meta Pixel 1 lần (GA4 đã nạp tĩnh trong index.html). KHÔNG bắn page_view ở
+// đây — để trackPageview lo (tránh đếm trùng lần tải đầu).
 export function initAnalytics(): void {
   if (initialized || typeof window === "undefined") return;
   initialized = true;
-
-  if (GA_ID) {
-    const s = document.createElement("script");
-    s.async = true;
-    s.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
-    document.head.appendChild(s);
-    window.dataLayer = window.dataLayer || [];
-    window.gtag = function gtag() {
-      // eslint-disable-next-line prefer-rest-params
-      window.dataLayer!.push(arguments);
-    };
-    window.gtag("js", new Date());
-    window.gtag("config", GA_ID, { send_page_view: false });
-  }
 
   if (META_PIXEL_ID) {
     const w = window as unknown as { fbq?: any; _fbq?: any };
