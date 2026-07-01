@@ -21,26 +21,11 @@ verify_jwt = false
 [functions.get-view-stats]
 verify_jwt = false
 
-[functions.crawl-electricity-news]
-verify_jwt = false
-
-[functions.cleanup-electricity-news]
-verify_jwt = false
-
-[functions.discovery-rss-news]
-verify_jwt = false
-
 [functions.backfill-summaries]
 verify_jwt = false
 [functions.health-check]
 verify_jwt = false
-[functions.pipeline-health-check]
-verify_jwt = false
 [functions.submit-news]
 verify_jwt = false
 [functions.submit-news-bulk]
-verify_jwt = false
-[functions.submit-electricity-news]
-verify_jwt = false
-[functions.submit-electricity-bulk]
 verify_jwt = false
