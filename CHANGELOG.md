@@ -1,3 +1,10 @@
+# [1.69.0](https://github.com/lth91/luot247-vision/compare/v1.68.0...v1.69.0) (2026-07-02)
+
+
+### Features
+
+* **submission:** chuẩn dung lượng mới — tiêu đề 12–18 từ, tổng tiêu đề + nội dung 120–140 từ ([#94](https://github.com/lth91/luot247-vision/issues/94)) ([b451198](https://github.com/lth91/luot247-vision/commit/b451198d2242fb4fdc96c319c6167555e1bf32d1))
+
 # [1.68.0](https://github.com/lth91/luot247-vision/compare/v1.67.1...v1.68.0) (2026-07-01)
 
 
