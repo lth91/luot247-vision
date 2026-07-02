@@ -1,3 +1,10 @@
+# [1.71.0](https://github.com/lth91/luot247-vision/compare/v1.70.0...v1.71.0) (2026-07-02)
+
+
+### Features
+
+* **submission:** ẩn Điểm của tôi + Bảng xếp hạng với user ngoài whitelist ([#98](https://github.com/lth91/luot247-vision/issues/98)) ([09b605a](https://github.com/lth91/luot247-vision/commit/09b605a7d60e4a72f623c0c122f2ddde178cddbe))
+
 # [1.70.0](https://github.com/lth91/luot247-vision/compare/v1.69.2...v1.70.0) (2026-07-02)
 
 
