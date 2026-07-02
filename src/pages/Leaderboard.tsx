@@ -106,7 +106,7 @@ const Leaderboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header user={session?.user} userRole={userRole} />
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         <h1 className="text-xl font-bold">📊 Bảng theo dõi gửi tin</h1>
 
         <Card>
@@ -120,45 +120,46 @@ const Leaderboard = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      {/* Tiêu đề cột cho phép xuống 2 dòng để 10 cột vừa màn desktop, khỏi cuộn ngang */}
                       <TableHead className="whitespace-nowrap">Tên</TableHead>
                       <TableHead className="whitespace-nowrap">Email đăng ký</TableHead>
-                      <TableHead className="whitespace-nowrap text-right">Tin đăng hôm nay</TableHead>
-                      <TableHead className="whitespace-nowrap text-right">Tin đăng tháng này</TableHead>
-                      <TableHead className="whitespace-nowrap text-right">Tin duyệt hôm nay</TableHead>
-                      <TableHead className="whitespace-nowrap text-right">Tin duyệt tháng này</TableHead>
-                      <TableHead className="whitespace-nowrap text-right">Tin duyệt tháng trước</TableHead>
-                      <TableHead className="whitespace-nowrap text-right">Tỷ lệ duyệt hôm nay</TableHead>
-                      <TableHead className="whitespace-nowrap text-right">Thẻ đỏ</TableHead>
-                      <TableHead className="whitespace-nowrap text-right">Thẻ vàng</TableHead>
+                      <TableHead className="text-right text-xs leading-tight px-2 min-w-[70px]">Tin đăng hôm nay</TableHead>
+                      <TableHead className="text-right text-xs leading-tight px-2 min-w-[70px]">Tin đăng tháng này</TableHead>
+                      <TableHead className="text-right text-xs leading-tight px-2 min-w-[70px]">Tin duyệt hôm nay</TableHead>
+                      <TableHead className="text-right text-xs leading-tight px-2 min-w-[70px]">Tin duyệt tháng này</TableHead>
+                      <TableHead className="text-right text-xs leading-tight px-2 min-w-[70px]">Tin duyệt tháng trước</TableHead>
+                      <TableHead className="text-right text-xs leading-tight px-2 min-w-[70px]">Tỷ lệ duyệt hôm nay</TableHead>
+                      <TableHead className="text-right text-xs leading-tight px-2 min-w-[52px]">Thẻ đỏ</TableHead>
+                      <TableHead className="text-right text-xs leading-tight px-2 min-w-[52px]">Thẻ vàng</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {rows.map((r) => (
                       <TableRow key={r.email}>
                         <TableCell className="font-medium whitespace-nowrap">{r.full_name || "—"}</TableCell>
-                        <TableCell className="text-muted-foreground whitespace-nowrap">{r.email}</TableCell>
-                        <TableCell className="text-right">{r.sub_today}</TableCell>
-                        <TableCell className="text-right">{r.sub_month}</TableCell>
-                        <TableCell className="text-right">{r.acc_today}</TableCell>
-                        <TableCell className="text-right font-semibold">{r.acc_month}</TableCell>
-                        <TableCell className="text-right text-muted-foreground">{r.acc_prev_month}</TableCell>
-                        <TableCell className="text-right">{rate(r.acc_today, r.sub_today)}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs whitespace-nowrap max-w-[220px] truncate" title={r.email}>{r.email}</TableCell>
+                        <TableCell className="text-right px-2">{r.sub_today}</TableCell>
+                        <TableCell className="text-right px-2">{r.sub_month}</TableCell>
+                        <TableCell className="text-right px-2">{r.acc_today}</TableCell>
+                        <TableCell className="text-right px-2 font-semibold">{r.acc_month}</TableCell>
+                        <TableCell className="text-right px-2 text-muted-foreground">{r.acc_prev_month}</TableCell>
+                        <TableCell className="text-right px-2">{rate(r.acc_today, r.sub_today)}</TableCell>
                         {/* Thẻ phạt: cơ chế chưa áp dụng — tạm 0 cho tất cả. */}
-                        <TableCell className="text-right text-red-600">0</TableCell>
-                        <TableCell className="text-right text-yellow-600">0</TableCell>
+                        <TableCell className="text-right px-2 text-red-600">0</TableCell>
+                        <TableCell className="text-right px-2 text-yellow-600">0</TableCell>
                       </TableRow>
                     ))}
                     <TableRow className="border-t-2 font-bold bg-muted/40">
                       <TableCell>TỔNG CỘNG</TableCell>
                       <TableCell />
-                      <TableCell className="text-right">{sum.sub_today}</TableCell>
-                      <TableCell className="text-right">{sum.sub_month}</TableCell>
-                      <TableCell className="text-right">{sum.acc_today}</TableCell>
-                      <TableCell className="text-right">{sum.acc_month}</TableCell>
-                      <TableCell className="text-right">{sum.acc_prev_month}</TableCell>
-                      <TableCell className="text-right">{rate(sum.acc_today, sum.sub_today)}</TableCell>
-                      <TableCell className="text-right text-red-600">0</TableCell>
-                      <TableCell className="text-right text-yellow-600">0</TableCell>
+                      <TableCell className="text-right px-2">{sum.sub_today}</TableCell>
+                      <TableCell className="text-right px-2">{sum.sub_month}</TableCell>
+                      <TableCell className="text-right px-2">{sum.acc_today}</TableCell>
+                      <TableCell className="text-right px-2">{sum.acc_month}</TableCell>
+                      <TableCell className="text-right px-2">{sum.acc_prev_month}</TableCell>
+                      <TableCell className="text-right px-2">{rate(sum.acc_today, sum.sub_today)}</TableCell>
+                      <TableCell className="text-right px-2 text-red-600">0</TableCell>
+                      <TableCell className="text-right px-2 text-yellow-600">0</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
