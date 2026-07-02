@@ -1,3 +1,10 @@
+## [1.69.1](https://github.com/lth91/luot247-vision/compare/v1.69.0...v1.69.1) (2026-07-02)
+
+
+### Bug Fixes
+
+* **views:** bỏ ngày spike viral trong daily-auto-views — trần cố định 3600/ngày ([#95](https://github.com/lth91/luot247-vision/issues/95)) ([8376291](https://github.com/lth91/luot247-vision/commit/8376291339589fe19307315e57642d4d35955a1a))
+
 # [1.69.0](https://github.com/lth91/luot247-vision/compare/v1.68.0...v1.69.0) (2026-07-02)
 
 
