@@ -1,3 +1,10 @@
+## [1.71.1](https://github.com/lth91/luot247-vision/compare/v1.71.0...v1.71.1) (2026-07-02)
+
+
+### Bug Fixes
+
+* **submission:** sửa email whitelist Bùi Thị Na — bui.thi.na.denco@gmail.com ([#99](https://github.com/lth91/luot247-vision/issues/99)) ([56c4f35](https://github.com/lth91/luot247-vision/commit/56c4f35f7a8b4a6fe3f3b028244105ea3fc07bf8))
+
 # [1.71.0](https://github.com/lth91/luot247-vision/compare/v1.70.0...v1.71.0) (2026-07-02)
 
 
