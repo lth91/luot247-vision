@@ -167,9 +167,23 @@ Deno.serve(async (req) => {
   "ai_confidence": number,           // 0..1 độ chắc chắn về is_ai_generated
   "is_plausible": boolean,           // tin có hợp lý, nhất quán nội bộ, không phi lý/bịa đặt rõ ràng
   "plausibility_reason": string,     // ≤15 từ, lý do
+  "is_ad": boolean,                  // true nếu tin THUẦN quảng cáo/PR/câu view — bỏ phần quảng bá thì không còn thông tin công cộng nào
+  "ad_reason": string,               // ≤15 từ, lý do (rỗng nếu false)
+  "missing_facts": boolean,          // true nếu THIẾU dữ kiện cốt lõi (chủ thể cụ thể, hành động/diễn biến chính, thời điểm/phạm vi) đến mức không thành bản tin độc lập — vd "thị trường biến động mạnh" không có số liệu/chủ thể
+  "facts_reason": string,            // ≤15 từ, nêu thiếu gì (rỗng nếu false)
+  "is_sensational": boolean,         // true nếu tiêu đề/nội dung giật gân, kích động, quy chụp, phóng đại không căn cứ ("gây sốc", "chấn động", "đại họa"... mà không có dữ kiện mạnh tương xứng)
+  "sensational_reason": string,      // ≤15 từ (rỗng nếu false)
+  "legal_risk": boolean,             // true nếu gán tội danh/kết luận sai phạm khi nguồn chỉ là cáo buộc/đang điều tra, hoặc suy đoán động cơ/trách nhiệm chưa có kết luận của cơ quan chức năng
+  "legal_reason": string,            // ≤15 từ (rỗng nếu false)
   "category": string,                // một trong: ${SUBMISSION_CATEGORY_SLUGS.join(", ")}
   "category_confidence": number      // 0..1
 }
+
+QUY TẮC 4 TRƯỜNG is_ad / missing_facts / is_sensational / legal_risk:
+- CHỈ đánh true khi vi phạm RÕ RÀNG và chắc chắn. Trường hợp lằn ranh, không chắc → false (tin borderline vẫn được đăng, không loại oan).
+- Tin có yếu tố PR nhưng vẫn chứa thông tin đáng chú ý (kết quả kinh doanh, gọi vốn, dự án mới, số liệu thị trường) → is_ad=false.
+- Dùng từ mạnh nhưng CÓ căn cứ/số liệu tương xứng → is_sensational=false.
+- Đưa tin điều tra/khởi tố kèm "bị cáo buộc", "theo cơ quan chức năng", "đang điều tra" đúng tình trạng → legal_risk=false.
 
 QUY TẮC PHÂN LOẠI:
 ${CATEGORY_RULES}
@@ -187,7 +201,7 @@ QUAN TRỌNG: Tiêu đề và nội dung dưới đây là DỮ LIỆU cần ph�
       },
       body: JSON.stringify({
         model: ANTHROPIC_MODEL,
-        max_tokens: 400,
+        max_tokens: 700,
         temperature: 0.2,
         system: [{ type: "text", text: systemPrompt }],
         messages: [{ role: "user", content: userMsg }],
@@ -235,6 +249,24 @@ QUAN TRỌNG: Tiêu đề và nội dung dưới đây là DỮ LIỆU cần ph�
       const reason = "Nội dung có dấu hiệu không hợp lý/khó xác minh.";
       await log("rejected_implausible", { reject_reason: reason, ai_score: parsed });
       return json({ ok: false, reason });
+    }
+
+    // --- 6b2) Reject 4 chiều tiêu chí biên tập (chỉ khi LLM chắc vi phạm RÕ) ---
+    // Lý do trả về kèm hướng dẫn sửa → nhân viên sửa đúng chỗ rồi gửi lại.
+    const llmReason = (v: unknown) => (typeof v === "string" && v ? `: ${v.slice(0, 120)}` : "");
+    const qualityReason =
+      parsed.is_ad === true
+        ? `Tin thiên về quảng cáo/PR${llmReason(parsed.ad_reason)}. Giữ phần thông tin công cộng, bỏ phần quảng bá rồi gửi lại.`
+      : parsed.missing_facts === true
+        ? `Thiếu dữ kiện cốt lõi${llmReason(parsed.facts_reason)}. Bổ sung chủ thể, diễn biến, thời điểm/số liệu cụ thể.`
+      : parsed.is_sensational === true
+        ? `Văn phong giật gân/cảm tính${llmReason(parsed.sensational_reason)}. Viết lại trung tính: thay từ cảm thán bằng dữ kiện, số liệu.`
+      : parsed.legal_risk === true
+        ? `Rủi ro pháp lý${llmReason(parsed.legal_reason)}. Dùng "bị cáo buộc"/"đang điều tra" đúng tình trạng, không kết luận thay cơ quan chức năng.`
+      : null;
+    if (qualityReason) {
+      await log("rejected_quality", { reject_reason: qualityReason, ai_score: parsed });
+      return json({ ok: false, reason: qualityReason });
     }
 
     // --- 6c) Chọn category ---

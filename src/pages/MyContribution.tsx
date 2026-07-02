@@ -36,6 +36,7 @@ const STATUS_META: Record<string, { label: string; variant: "default" | "seconda
   rejected_similar: { label: "Trùng tiêu đề", variant: "secondary" },
   rejected_ai: { label: "Giọng AI", variant: "destructive" },
   rejected_implausible: { label: "Khả nghi", variant: "destructive" },
+  rejected_quality: { label: "Chưa đạt tiêu chí", variant: "secondary" },
   error: { label: "Lỗi hệ thống", variant: "outline" },
 };
 
