@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { countWords, SUBMISSION_LIMITS } from "@/lib/newsCategories";
+import { useSubmissionAllowed } from "@/hooks/useSubmissionAllowed";
 
 const { titleMin, titleMax, totalMin, totalMax } = SUBMISSION_LIMITS;
 
@@ -30,6 +31,8 @@ const SubmitNews = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
+  // Quyền gửi tin theo whitelist email (null = đang kiểm tra).
+  const allowed = useSubmissionAllowed(session?.user?.id);
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -176,6 +179,41 @@ const SubmitNews = () => {
       setBulkLoading(false);
     }
   };
+
+  // Chưa xác định xong quyền → placeholder ngắn (tránh nháy form rồi biến mất).
+  if (session && allowed === null) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header user={session?.user} userRole={userRole} />
+        <main className="max-w-2xl mx-auto px-4 py-6">
+          <p className="text-sm text-muted-foreground text-center py-10">Đang kiểm tra quyền truy cập...</p>
+        </main>
+      </div>
+    );
+  }
+
+  // Không có quyền gửi tin → thông báo, không hiện form (backend cũng chặn).
+  if (session && allowed === false) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header user={session?.user} userRole={userRole} />
+        <main className="max-w-2xl mx-auto px-4 py-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">🔒 Gửi tin</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Chức năng gửi tin hiện chỉ dành cho các tài khoản đã đăng ký.
+                Tài khoản <b>{session.user.email}</b> chưa được cấp quyền.
+                Vui lòng liên hệ quản trị viên nếu bạn cần gửi tin.
+              </p>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
