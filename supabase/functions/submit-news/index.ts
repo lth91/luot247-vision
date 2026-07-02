@@ -57,6 +57,23 @@ Deno.serve(async (req) => {
   const user = userData?.user;
   if (userErr || !user) return json({ ok: false, reason: "Phiên đăng nhập không hợp lệ." }, 401);
 
+  // --- 1b) Whitelist gửi tin: chỉ email đăng ký hoặc admin ---
+  // Lỗi query (vd migration chưa chạy) → fail-open tạm để không chặn nhầm
+  // nhân viên; sau khi migration áp thì bảng luôn tồn tại.
+  {
+    const email = (user.email ?? "").toLowerCase();
+    const { data: wlRow, error: wlErr } = await supabase
+      .from("submission_whitelist").select("email").eq("email", email).maybeSingle();
+    if (wlErr) console.error("whitelist check error:", wlErr.message);
+    if (!wlErr && !wlRow) {
+      const { data: adminRow } = await supabase
+        .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
+      if (!adminRow) {
+        return json({ ok: false, reason: "Tài khoản của bạn chưa được cấp quyền gửi tin. Vui lòng liên hệ quản trị viên." }, 403);
+      }
+    }
+  }
+
   // Tiêu đề tin (để tab "Tin bị loại" hiển thị) — set sau khi parse body.
   let logTitle: string | null = null;
   // Ghi log + (best-effort) trả về. status thuộc CHECK constraint của submission_log.

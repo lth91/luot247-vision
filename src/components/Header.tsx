@@ -9,6 +9,7 @@ import logo from "@/assets/logo.png";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useReadingContext } from "@/contexts/ReadingContext";
+import { useSubmissionAllowed } from "@/hooks/useSubmissionAllowed";
 
 interface HeaderProps {
   user: any;
@@ -22,6 +23,8 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const [readingMode, setReadingMode] = useState(false);
+  // Chỉ email trong whitelist (hoặc admin) thấy mục "Gửi tin".
+  const canSubmit = useSubmissionAllowed(user?.id);
   
   // Use ReadingContext for synchronization and read news toggle
   const { syncToFlipMode, syncToScrollMode, shouldHideReadNews, setShouldHideReadNews } = useReadingContext();
@@ -157,16 +160,18 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                     ❤️ Danh sách yêu thích
                   </Button>
 
-                  <Button
-                    variant="ghost"
-                    className="justify-start"
-                    onClick={() => {
-                      setOpen(false);
-                      navigate("/gui-tin");
-                    }}
-                  >
-                    ✍️ Gửi tin
-                  </Button>
+                  {canSubmit !== false && (
+                    <Button
+                      variant="ghost"
+                      className="justify-start"
+                      onClick={() => {
+                        setOpen(false);
+                        navigate("/gui-tin");
+                      }}
+                    >
+                      ✍️ Gửi tin
+                    </Button>
+                  )}
 
                   <Button
                     variant="ghost"

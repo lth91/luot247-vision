@@ -116,6 +116,21 @@ Deno.serve(async (req) => {
   const user = userData?.user;
   if (userErr || !user) return json({ ok: false, reason: "Phiên đăng nhập không hợp lệ." }, 401);
 
+  // Whitelist gửi tin: chỉ email đăng ký hoặc admin (như submit-news).
+  {
+    const email = (user.email ?? "").toLowerCase();
+    const { data: wlRow, error: wlErr } = await supabase
+      .from("submission_whitelist").select("email").eq("email", email).maybeSingle();
+    if (wlErr) console.error("whitelist check error:", wlErr.message);
+    if (!wlErr && !wlRow) {
+      const { data: adminRow } = await supabase
+        .from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
+      if (!adminRow) {
+        return json({ ok: false, reason: "Tài khoản của bạn chưa được cấp quyền gửi tin. Vui lòng liên hệ quản trị viên." }, 403);
+      }
+    }
+  }
+
   const logRow = (status: string, opts: { news_id?: string | null; reject_reason?: string; ai_score?: unknown; title?: string } = {}) =>
     supabase.from("submission_log").insert({
       user_id: user.id, news_id: opts.news_id ?? null, status,
