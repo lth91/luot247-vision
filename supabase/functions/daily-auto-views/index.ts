@@ -82,11 +82,9 @@ serve(async (req) => {
     // Hướng 3a: cuối tuần thấp hơn ~12-18%.
     const dowMult = (dow === 0 || dow === 6) ? (0.82 + dayRng() * 0.06) : (0.96 + dayRng() * 0.12)
     dailyTarget *= dowMult
-    // Hướng 3b: ngày spike hiếm (~7%) — mô phỏng tin viral, ×1.3-1.8.
-    const isSpike = dayRng() < 0.07
-    if (isSpike) dailyTarget *= 1.3 + dayRng() * 0.5
+    // Ngày spike "viral" ĐÃ BỎ theo yêu cầu — không muốn ngày nào vượt 4000 view.
     // Kẹp biên cho khỏi cực đoan.
-    dailyTarget = Math.round(Math.max(2200, Math.min(isSpike ? 5200 : 3600, dailyTarget)))
+    dailyTarget = Math.round(Math.max(2200, Math.min(3600, dailyTarget)))
 
     // Hướng 5: đường cong 24h + jitter mỗi giờ (mean≈1, ±15%) → hình dạng đổi mỗi
     // ngày nhưng tổng vẫn chuẩn (vì normalize theo chính curve đã jitter).
@@ -101,7 +99,7 @@ serve(async (req) => {
     const noise = Math.max(0.6, Math.min(1.5, gaussian(Math.random, 1, 0.15)))
     const viewsToAdd = Math.max(0, Math.round(baseForInterval * noise))
     
-    console.log(`Will add ${viewsToAdd} views for this 30-minute interval (target: ${dailyTarget}/day, dow: ${dow}, spike: ${isSpike})`)
+    console.log(`Will add ${viewsToAdd} views for this 30-minute interval (target: ${dailyTarget}/day, dow: ${dow})`)
 
     // Interval đêm trọng số thấp → có thể ra 0 view; bỏ qua, không insert mảng rỗng.
     if (viewsToAdd <= 0) {
