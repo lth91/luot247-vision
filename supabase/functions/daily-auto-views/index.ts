@@ -79,8 +79,9 @@ serve(async (req) => {
 
     // Hướng 2: tổng/ngày theo phân phối chuông (TB 3000, lệch chuẩn 250).
     let dailyTarget = gaussian(dayRng, 3000, 250)
-    // Hướng 3a: cuối tuần thấp hơn ~12-18%.
-    const dowMult = (dow === 0 || dow === 6) ? (0.82 + dayRng() * 0.06) : (0.96 + dayRng() * 0.12)
+    // Hướng 3a: cuối tuần CAO hơn ngày thường ~10-18% (theo yêu cầu — độc giả
+    // rảnh cuối tuần lướt tin nhiều hơn). Ngày thường dao động quanh 1.
+    const dowMult = (dow === 0 || dow === 6) ? (1.10 + dayRng() * 0.08) : (0.96 + dayRng() * 0.12)
     dailyTarget *= dowMult
     // Ngày spike "viral" ĐÃ BỎ theo yêu cầu — không muốn ngày nào vượt 4000 view.
     // Kẹp biên cho khỏi cực đoan.
