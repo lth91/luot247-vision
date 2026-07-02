@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
+import { useSubmissionAllowed } from "@/hooks/useSubmissionAllowed";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -17,16 +19,29 @@ interface Row {
 const MEDAL = ["🥇", "🥈", "🥉"];
 
 const Leaderboard = () => {
+  const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s); setSessionChecked(true);
+    });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session); setSessionChecked(true);
+    });
     return () => subscription.unsubscribe();
   }, []);
+
+  // Tính năng thuộc nhóm gửi tin — chỉ whitelist + admin. Khách/user thường → trang chủ.
+  const allowed = useSubmissionAllowed(session?.user?.id);
+  useEffect(() => {
+    if (sessionChecked && !session) navigate("/");
+    if (allowed === false) navigate("/");
+  }, [sessionChecked, session, allowed, navigate]);
 
   useEffect(() => {
     if (session?.user) {

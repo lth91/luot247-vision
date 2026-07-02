@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { categoryLabel } from "@/lib/newsCategories";
 import { getRelativeTime } from "@/lib/dateUtils";
+import { useSubmissionAllowed } from "@/hooks/useSubmissionAllowed";
 
 interface ProfileStats {
   total_points: number;
@@ -60,6 +61,12 @@ const MyContribution = () => {
   useEffect(() => {
     if (sessionChecked && !session) { navigate("/auth"); }
   }, [sessionChecked, session, navigate]);
+
+  // Tính năng thuộc nhóm gửi tin — user ngoài whitelist về trang chủ.
+  const allowed = useSubmissionAllowed(session?.user?.id);
+  useEffect(() => {
+    if (allowed === false) navigate("/");
+  }, [allowed, navigate]);
 
   useEffect(() => {
     if (!session?.user) return;
