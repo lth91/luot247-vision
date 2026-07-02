@@ -1,6 +1,6 @@
 // Edge function: nhận tin do USER gửi → kiểm duyệt tự động → auto-publish.
 // Luồng: verify JWT → validate độ dài (từ) → dedup URL + title → LLM (giọng AI
-// + plausibility + phân loại 5 mục) → INSERT news (is_approved=true) + log.
+// + plausibility + phân loại 9 mục) → INSERT news (is_approved=true) + log.
 // Deploy với --no-verify-jwt (như mọi function repo) → verify JWT THỦ CÔNG.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
@@ -15,9 +15,10 @@ const corsHeaders = {
 
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 
-// Ngưỡng độ dài (đếm theo TỪ) — chốt với user.
-const TITLE_MIN = 10, TITLE_MAX = 18;
-const CONTENT_MIN = 110, CONTENT_MAX = 140;
+// Ngưỡng độ dài (đếm theo TỪ) — chuẩn theo "Bộ tiêu chí lọc tin" của sếp:
+// tiêu đề 12–18 từ, TỔNG (tiêu đề + nội dung) 120–140 từ.
+const TITLE_MIN = 12, TITLE_MAX = 18;
+const TOTAL_MIN = 120, TOTAL_MAX = 140;
 // Cap ký tự (defense): chặn "từ" siêu dài → bound input gửi LLM, chống đốt token.
 const TITLE_MAX_CHARS = 400, CONTENT_MAX_CHARS = 4000;
 
@@ -104,13 +105,14 @@ Deno.serve(async (req) => {
     }
     const titleWords = countWords(title);
     const contentWords = countWords(content);
+    const totalWords = titleWords + contentWords;
     if (titleWords < TITLE_MIN || titleWords > TITLE_MAX) {
       const reason = `Tiêu đề cần ${TITLE_MIN}–${TITLE_MAX} từ (hiện ${titleWords}).`;
       await log("rejected_length", { reject_reason: reason });
       return json({ ok: false, reason });
     }
-    if (contentWords < CONTENT_MIN || contentWords > CONTENT_MAX) {
-      const reason = `Nội dung cần ${CONTENT_MIN}–${CONTENT_MAX} từ (hiện ${contentWords}).`;
+    if (totalWords < TOTAL_MIN || totalWords > TOTAL_MAX) {
+      const reason = `Tổng tiêu đề + nội dung cần ${TOTAL_MIN}–${TOTAL_MAX} từ (hiện ${totalWords}).`;
       await log("rejected_length", { reject_reason: reason });
       return json({ ok: false, reason });
     }

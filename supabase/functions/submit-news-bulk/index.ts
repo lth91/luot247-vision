@@ -1,6 +1,6 @@
 // Edge function: nhận link Google Sheet (2 cột: Tiêu đề | Nội dung) → gửi HÀNG
 // LOẠT tin qua đúng pipeline kiểm duyệt của submit-news (độ dài → trùng tiêu đề
-// → LLM giọng-AI + plausibility + phân loại 5 mục) → đăng + +10đ/tin.
+// → LLM giọng-AI + plausibility + phân loại 9 mục) → đăng + +10đ/tin.
 // LLM gộp theo LÔ 10 dòng/call để tránh timeout + giảm chi phí.
 // Deploy --no-verify-jwt → verify JWT thủ công.
 // (re-trigger deploy: lần trước esm.sh lỗi 522 transient → bundle fail.)
@@ -15,8 +15,9 @@ const corsHeaders = {
 };
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 
-const TITLE_MIN = 10, TITLE_MAX = 18;
-const CONTENT_MIN = 110, CONTENT_MAX = 140;
+// Chuẩn "Bộ tiêu chí lọc tin": tiêu đề 12–18 từ, TỔNG (tiêu đề + nội dung) 120–140 từ.
+const TITLE_MIN = 12, TITLE_MAX = 18;
+const TOTAL_MIN = 120, TOTAL_MAX = 140;
 const TITLE_MAX_CHARS = 400, CONTENT_MAX_CHARS = 4000;
 const MAX_ROWS = 100;       // trần số tin / lần import
 const LLM_BATCH = 10;       // số dòng / call LLM
@@ -166,10 +167,11 @@ Deno.serve(async (req) => {
     for (const row of rows) {
       const { rowNum, title, content } = row;
       const tw = countWords(title), cw = countWords(content);
+      const total = tw + cw;
       if (!title || !content || title.length > TITLE_MAX_CHARS || content.length > CONTENT_MAX_CHARS ||
-          tw < TITLE_MIN || tw > TITLE_MAX || cw < CONTENT_MIN || cw > CONTENT_MAX) {
+          tw < TITLE_MIN || tw > TITLE_MAX || total < TOTAL_MIN || total > TOTAL_MAX) {
         summary.rejected_length++;
-        const reason = `Sai độ dài: tiêu đề ${tw} từ (cần 10–18), nội dung ${cw} từ (cần 110–140)`;
+        const reason = `Sai độ dài: tiêu đề ${tw} từ (cần ${TITLE_MIN}–${TITLE_MAX}), tổng tiêu đề + nội dung ${total} từ (cần ${TOTAL_MIN}–${TOTAL_MAX})`;
         issues.push({ row: rowNum, title: title.slice(0, 60), reason });
         logReject("rejected_length", title || "(trống)", reason);
         continue;

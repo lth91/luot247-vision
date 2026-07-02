@@ -12,16 +12,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { countWords, SUBMISSION_LIMITS } from "@/lib/newsCategories";
 
-const { titleMin, titleMax, contentMin, contentMax } = SUBMISSION_LIMITS;
+const { titleMin, titleMax, totalMin, totalMax } = SUBMISSION_LIMITS;
 
-// Hiển thị trạng thái word-count: ok / thiếu / thừa.
-function WordHint({ count, min, max }: { count: number; min: number; max: number }) {
+// Hiển thị trạng thái word-count: ok / thiếu / thừa. prefix: nhãn thêm phía
+// trước (vd "Tổng" cho bộ đếm tiêu đề + nội dung).
+function WordHint({ count, min, max, prefix }: { count: number; min: number; max: number; prefix?: string }) {
   let cls = "text-muted-foreground";
   let msg = `${count} từ`;
   if (count > 0 && count < min) { cls = "text-amber-600"; msg = `${count} từ — cần thêm ${min - count}`; }
   else if (count > max) { cls = "text-red-600"; msg = `${count} từ — thừa ${count - max}`; }
   else if (count >= min && count <= max) { cls = "text-green-600"; msg = `${count} từ — OK`; }
-  return <span className={`text-xs ${cls}`}>{msg} (cần {min}–{max})</span>;
+  return <span className={`text-xs ${cls}`}>{prefix ? `${prefix}: ` : ""}{msg} (cần {min}–{max})</span>;
 }
 
 const SubmitNews = () => {
@@ -114,9 +115,10 @@ const SubmitNews = () => {
 
   const titleWords = countWords(title);
   const contentWords = countWords(content);
+  const totalWords = titleWords + contentWords;
   const lengthOk =
     titleWords >= titleMin && titleWords <= titleMax &&
-    contentWords >= contentMin && contentWords <= contentMax;
+    totalWords >= totalMin && totalWords <= totalMax;
   const canSubmit = lengthOk && !isLoading;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -209,10 +211,10 @@ const SubmitNews = () => {
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="content">Nội dung</Label>
-                      <WordHint count={contentWords} min={contentMin} max={contentMax} />
+                      <WordHint count={totalWords} min={totalMin} max={totalMax} prefix="Tổng tiêu đề + nội dung" />
                     </div>
                     <Textarea id="content" value={content} onChange={(e) => setContent(e.target.value)}
-                      placeholder="Tóm tắt tin trong 110–140 từ, văn phong tự nhiên." rows={8} disabled={isLoading} />
+                      placeholder={`Tóm tắt tin sao cho TỔNG tiêu đề + nội dung đạt ${totalMin}–${totalMax} từ, văn phong tự nhiên.`} rows={8} disabled={isLoading} />
                   </div>
 
                   <p className="text-xs text-muted-foreground">
@@ -224,7 +226,7 @@ const SubmitNews = () => {
                   </Button>
                   {!lengthOk && (title || content) && (
                     <p className="text-xs text-center text-muted-foreground">
-                      Cần đúng độ dài tiêu đề ({titleMin}–{titleMax} từ) và nội dung ({contentMin}–{contentMax} từ) để gửi.
+                      Cần tiêu đề {titleMin}–{titleMax} từ và tổng tiêu đề + nội dung {totalMin}–{totalMax} từ để gửi.
                     </p>
                   )}
                 </form>
@@ -234,7 +236,7 @@ const SubmitNews = () => {
               <TabsContent value="bulk" className="space-y-4">
                 <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
                   <p className="font-medium text-foreground">Cách dùng:</p>
-                  <p>• Sheet có <b>2 cột</b>: cột A = <b>Tiêu đề</b> (10–18 từ), cột B = <b>Nội dung</b> (110–140 từ). Dòng 1 là tiêu đề cột.</p>
+                  <p>• Sheet có <b>2 cột</b>: cột A = <b>Tiêu đề</b> ({titleMin}–{titleMax} từ), cột B = <b>Nội dung</b> (tổng tiêu đề + nội dung {totalMin}–{totalMax} từ). Dòng 1 là tiêu đề cột.</p>
                   <p>• Đặt quyền chia sẻ Sheet: <b>Anyone with the link → Viewer</b>.</p>
                   <p>• Tối đa <b>100 tin/lần</b>. Mỗi tin qua kiểm duyệt AI như gửi lẻ; tin đạt được đăng + 10đ.</p>
                   <p>• <b>Import lại an toàn</b>: tin đã đăng sẽ tự bỏ qua (không trừ điểm, không tốn phí). Sửa tin lỗi rồi import lại cả sheet là được.</p>
