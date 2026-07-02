@@ -1,3 +1,10 @@
+## [1.72.1](https://github.com/lth91/luot247-vision/compare/v1.72.0...v1.72.1) (2026-07-02)
+
+
+### Bug Fixes
+
+* **views:** guard chống daily-auto-views bị gọi trùng interval — hết view đúp 1.7x ([#101](https://github.com/lth91/luot247-vision/issues/101)) ([332cfcf](https://github.com/lth91/luot247-vision/commit/332cfcf63bbbaf5c9fce9b51e145d340c324e2e3))
+
 # [1.72.0](https://github.com/lth91/luot247-vision/compare/v1.71.1...v1.72.0) (2026-07-02)
 
 
