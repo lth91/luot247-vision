@@ -86,6 +86,7 @@ const SubmitNews = () => {
     rejected_length: "Sai độ dài",
     rejected_ai: "Dấu hiệu AI",
     rejected_implausible: "Khả nghi",
+    rejected_quality: "Chưa đạt tiêu chí biên tập",
     rejected_duplicate: "Đã có trên hệ thống",
     rejected_similar: "Trùng tin đã có",
     error: "Lỗi xử lý",
@@ -298,6 +299,7 @@ const SubmitNews = () => {
                     {bulkResult.duplicate > 0 && <p>• Đã có trên hệ thống, bỏ qua: {bulkResult.duplicate}</p>}
                     {bulkResult.rejected_ai > 0 && <p>• Dấu hiệu AI: {bulkResult.rejected_ai}</p>}
                     {bulkResult.rejected_implausible > 0 && <p>• Khả nghi: {bulkResult.rejected_implausible}</p>}
+                    {bulkResult.rejected_quality > 0 && <p>• Chưa đạt tiêu chí biên tập (PR/thiếu dữ kiện/giật gân/rủi ro pháp lý): {bulkResult.rejected_quality}</p>}
                     {bulkResult.error > 0 && <p>• Lỗi xử lý: {bulkResult.error}</p>}
                     {bulkResult.skipped > 0 && <p className="text-amber-600">• Chưa kịp xử lý (quá thời gian): {bulkResult.skipped} — import lại để gửi tiếp.</p>}
                     {bulkResult.truncated && <p className="text-amber-600">⚠️ Sheet vượt 100 dòng — phần dư chưa xử lý, import lại để gửi tiếp.</p>}
