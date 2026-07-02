@@ -57,6 +57,32 @@ serve(async (req) => {
     
     console.log(`Current Vietnam time: ${vietnamTime.toISOString()}, Hour: ${currentHour}:${currentMinute}`)
 
+    // Tính khoảng 30 phút hiện tại NGAY từ đầu — dùng cho guard chống gọi trùng.
+    const intervalStart = new Date(vietnamTime)
+    intervalStart.setUTCMinutes(currentMinute < 30 ? 0 : 30, 0, 0)
+    const intervalEnd = new Date(intervalStart)
+    intervalEnd.setUTCMinutes(intervalStart.getUTCMinutes() + 30)
+    // Chuyển về UTC để lưu vào database
+    const intervalStartUTC = new Date(intervalStart.getTime() - (7 * 60 * 60 * 1000))
+    const intervalEndUTC = new Date(intervalEnd.getTime() - (7 * 60 * 60 * 1000))
+
+    // ==== GUARD CHỐNG GỌI TRÙNG (phát hiện 02/07: mỗi mốc :00/:30 bị gọi 2 lần
+    // song song → view đúp ~1.7x). Bảng auto_views_runs có PK = interval_start:
+    // execution ĐẦU TIÊN insert thành công; execution thứ 2 dính 23505 → thoát,
+    // không bơm view, không reset đúp. Bảng chưa tạo (migration chưa chạy) →
+    // fail-open: tiếp tục như cũ.
+    const { error: guardErr } = await supabaseClient
+      .from('auto_views_runs')
+      .insert({ interval_start: intervalStartUTC.toISOString() })
+    if (guardErr) {
+      if (guardErr.code === '23505') {
+        console.log(`Duplicate invocation for interval ${intervalStartUTC.toISOString()} — skipped.`)
+        return new Response(JSON.stringify({ success: true, message: 'Duplicate invocation skipped (interval already processed)' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 })
+      }
+      console.error('Run-guard error (bảng auto_views_runs chưa tạo?) — tiếp tục không guard:', guardErr.message)
+    }
+
     // Chạy 24/7: ban đêm vẫn có baseline thấp (qua BASE_CURVE) cho tự nhiên.
 
     // CRITICAL: Reset daily stats at 7:00 AM (first interval of the day)
@@ -70,6 +96,11 @@ serve(async (req) => {
       } else {
         console.log('✅ Daily reset completed successfully - yesterday updated, today reset to 0')
       }
+
+      // Dọn guard cũ hơn 7 ngày (mỗi ngày 48 dòng — giữ gọn bảng).
+      await supabaseClient.from('auto_views_runs')
+        .delete()
+        .lt('interval_start', new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString())
     }
 
     // ====== Tính mục tiêu NGÀY (seed theo ngày → mọi interval nhất quán) ======
@@ -109,18 +140,7 @@ serve(async (req) => {
     }
 
     const viewsToInsert = []
-    
-    // Tính khoảng thời gian 30 phút hiện tại
-    const intervalStart = new Date(vietnamTime)
-    intervalStart.setUTCMinutes(currentMinute < 30 ? 0 : 30, 0, 0)
-    
-    const intervalEnd = new Date(intervalStart)
-    intervalEnd.setUTCMinutes(intervalStart.getUTCMinutes() + 30)
-    
-    // Chuyển về UTC để lưu vào database
-    const intervalStartUTC = new Date(intervalStart.getTime() - (7 * 60 * 60 * 1000))
-    const intervalEndUTC = new Date(intervalEnd.getTime() - (7 * 60 * 60 * 1000))
-    
+
     console.log(`Time range: ${intervalStartUTC.toISOString()} to ${intervalEndUTC.toISOString()}`)
 
     // Hướng 4: arrivals BÙNG CỤM theo "phiên" thay vì rải đều — 1 khách xem 1-3
