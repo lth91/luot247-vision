@@ -1,3 +1,10 @@
+# [1.72.0](https://github.com/lth91/luot247-vision/compare/v1.71.1...v1.72.0) (2026-07-02)
+
+
+### Features
+
+* **submission:** LLM chấm 4 chiều tiêu chí biên tập — loại khi vi phạm rõ kèm hướng dẫn sửa ([#100](https://github.com/lth91/luot247-vision/issues/100)) ([8a3789d](https://github.com/lth91/luot247-vision/commit/8a3789db2bac750fc15517c6fcbd39fd4bf2888e))
+
 ## [1.71.1](https://github.com/lth91/luot247-vision/compare/v1.71.0...v1.71.1) (2026-07-02)
 
 
