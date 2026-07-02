@@ -1,3 +1,10 @@
+# [1.70.0](https://github.com/lth91/luot247-vision/compare/v1.69.2...v1.70.0) (2026-07-02)
+
+
+### Features
+
+* **submission:** khoá gửi tin theo whitelist email — chỉ 25 email đăng ký + admin ([#97](https://github.com/lth91/luot247-vision/issues/97)) ([658893e](https://github.com/lth91/luot247-vision/commit/658893e220555f85cbb62ecef0c1bdaee8f7f7a8))
+
 ## [1.69.2](https://github.com/lth91/luot247-vision/compare/v1.69.1...v1.69.2) (2026-07-02)
 
 
