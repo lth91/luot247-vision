@@ -1,3 +1,10 @@
+## [1.69.2](https://github.com/lth91/luot247-vision/compare/v1.69.1...v1.69.2) (2026-07-02)
+
+
+### Bug Fixes
+
+* **views:** cuối tuần view giả lập CAO hơn ngày thường 10-18% ([#96](https://github.com/lth91/luot247-vision/issues/96)) ([d344d04](https://github.com/lth91/luot247-vision/commit/d344d046bc01cb8d7bcdf2bac9c49699b5e2d8cb))
+
 ## [1.69.1](https://github.com/lth91/luot247-vision/compare/v1.69.0...v1.69.1) (2026-07-02)
 
 
