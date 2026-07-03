@@ -33,6 +33,14 @@ interface ViewStats {
 // Tỷ lệ duyệt = duyệt/gửi; chưa gửi tin nào → "—".
 const rate = (acc: number, sub: number) => (sub > 0 ? `${Math.round((acc / sub) * 100)}%` : "—");
 
+// Cột sắp xếp được: tên + các cột số + tỷ lệ (rate tính từ acc/sub, "—" xếp cuối).
+type SortKey = "full_name" | "sub_today" | "sub_month" | "acc_today" | "acc_month" | "acc_prev_month" | "rate";
+
+const sortVal = (r: DashRow, key: SortKey): number | string =>
+  key === "full_name" ? (r.full_name || "") :
+  key === "rate" ? (r.sub_today > 0 ? r.acc_today / r.sub_today : -1) :
+  r[key];
+
 const Leaderboard = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
@@ -41,6 +49,22 @@ const Leaderboard = () => {
   const [rows, setRows] = useState<DashRow[]>([]);
   const [views, setViews] = useState<ViewStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // null = giữ thứ tự mặc định từ RPC (tin duyệt tháng này giảm dần).
+  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" } | null>(null);
+
+  // Bấm lần 1: lớn → bé; bấm lần nữa: đảo chiều.
+  const toggleSort = (key: SortKey) =>
+    setSort((s) => (s?.key === key ? { key, dir: s.dir === "desc" ? "asc" : "desc" } : { key, dir: "desc" }));
+
+  const sorted = sort
+    ? [...rows].sort((a, b) => {
+        const va = sortVal(a, sort.key), vb = sortVal(b, sort.key);
+        const c = typeof va === "string"
+          ? va.localeCompare(vb as string, "vi")
+          : (va as number) - (vb as number);
+        return sort.dir === "asc" ? c : -c;
+      })
+    : rows;
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
@@ -95,6 +119,17 @@ const Leaderboard = () => {
     { sub_today: 0, sub_month: 0, acc_today: 0, acc_month: 0, acc_prev_month: 0 },
   );
 
+  // Ô tiêu đề bấm được để sắp xếp; mũi tên chỉ chiều đang áp dụng.
+  const SortHead = ({ label, k, className = "" }: { label: string; k: SortKey; className?: string }) => (
+    <TableHead className={className}>
+      <button type="button" onClick={() => toggleSort(k)}
+        className="w-full inline-flex items-center justify-end gap-0.5 hover:text-foreground">
+        <span>{label}</span>
+        <span className="text-[10px] shrink-0">{sort?.key === k ? (sort.dir === "desc" ? "▼" : "▲") : "⇅"}</span>
+      </button>
+    </TableHead>
+  );
+
   const VIEW_CELLS: { label: string; key: keyof ViewStats }[] = [
     { label: "View hôm nay", key: "today" },
     { label: "View hôm qua", key: "yesterday" },
@@ -123,20 +158,20 @@ const Leaderboard = () => {
                   <TableHeader className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-card [&_th]:shadow-[inset_0_-1px_0_hsl(var(--border))]">
                     <TableRow>
                       {/* Tiêu đề cột cho phép xuống 2 dòng để 10 cột vừa màn desktop, khỏi cuộn ngang */}
-                      <TableHead className="whitespace-nowrap">Tên</TableHead>
+                      <SortHead label="Tên" k="full_name" className="whitespace-nowrap [&_button]:justify-start" />
                       <TableHead className="whitespace-nowrap">Email đăng ký</TableHead>
-                      <TableHead className="text-right text-xs leading-tight px-2 min-w-[70px]">Tin đăng hôm nay</TableHead>
-                      <TableHead className="text-right text-xs leading-tight px-2 min-w-[70px]">Tin đăng tháng này</TableHead>
-                      <TableHead className="text-right text-xs leading-tight px-2 min-w-[70px]">Tin duyệt hôm nay</TableHead>
-                      <TableHead className="text-right text-xs leading-tight px-2 min-w-[70px]">Tin duyệt tháng này</TableHead>
-                      <TableHead className="text-right text-xs leading-tight px-2 min-w-[70px]">Tin duyệt tháng trước</TableHead>
-                      <TableHead className="text-right text-xs leading-tight px-2 min-w-[70px]">Tỷ lệ duyệt hôm nay</TableHead>
+                      <SortHead label="Tin đăng hôm nay" k="sub_today" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
+                      <SortHead label="Tin đăng tháng này" k="sub_month" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
+                      <SortHead label="Tin duyệt hôm nay" k="acc_today" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
+                      <SortHead label="Tin duyệt tháng này" k="acc_month" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
+                      <SortHead label="Tin duyệt tháng trước" k="acc_prev_month" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
+                      <SortHead label="Tỷ lệ duyệt hôm nay" k="rate" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
                       <TableHead className="text-right text-xs leading-tight px-2 min-w-[52px]">Thẻ đỏ</TableHead>
                       <TableHead className="text-right text-xs leading-tight px-2 min-w-[52px]">Thẻ vàng</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rows.map((r) => (
+                    {sorted.map((r) => (
                       <TableRow key={r.email}>
                         <TableCell className="font-medium whitespace-nowrap">{r.full_name || "—"}</TableCell>
                         <TableCell className="text-muted-foreground text-xs whitespace-nowrap max-w-[220px] truncate" title={r.email}>{r.email}</TableCell>
