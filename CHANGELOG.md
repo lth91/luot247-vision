@@ -1,3 +1,10 @@
+# [1.74.0](https://github.com/lth91/luot247-vision/compare/v1.73.0...v1.74.0) (2026-07-03)
+
+
+### Features
+
+* **leaderboard:** ghim tiêu đề khi cuộn + bấm cột để sắp xếp tăng/giảm ([#105](https://github.com/lth91/luot247-vision/issues/105)) ([c29fecb](https://github.com/lth91/luot247-vision/commit/c29fecb3319ec6cdcc3b9b359c6eb18813ccfb51))
+
 # [1.73.0](https://github.com/lth91/luot247-vision/compare/v1.72.1...v1.73.0) (2026-07-03)
 
 
