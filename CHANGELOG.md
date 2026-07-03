@@ -1,3 +1,10 @@
+# [1.78.0](https://github.com/lth91/luot247-vision/compare/v1.77.0...v1.78.0) (2026-07-03)
+
+
+### Features
+
+* **leaderboard:** bỏ cột Tin đăng tháng này, đưa Tin duyệt hôm nay lên trước Tin đăng hôm nay ([#112](https://github.com/lth91/luot247-vision/issues/112)) ([28d8342](https://github.com/lth91/luot247-vision/commit/28d8342643cca7d07634e83a68046e89082ad04e))
+
 # [1.77.0](https://github.com/lth91/luot247-vision/compare/v1.76.0...v1.77.0) (2026-07-03)
 
 
