@@ -161,9 +161,8 @@ const Leaderboard = () => {
                       {/* Tiêu đề cột cho phép xuống 2 dòng để 10 cột vừa màn desktop, khỏi cuộn ngang */}
                       <SortHead label="Tên" k="full_name" className="whitespace-nowrap [&_button]:justify-start" />
                       <TableHead className="whitespace-nowrap">Email đăng ký</TableHead>
-                      <SortHead label="Tin đăng hôm nay" k="sub_today" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
                       <SortHead label="Tin duyệt hôm nay" k="acc_today" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
-                      <SortHead label="Tin đăng tháng này" k="sub_month" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
+                      <SortHead label="Tin đăng hôm nay" k="sub_today" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
                       <SortHead label="Tin duyệt tháng này" k="acc_month" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
                       <SortHead label="Tin duyệt tháng trước" k="acc_prev_month" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
                       <SortHead label="Tỷ lệ duyệt hôm nay" k="rate" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
@@ -176,9 +175,8 @@ const Leaderboard = () => {
                       <TableRow key={r.email}>
                         <TableCell className="font-medium whitespace-nowrap">{r.full_name || "—"}</TableCell>
                         <TableCell className="text-muted-foreground text-xs whitespace-nowrap max-w-[220px] truncate" title={r.email}>{r.email}</TableCell>
-                        <TableCell className="text-right px-2">{r.sub_today}</TableCell>
                         <TableCell className="text-right px-2">{r.acc_today}</TableCell>
-                        <TableCell className="text-right px-2">{r.sub_month}</TableCell>
+                        <TableCell className="text-right px-2">{r.sub_today}</TableCell>
                         <TableCell className="text-right px-2 font-semibold">{r.acc_month}</TableCell>
                         <TableCell className="text-right px-2 text-muted-foreground">{r.acc_prev_month}</TableCell>
                         <TableCell className="text-right px-2">{rate(r.acc_today, r.sub_today)}</TableCell>
@@ -190,9 +188,8 @@ const Leaderboard = () => {
                     <TableRow className="border-t-2 font-bold bg-muted/40">
                       <TableCell>TỔNG CỘNG</TableCell>
                       <TableCell />
-                      <TableCell className="text-right px-2">{sum.sub_today}</TableCell>
                       <TableCell className="text-right px-2">{sum.acc_today}</TableCell>
-                      <TableCell className="text-right px-2">{sum.sub_month}</TableCell>
+                      <TableCell className="text-right px-2">{sum.sub_today}</TableCell>
                       <TableCell className="text-right px-2">{sum.acc_month}</TableCell>
                       <TableCell className="text-right px-2">{sum.acc_prev_month}</TableCell>
                       <TableCell className="text-right px-2">{rate(sum.acc_today, sum.sub_today)}</TableCell>
