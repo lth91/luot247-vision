@@ -1,3 +1,10 @@
+# [1.76.0](https://github.com/lth91/luot247-vision/compare/v1.75.0...v1.76.0) (2026-07-03)
+
+
+### Features
+
+* **submission:** tách 2 tiêu chí độ dài độc lập — tiêu đề 12–18, nội dung 108–122 từ ([#109](https://github.com/lth91/luot247-vision/issues/109)) ([b013e94](https://github.com/lth91/luot247-vision/commit/b013e94969e0bdf573e26e034f516ff0c6cac136))
+
 # [1.75.0](https://github.com/lth91/luot247-vision/compare/v1.74.1...v1.75.0) (2026-07-03)
 
 
