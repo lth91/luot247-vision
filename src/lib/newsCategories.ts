@@ -28,11 +28,12 @@ export function countWords(s: string): number {
   return s.trim().split(/\s+/).filter(Boolean).length;
 }
 
-// Chuẩn "Bộ tiêu chí lọc tin": tiêu đề 12–18 từ, TỔNG (tiêu đề + nội dung)
-// 120–140 từ. Khớp ngưỡng edge function submit-news / submit-news-bulk.
+// 2 tiêu chí ĐỘC LẬP (03/07): tiêu đề 12–18, nội dung 108–122 → tổng tự động
+// nằm trong 120–140, bảo toàn chuẩn "Bộ tiêu chí lọc tin" mà không bắt đội
+// gửi tin cộng tổng. Khớp ngưỡng edge submit-news / submit-news-bulk.
 export const SUBMISSION_LIMITS = {
   titleMin: 12,
   titleMax: 18,
-  totalMin: 120,
-  totalMax: 140,
+  contentMin: 108,
+  contentMax: 122,
 } as const;
