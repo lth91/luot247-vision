@@ -1,3 +1,10 @@
+# [1.77.0](https://github.com/lth91/luot247-vision/compare/v1.76.0...v1.77.0) (2026-07-03)
+
+
+### Features
+
+* **submission:** chốt tiêu đề 12–18 + tổng 120–140, bộ đếm nội dung tự tính theo tiêu đề ([#110](https://github.com/lth91/luot247-vision/issues/110)) ([4f3c43a](https://github.com/lth91/luot247-vision/commit/4f3c43ad3a634b920b5b4afba7b593d950268467))
+
 # [1.76.0](https://github.com/lth91/luot247-vision/compare/v1.75.0...v1.76.0) (2026-07-03)
 
 
