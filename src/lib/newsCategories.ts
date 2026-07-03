@@ -28,12 +28,12 @@ export function countWords(s: string): number {
   return s.trim().split(/\s+/).filter(Boolean).length;
 }
 
-// 2 tiêu chí ĐỘC LẬP (03/07): tiêu đề 12–18, nội dung 108–122 → tổng tự động
-// nằm trong 120–140, bảo toàn chuẩn "Bộ tiêu chí lọc tin" mà không bắt đội
-// gửi tin cộng tổng. Khớp ngưỡng edge submit-news / submit-news-bulk.
+// Chốt với đội 03/07 (bản cuối): tiêu đề 12–18, TỔNG cả tin 120–140 (đúng
+// nguyên văn "Bộ tiêu chí lọc tin"). Form tự tính khoảng nội dung theo tiêu
+// đề (= totalMin-title .. totalMax-title) nên nhân viên không phải cộng tổng.
 export const SUBMISSION_LIMITS = {
   titleMin: 12,
   titleMax: 18,
-  contentMin: 108,
-  contentMax: 122,
+  totalMin: 120,
+  totalMax: 140,
 } as const;

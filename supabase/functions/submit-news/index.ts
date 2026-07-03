@@ -15,11 +15,12 @@ const corsHeaders = {
 
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 
-// Ngưỡng độ dài (đếm theo TỪ) — 2 tiêu chí ĐỘC LẬP (03/07, theo phản hồi đội
-// gửi tin: bỏ khái niệm "tổng" khó nhớ). Tiêu đề 12–18 + nội dung 108–122
-// → tổng tự động nằm trong 120–140, vẫn bảo toàn chuẩn "Bộ tiêu chí lọc tin".
+// Ngưỡng độ dài (đếm theo TỪ) — chốt với đội gửi tin 03/07 (bản cuối):
+// tiêu đề 12–18, TỔNG cả tin 120–140 (đúng nguyên văn "Bộ tiêu chí lọc tin").
+// Thông báo lỗi + bộ đếm frontend TỰ TÍNH khoảng nội dung theo tiêu đề
+// (= 120-title .. 140-title) nên nhân viên không phải cộng tổng.
 const TITLE_MIN = 12, TITLE_MAX = 18;
-const CONTENT_MIN = 108, CONTENT_MAX = 122;
+const TOTAL_MIN = 120, TOTAL_MAX = 140;
 // Cap ký tự (defense): chặn "từ" siêu dài → bound input gửi LLM, chống đốt token.
 const TITLE_MAX_CHARS = 400, CONTENT_MAX_CHARS = 4000;
 
@@ -128,8 +129,10 @@ Deno.serve(async (req) => {
       await log("rejected_length", { reject_reason: reason });
       return json({ ok: false, reason });
     }
-    if (contentWords < CONTENT_MIN || contentWords > CONTENT_MAX) {
-      const reason = `Nội dung cần ${CONTENT_MIN}–${CONTENT_MAX} từ (hiện ${contentWords}).`;
+    const totalWords = titleWords + contentWords;
+    if (totalWords < TOTAL_MIN || totalWords > TOTAL_MAX) {
+      // Báo theo khoảng NỘI DUNG tự tính từ tiêu đề — nhân viên sửa đúng ô, khỏi cộng tổng.
+      const reason = `Với tiêu đề ${titleWords} từ, nội dung cần ${TOTAL_MIN - titleWords}–${TOTAL_MAX - titleWords} từ (hiện ${contentWords}).`;
       await log("rejected_length", { reject_reason: reason });
       return json({ ok: false, reason });
     }
