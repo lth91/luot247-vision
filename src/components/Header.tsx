@@ -179,17 +179,6 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                         className="justify-start"
                         onClick={() => {
                           setOpen(false);
-                          navigate("/diem-cua-toi");
-                        }}
-                      >
-                        🏆 Điểm của tôi
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        className="justify-start"
-                        onClick={() => {
-                          setOpen(false);
                           navigate("/bang-xep-hang");
                         }}
                       >
