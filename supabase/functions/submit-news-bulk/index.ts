@@ -15,9 +15,10 @@ const corsHeaders = {
 };
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 
-// Chuẩn "Bộ tiêu chí lọc tin": tiêu đề 12–18 từ, TỔNG (tiêu đề + nội dung) 120–140 từ.
+// 2 tiêu chí ĐỘC LẬP (03/07): tiêu đề 12–18, nội dung 108–122 → tổng tự động
+// 120–140, bảo toàn chuẩn "Bộ tiêu chí lọc tin" mà đội không phải cộng tổng.
 const TITLE_MIN = 12, TITLE_MAX = 18;
-const TOTAL_MIN = 120, TOTAL_MAX = 140;
+const CONTENT_MIN = 108, CONTENT_MAX = 122;
 const TITLE_MAX_CHARS = 400, CONTENT_MAX_CHARS = 4000;
 const MAX_ROWS = 100;       // trần số tin / lần import
 const LLM_BATCH = 10;       // số dòng / call LLM
@@ -194,11 +195,10 @@ Deno.serve(async (req) => {
     for (const row of rows) {
       const { rowNum, title, content } = row;
       const tw = countWords(title), cw = countWords(content);
-      const total = tw + cw;
       if (!title || !content || title.length > TITLE_MAX_CHARS || content.length > CONTENT_MAX_CHARS ||
-          tw < TITLE_MIN || tw > TITLE_MAX || total < TOTAL_MIN || total > TOTAL_MAX) {
+          tw < TITLE_MIN || tw > TITLE_MAX || cw < CONTENT_MIN || cw > CONTENT_MAX) {
         summary.rejected_length++;
-        const reason = `Sai độ dài: tiêu đề ${tw} từ (cần ${TITLE_MIN}–${TITLE_MAX}), tổng tiêu đề + nội dung ${total} từ (cần ${TOTAL_MIN}–${TOTAL_MAX})`;
+        const reason = `Sai độ dài: tiêu đề ${tw} từ (cần ${TITLE_MIN}–${TITLE_MAX}), nội dung ${cw} từ (cần ${CONTENT_MIN}–${CONTENT_MAX})`;
         issues.push({ row: rowNum, title: title.slice(0, 60), reason });
         logReject("rejected_length", title || "(trống)", reason);
         continue;
