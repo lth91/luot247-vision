@@ -108,15 +108,17 @@ serve(async (req) => {
     const dayRng = mulberry32(hashStr(vnDateStr))
     const dow = vietnamTime.getUTCDay() // 0=CN..6=T7 (theo giờ VN)
 
-    // Hướng 2: tổng/ngày theo phân phối chuông (TB 3000, lệch chuẩn 250).
-    let dailyTarget = gaussian(dayRng, 3000, 250)
-    // Hướng 3a: cuối tuần CAO hơn ngày thường ~10-18% (theo yêu cầu — độc giả
-    // rảnh cuối tuần lướt tin nhiều hơn). Ngày thường dao động quanh 1.
-    const dowMult = (dow === 0 || dow === 6) ? (1.10 + dayRng() * 0.08) : (0.96 + dayRng() * 0.12)
+    // Hướng 2: tổng/ngày theo phân phối chuông — nâng mặt bằng lên QUANH 3800
+    // (yêu cầu 03/07: cả ngày thường cũng ~3800, không chỉ cuối tuần).
+    let dailyTarget = gaussian(dayRng, 3800, 150)
+    // Hướng 3a: cuối tuần vẫn CAO hơn ngày thường một chút. Ngày thường
+    // ×0.94-1.02 (~3.450-3.950); cuối tuần ×1.02-1.07 (~3.800-4.000 sau kẹp).
+    const dowMult = (dow === 0 || dow === 6) ? (1.02 + dayRng() * 0.05) : (0.94 + dayRng() * 0.08)
     dailyTarget *= dowMult
-    // Ngày spike "viral" ĐÃ BỎ. Trần nâng 3600 → 3800 theo yêu cầu 03/07
-    // (vẫn không ngày nào chạm 4000). Kẹp biên cho khỏi cực đoan.
-    dailyTarget = Math.round(Math.max(2200, Math.min(3800, dailyTarget)))
+    // Ngày spike "viral" ĐÃ BỎ. Trần dao động 3940-4000 theo seed ngày (tránh
+    // ngày bị kẹp ra đúng số chẵn 4000 lặp lại — nhìn giả). KHÔNG VƯỢT 4000.
+    const dayCap = 3940 + Math.round(dayRng() * 60)
+    dailyTarget = Math.round(Math.max(3200, Math.min(dayCap, dailyTarget)))
 
     // Hướng 5: đường cong 24h + jitter mỗi giờ (mean≈1, ±15%) → hình dạng đổi mỗi
     // ngày nhưng tổng vẫn chuẩn (vì normalize theo chính curve đã jitter).
