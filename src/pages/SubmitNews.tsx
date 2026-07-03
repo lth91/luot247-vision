@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { countWords, SUBMISSION_LIMITS } from "@/lib/newsCategories";
 import { useSubmissionAllowed } from "@/hooks/useSubmissionAllowed";
 
-const { titleMin, titleMax, contentMin, contentMax } = SUBMISSION_LIMITS;
+const { titleMin, titleMax, totalMin, totalMax } = SUBMISSION_LIMITS;
 
 // Hiển thị trạng thái word-count: ok / thiếu / thừa. prefix: nhãn thêm phía
 // trước (vd "Tổng" cho bộ đếm tiêu đề + nội dung).
@@ -119,9 +119,14 @@ const SubmitNews = () => {
 
   const titleWords = countWords(title);
   const contentWords = countWords(content);
+  // Khoảng nội dung TỰ TÍNH theo tiêu đề đã gõ (điều kiện thật: tổng 120–140).
+  // Chưa gõ tiêu đề → hiển thị theo tiêu đề chuẩn giữa (15 từ) để có mốc nhắm.
+  const refTitle = titleWords > 0 ? titleWords : 15;
+  const contentMin = totalMin - refTitle;
+  const contentMax = totalMax - refTitle;
   const lengthOk =
     titleWords >= titleMin && titleWords <= titleMax &&
-    contentWords >= contentMin && contentWords <= contentMax;
+    titleWords + contentWords >= totalMin && titleWords + contentWords <= totalMax;
   const canSubmit = lengthOk && !isLoading;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -252,7 +257,10 @@ const SubmitNews = () => {
                       <WordHint count={contentWords} min={contentMin} max={contentMax} />
                     </div>
                     <Textarea id="content" value={content} onChange={(e) => setContent(e.target.value)}
-                      placeholder={`Tóm tắt tin trong ${contentMin}–${contentMax} từ, văn phong tự nhiên.`} rows={8} disabled={isLoading} />
+                      placeholder="Tóm tắt tin bằng văn phong tự nhiên — số từ cần thiết hiện ở góc phải, tự tính theo tiêu đề." rows={8} disabled={isLoading} />
+                    <p className="text-[11px] text-muted-foreground">
+                      Khoảng từ của nội dung tự điều chỉnh theo độ dài tiêu đề (tổng cả tin 120–140 từ) — bạn không cần tự cộng.
+                    </p>
                   </div>
 
                   <p className="text-xs text-muted-foreground">
@@ -264,7 +272,7 @@ const SubmitNews = () => {
                   </Button>
                   {!lengthOk && (title || content) && (
                     <p className="text-xs text-center text-muted-foreground">
-                      Cần tiêu đề {titleMin}–{titleMax} từ và nội dung {contentMin}–{contentMax} từ để gửi.
+                      Cần tiêu đề {titleMin}–{titleMax} từ và nội dung {contentMin}–{contentMax} từ (theo tiêu đề hiện tại) để gửi.
                     </p>
                   )}
                 </form>
@@ -274,7 +282,7 @@ const SubmitNews = () => {
               <TabsContent value="bulk" className="space-y-4">
                 <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
                   <p className="font-medium text-foreground">Cách dùng:</p>
-                  <p>• Sheet có <b>2 cột</b>: cột A = <b>Tiêu đề</b> ({titleMin}–{titleMax} từ), cột B = <b>Nội dung</b> ({contentMin}–{contentMax} từ). Dòng 1 là tiêu đề cột.</p>
+                  <p>• Sheet có <b>2 cột</b>: cột A = <b>Tiêu đề</b> ({titleMin}–{titleMax} từ), cột B = <b>Nội dung</b> (nhắm <b>110–125 từ</b>; điều kiện thật: tổng cả tin {totalMin}–{totalMax} từ). Dòng 1 là tiêu đề cột.</p>
                   <p>• Đặt quyền chia sẻ Sheet: <b>Anyone with the link → Viewer</b>.</p>
                   <p>• Tối đa <b>100 tin/lần</b>. Mỗi tin qua kiểm duyệt AI như gửi lẻ; tin đạt được đăng + 10đ.</p>
                   <p>• <b>Import lại an toàn</b>: tin đã đăng sẽ tự bỏ qua (không trừ điểm, không tốn phí). Sửa tin lỗi rồi import lại cả sheet là được.</p>
