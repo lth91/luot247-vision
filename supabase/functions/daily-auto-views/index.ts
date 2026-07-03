@@ -114,9 +114,9 @@ serve(async (req) => {
     // rảnh cuối tuần lướt tin nhiều hơn). Ngày thường dao động quanh 1.
     const dowMult = (dow === 0 || dow === 6) ? (1.10 + dayRng() * 0.08) : (0.96 + dayRng() * 0.12)
     dailyTarget *= dowMult
-    // Ngày spike "viral" ĐÃ BỎ theo yêu cầu — không muốn ngày nào vượt 4000 view.
-    // Kẹp biên cho khỏi cực đoan.
-    dailyTarget = Math.round(Math.max(2200, Math.min(3600, dailyTarget)))
+    // Ngày spike "viral" ĐÃ BỎ. Trần nâng 3600 → 3800 theo yêu cầu 03/07
+    // (vẫn không ngày nào chạm 4000). Kẹp biên cho khỏi cực đoan.
+    dailyTarget = Math.round(Math.max(2200, Math.min(3800, dailyTarget)))
 
     // Hướng 5: đường cong 24h + jitter mỗi giờ (mean≈1, ±15%) → hình dạng đổi mỗi
     // ngày nhưng tổng vẫn chuẩn (vì normalize theo chính curve đã jitter).
