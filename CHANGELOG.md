@@ -1,3 +1,10 @@
+## [1.74.1](https://github.com/lth91/luot247-vision/compare/v1.74.0...v1.74.1) (2026-07-03)
+
+
+### Bug Fixes
+
+* **views:** nâng trần view giả lập 3600 → 3800/ngày ([#106](https://github.com/lth91/luot247-vision/issues/106)) ([d498a10](https://github.com/lth91/luot247-vision/commit/d498a1007a43970ade4430dc58aef21288b884db))
+
 # [1.74.0](https://github.com/lth91/luot247-vision/compare/v1.73.0...v1.74.0) (2026-07-03)
 
 
