@@ -116,9 +116,11 @@ const Leaderboard = () => {
             ) : rows.length === 0 ? (
               <p className="text-sm text-muted-foreground py-10 text-center">Chưa có dữ liệu.</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="max-h-[75vh] overflow-auto">
+                {/* Khung cuộn riêng (dọc + ngang) để hàng tiêu đề ghim được khi kéo xuống */}
                 <Table>
-                  <TableHeader>
+                  {/* Ghim từng ô th (sticky trên thead không ổn định giữa các trình duyệt) */}
+                  <TableHeader className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-card [&_th]:shadow-[inset_0_-1px_0_hsl(var(--border))]">
                     <TableRow>
                       {/* Tiêu đề cột cho phép xuống 2 dòng để 10 cột vừa màn desktop, khỏi cuộn ngang */}
                       <TableHead className="whitespace-nowrap">Tên</TableHead>
