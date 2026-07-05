@@ -160,8 +160,10 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                     ❤️ Danh sách yêu thích
                   </Button>
 
-                  {/* Nhóm tính năng gửi tin (gửi/điểm/xếp hạng): chỉ whitelist + admin */}
-                  {canSubmit !== false && (
+                  {/* Nhóm tính năng gửi tin (gửi/xếp hạng): chỉ whitelist + admin.
+                      So sánh === true (ẩn trước, hiện sau khi xác nhận quyền) —
+                      tránh nút lóe lên với user thường trong lúc RPC đang chạy. */}
+                  {canSubmit === true && (
                     <>
                       <Button
                         variant="ghost"
@@ -319,17 +321,7 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                     🔐 Đăng nhập
                   </Button>
 
-                  <Button
-                    variant="ghost"
-                    className="justify-start"
-                    onClick={() => {
-                      setOpen(false);
-                      navigate("/bang-xep-hang");
-                    }}
-                  >
-                    📊 Bảng xếp hạng
-                  </Button>
-
+                  {/* Bảng xếp hạng là trang nội bộ (whitelist) — khách không thấy. */}
                   <Button
                     variant="ghost"
                     className="justify-start"
