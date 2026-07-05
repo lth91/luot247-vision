@@ -1,3 +1,10 @@
+## [1.78.1](https://github.com/lth91/luot247-vision/compare/v1.78.0...v1.78.1) (2026-07-05)
+
+
+### Bug Fixes
+
+* **menu:** siết hiển thị nhóm gửi tin — ẩn trước hiện sau, gỡ Bảng xếp hạng khỏi menu khách ([#113](https://github.com/lth91/luot247-vision/issues/113)) ([9396b2a](https://github.com/lth91/luot247-vision/commit/9396b2afcb525dc0dd7fdf887772744fa051f444)), closes [#98](https://github.com/lth91/luot247-vision/issues/98)
+
 # [1.78.0](https://github.com/lth91/luot247-vision/compare/v1.77.0...v1.78.0) (2026-07-03)
 
 
