@@ -45,38 +45,31 @@ CREATE POLICY "Admins manage all cards" ON public.news_cards
   FOR ALL USING (public.has_role(auth.uid(), 'admin'))
   WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
--- ===== 1b) Quyền "Quản lý đóng góp" cấp theo NGƯỜI (không phải admin) =====
--- long@denco.vn (sếp) cần vào /quan-ly-dong-gop (phủ quyết thẻ, mở khóa, xem
--- công phát hiện) nhưng KHÔNG được cấp admin toàn hệ thống. Admin nghiễm nhiên
--- là manager. Manager KHÔNG gỡ tin được (RLS UPDATE news vẫn admin/mod).
-CREATE TABLE IF NOT EXISTS public.contribution_managers (
-  user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-
-ALTER TABLE public.contribution_managers ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Admins manage contribution managers" ON public.contribution_managers;
-CREATE POLICY "Admins manage contribution managers" ON public.contribution_managers
-  FOR ALL USING (public.has_role(auth.uid(), 'admin'))
-  WITH CHECK (public.has_role(auth.uid(), 'admin'));
-
+-- ===== 1b) Quyền "Quản lý đóng góp" = ROLE 'manager' (enum thêm ở migration
+-- 20260705005000, chạy TRƯỚC file này). Manager: phủ quyết thẻ, mở khóa, gỡ
+-- tin + phạt điểm — KHÔNG có các trang admin khác. Admin nghiễm nhiên đủ quyền.
 CREATE OR REPLACE FUNCTION public.is_contribution_manager()
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = public
 AS $$
   SELECT public.has_role(auth.uid(), 'admin')
-      OR EXISTS (SELECT 1 FROM public.contribution_managers m WHERE m.user_id = auth.uid());
+      OR public.has_role(auth.uid(), 'manager');
 $$;
 
 REVOKE ALL ON FUNCTION public.is_contribution_manager() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.is_contribution_manager() TO authenticated;
 
--- Seed: cấp quyền cho long@denco.vn (nếu tài khoản đã tồn tại).
-INSERT INTO public.contribution_managers (user_id)
-SELECT id FROM auth.users WHERE email = 'long@denco.vn'
-ON CONFLICT (user_id) DO NOTHING;
+-- Dọn bảng của phương án cũ (nếu đã lỡ tạo trong lúc thử nghiệm).
+DROP TABLE IF EXISTS public.contribution_managers;
+
+-- Seed: long@denco.vn → manager. UPDATE dòng role sẵn có ('user' do
+-- handle_new_user gán) — KHÔNG INSERT thêm dòng, tránh 2 dòng role làm
+-- .maybeSingle() ở frontend lỗi.
+UPDATE public.user_roles
+SET role = 'manager'
+WHERE user_id = (SELECT id FROM auth.users WHERE email = 'long@denco.vn')
+  AND role = 'user';
 
 -- Manager đọc được thẻ để trang quản lý hiển thị (quyền GHI vẫn qua RPC/admin).
 DROP POLICY IF EXISTS "Managers view all cards" ON public.news_cards;
@@ -397,3 +390,38 @@ $$;
 
 REVOKE ALL ON FUNCTION public.get_submission_dashboard() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_submission_dashboard() TO authenticated;
+
+-- ===== 8) RPC gỡ tin + phạt điểm (admin + manager) =====
+-- KHÔNG mở RLS UPDATE news cho manager (quá rộng — sửa được mọi cột). RPC này
+-- chỉ cho đúng thao tác GỠ MỀM tin user gửi; trigger award_points_on_news
+-- (AFTER UPDATE OF is_approved) tự thu hồi thưởng + phạt theo tầng như cũ.
+CREATE OR REPLACE FUNCTION public.takedown_news(_news_id uuid, _reason text, _note text DEFAULT NULL)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT public.is_contribution_manager() THEN
+    RAISE EXCEPTION 'Chỉ quản lý đóng góp được gỡ tin.';
+  END IF;
+  IF _reason NOT IN ('system', 'format', 'factual', 'severe') THEN
+    RAISE EXCEPTION 'Lý do gỡ không hợp lệ.';
+  END IF;
+
+  UPDATE public.news
+  SET is_approved = false,
+      takedown_reason = _reason,
+      takedown_at = now(),
+      takedown_by = auth.uid(),
+      takedown_note = nullif(trim(coalesce(_note, '')), '')
+  WHERE id = _news_id AND is_approved = true AND submitted_by IS NOT NULL;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Tin không tồn tại, đã gỡ rồi, hoặc không phải tin do thành viên gửi.';
+  END IF;
+  RETURN jsonb_build_object('ok', true);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.takedown_news(uuid, text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.takedown_news(uuid, text, text) TO authenticated;

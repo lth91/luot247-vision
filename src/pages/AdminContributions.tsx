@@ -19,7 +19,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { categoryLabel } from "@/lib/newsCategories";
 import { getRelativeTime } from "@/lib/dateUtils";
-import { useContributionManager } from "@/hooks/useContributionManager";
 
 // Lý do gỡ tin ↔ mức ảnh hưởng điểm (khớp migration 20260629050000).
 // Tổng điểm trừ = thu hồi 10 thưởng gốc + phạt theo lý do.
@@ -101,22 +100,22 @@ const AdminContributions = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Gate: admin HOẶC "quản lý đóng góp" (contribution_managers — vd long@denco.vn).
-  // userRole vẫn load riêng để quyết nút "Gỡ tin" (chỉ admin gỡ được).
-  const isManager = useContributionManager(session?.user?.id);
+  // Gate: role admin HOẶC manager (role mới — vd long@denco.vn).
   useEffect(() => {
     if (!sessionChecked) return;
     if (!session) { navigate("/auth"); return; }
     supabase.from("user_roles").select("role").eq("user_id", session.user.id).maybeSingle()
-      .then(({ data }) => setUserRole(data?.role || null));
+      .then(({ data }) => {
+        const role = data?.role || null;
+        setUserRole(role);
+        if (role !== "admin" && role !== "manager") {
+          toast.error("Bạn không có quyền truy cập trang này.");
+          navigate("/");
+        }
+      });
   }, [sessionChecked, session, navigate]);
 
-  useEffect(() => {
-    if (isManager === false) {
-      toast.error("Bạn không có quyền truy cập trang này.");
-      navigate("/");
-    }
-  }, [isManager, navigate]);
+  const isManager = userRole === "admin" || userRole === "manager";
 
   const load = async () => {
     setIsLoading(true);
@@ -191,19 +190,18 @@ const AdminContributions = () => {
     setIsLoading(false);
   };
 
-  useEffect(() => { if (isManager === true) load(); }, [isManager]);
+  useEffect(() => { if (isManager) load(); }, [isManager]);
 
-  // Gỡ mềm tin kèm lý do → trigger DB tự thu hồi thưởng + phạt theo mức.
+  // Gỡ mềm tin kèm lý do qua RPC takedown_news (admin + manager đều gỡ được;
+  // RLS UPDATE news vẫn đóng với manager) → trigger DB tự thu hồi thưởng + phạt.
   const confirmTakedown = async () => {
     if (!pending) return;
     setRemoving(true);
-    const { error } = await supabase.from("news").update({
-      is_approved: false,
-      takedown_reason: reason,
-      takedown_at: new Date().toISOString(),
-      takedown_by: session?.user.id,
-      takedown_note: note.trim() || null,
-    }).eq("id", pending.id);
+    const { error } = await (supabase as any).rpc("takedown_news", {
+      _news_id: pending.id,
+      _reason: reason,
+      _note: note.trim() || null,
+    });
     setRemoving(false);
     if (error) { toast.error("Không gỡ được tin: " + error.message); return; }
     const meta = TAKEDOWN_REASONS.find((r) => r.value === reason);
@@ -249,7 +247,7 @@ const AdminContributions = () => {
     load();
   };
 
-  if (isManager !== true) {
+  if (!isManager) {
     return (
       <div className="min-h-screen bg-background">
         <Header user={session?.user} userRole={userRole} />
@@ -432,10 +430,7 @@ const AdminContributions = () => {
                         <TableCell className="text-xs">{nameById[n.submitted_by] || "—"}</TableCell>
                         <TableCell className="text-right text-xs text-muted-foreground">{getRelativeTime(n.created_at)}</TableCell>
                         <TableCell className="text-right">
-                          {/* Gỡ tin + phạt điểm: chỉ admin (RLS UPDATE news); manager chỉ xem. */}
-                          {userRole === "admin" && (
-                            <Button variant="ghost" size="sm" className="text-red-600" onClick={() => openTakedown(n)}>Gỡ</Button>
-                          )}
+                          <Button variant="ghost" size="sm" className="text-red-600" onClick={() => openTakedown(n)}>Gỡ</Button>
                         </TableCell>
                       </TableRow>
                     ))}

@@ -10,7 +10,6 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useReadingContext } from "@/contexts/ReadingContext";
 import { useSubmissionAllowed } from "@/hooks/useSubmissionAllowed";
-import { useContributionManager } from "@/hooks/useContributionManager";
 
 interface HeaderProps {
   user: any;
@@ -26,8 +25,6 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
   const [readingMode, setReadingMode] = useState(false);
   // Chỉ email trong whitelist (hoặc admin) thấy mục "Gửi tin".
   const canSubmit = useSubmissionAllowed(user?.id);
-  // "Quản lý đóng góp": admin (đã có trong khối Quản trị) hoặc manager được cấp riêng.
-  const isManager = useContributionManager(user?.id);
   
   // Use ReadingContext for synchronization and read news toggle
   const { syncToFlipMode, syncToScrollMode, shouldHideReadNews, setShouldHideReadNews } = useReadingContext();
@@ -285,9 +282,9 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                     </>
                   )}
 
-                  {/* Manager được cấp riêng (không phải admin/mod — vd long@denco.vn):
-                      thấy đúng 1 mục Quản lý đóng góp, không thấy khối Quản trị. */}
-                  {isManager === true && userRole !== "admin" && userRole !== "moderator" && (
+                  {/* Role manager (vd long@denco.vn): thấy đúng 1 mục Quản lý
+                      đóng góp, không thấy khối Quản trị của admin/mod. */}
+                  {userRole === "manager" && (
                     <Button
                       variant="ghost"
                       className="justify-start"
