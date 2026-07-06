@@ -144,6 +144,16 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Cấm gửi do đủ 3 thẻ đỏ (như submit-news; fail-open nếu cột chưa tạo).
+  {
+    const { data: profRow, error: banErr } = await supabase
+      .from("profiles").select("submission_banned").eq("id", user.id).maybeSingle();
+    if (banErr) console.error("ban check error:", banErr.message);
+    if (!banErr && profRow?.submission_banned === true) {
+      return json({ ok: false, reason: "Tài khoản đang bị tạm cấm gửi tin (đủ 3 thẻ đỏ). Vui lòng liên hệ quản trị viên." }, 403);
+    }
+  }
+
   const logRow = (status: string, opts: { news_id?: string | null; reject_reason?: string; ai_score?: unknown; title?: string } = {}) =>
     supabase.from("submission_log").insert({
       user_id: user.id, news_id: opts.news_id ?? null, status,

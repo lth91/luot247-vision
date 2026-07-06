@@ -76,6 +76,17 @@ Deno.serve(async (req) => {
     }
   }
 
+  // --- 1c) Cấm gửi do đủ 3 thẻ đỏ (hệ thống thẻ vàng/đỏ) ---
+  // Lỗi query (cột chưa tạo — migration chưa chạy) → fail-open như whitelist.
+  {
+    const { data: profRow, error: banErr } = await supabase
+      .from("profiles").select("submission_banned").eq("id", user.id).maybeSingle();
+    if (banErr) console.error("ban check error:", banErr.message);
+    if (!banErr && profRow?.submission_banned === true) {
+      return json({ ok: false, reason: "Tài khoản đang bị tạm cấm gửi tin (đủ 3 thẻ đỏ). Vui lòng liên hệ quản trị viên." }, 403);
+    }
+  }
+
   // Tiêu đề tin (để tab "Tin bị loại" hiển thị) — set sau khi parse body.
   let logTitle: string | null = null;
   // Ghi log + (best-effort) trả về. status thuộc CHECK constraint của submission_log.

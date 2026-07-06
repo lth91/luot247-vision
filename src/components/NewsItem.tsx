@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ThumbsUp, ThumbsDown, Share2, Search } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Share2, Search, Flag } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -8,6 +8,11 @@ import { useReadingContext } from "@/contexts/ReadingContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { ShareDialog } from "@/components/ShareDialog";
 import { getRelativeTime } from "@/lib/dateUtils";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 interface NewsItemProps {
   id: string;
@@ -20,6 +25,10 @@ interface NewsItemProps {
   isAuthenticated: boolean;
   isLast?: boolean;
   shareUrl?: string; // override link chia sẻ (tin điện trỏ về /d)
+  // Hệ thống thẻ vàng/đỏ: chỉ thành viên whitelist báo được tin của NGƯỜI KHÁC.
+  submittedBy?: string | null;
+  currentUserId?: string;
+  canReport?: boolean;
 }
 
 export const NewsItem = ({
@@ -30,10 +39,42 @@ export const NewsItem = ({
   isAuthenticated,
   isLast = false,
   shareUrl,
+  submittedBy,
+  currentUserId,
+  canReport = false,
 }: NewsItemProps) => {
   const navigate = useNavigate();
   const [disliked, setDisliked] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  // Dialog báo thẻ
+  const [reportOpen, setReportOpen] = useState(false);
+  const [cardType, setCardType] = useState<"yellow" | "red">("yellow");
+  const [cardReason, setCardReason] = useState("");
+  const [reporting, setReporting] = useState(false);
+
+  // Nút 🚩 chỉ hiện với thành viên whitelist, trên tin do NGƯỜI KHÁC gửi.
+  const showReport = canReport && !!submittedBy && submittedBy !== currentUserId;
+
+  const submitReport = async () => {
+    if (cardReason.trim().split(/\s+/).filter(Boolean).length < 5) {
+      toast.error("Vui lòng ghi lý do cụ thể (ít nhất 5 từ).");
+      return;
+    }
+    setReporting(true);
+    // RPC mới hơn types.ts auto-generated → cast any (pattern chung của repo).
+    const { error } = await (supabase as any).rpc("report_news_card", {
+      _news_id: id, _card_type: cardType, _reason: cardReason.trim(),
+    });
+    setReporting(false);
+    if (error) {
+      toast.error(error.message || "Không gửi được báo cáo.");
+      return;
+    }
+    toast.success("Đã gửi báo cáo thẻ — chờ admin xác nhận.");
+    setReportOpen(false);
+    setCardReason("");
+    setCardType("yellow");
+  };
   
   // Get highlight state from ReadingContext
   const { highlightedNewsId } = useReadingContext();
@@ -165,6 +206,17 @@ export const NewsItem = ({
               >
                 <Search className="h-3.5 w-3.5" />
               </Button>
+              {showReport && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-1 hover:bg-transparent text-muted-foreground hover:text-red-600"
+                  title="Báo thẻ tin có vấn đề"
+                  onClick={(e) => { e.stopPropagation(); setReportOpen(true); }}
+                >
+                  <Flag className="h-3.5 w-3.5" />
+                </Button>
+              )}
             </div>
 
             <span className="text-xs text-muted-foreground">
@@ -181,6 +233,50 @@ export const NewsItem = ({
         newsTitle={title}
         shareUrl={shareUrl}
       />
+
+      {/* Dialog báo thẻ vàng/đỏ — thẻ chỉ tính sau khi admin duyệt */}
+      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>🚩 Báo thẻ tin có vấn đề</DialogTitle>
+            <DialogDescription className="line-clamp-2">{title}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Mức đề xuất</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button type="button" variant={cardType === "yellow" ? "default" : "outline"}
+                  className={cardType === "yellow" ? "bg-yellow-500 hover:bg-yellow-600 text-black" : ""}
+                  onClick={() => setCardType("yellow")}>
+                  🟨 Thẻ vàng (lỗi nhẹ)
+                </Button>
+                <Button type="button" variant={cardType === "red" ? "default" : "outline"}
+                  className={cardType === "red" ? "bg-red-600 hover:bg-red-700" : ""}
+                  onClick={() => setCardType("red")}>
+                  🟥 Thẻ đỏ (lỗi nặng)
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Vàng: sai mục, văn phong, lặp ý. Đỏ: sai sự thật, PR trá hình, đạo văn.
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Lý do (bắt buộc, ≥ 5 từ)</Label>
+              <Textarea value={cardReason} onChange={(e) => setCardReason(e.target.value)} rows={3}
+                placeholder="Nêu cụ thể tin sai ở điểm nào — admin sẽ đối chiếu trước khi tính thẻ..." />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Thẻ chỉ được tính sau khi admin xác nhận. Báo đúng thẻ đỏ được ghi nhận khen thưởng.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setReportOpen(false)} disabled={reporting}>Huỷ</Button>
+            <Button variant="destructive" onClick={submitReport} disabled={reporting}>
+              {reporting ? "Đang gửi..." : "Gửi báo cáo"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

@@ -20,6 +20,9 @@ interface DashRow {
   acc_today: number;
   acc_month: number;
   acc_prev_month: number;
+  yellow_cards: number;
+  red_cards: number;
+  banned: boolean;
 }
 
 interface ViewStats {
@@ -34,7 +37,7 @@ interface ViewStats {
 const rate = (acc: number, sub: number) => (sub > 0 ? `${Math.round((acc / sub) * 100)}%` : "—");
 
 // Cột sắp xếp được: tên + các cột số + tỷ lệ (rate tính từ acc/sub, "—" xếp cuối).
-type SortKey = "full_name" | "sub_today" | "sub_month" | "acc_today" | "acc_month" | "acc_prev_month" | "rate";
+type SortKey = "full_name" | "sub_today" | "sub_month" | "acc_today" | "acc_month" | "acc_prev_month" | "rate" | "yellow_cards" | "red_cards";
 
 const sortVal = (r: DashRow, key: SortKey): number | string =>
   key === "full_name" ? (r.full_name || "") :
@@ -115,8 +118,10 @@ const Leaderboard = () => {
       acc_today: a.acc_today + r.acc_today,
       acc_month: a.acc_month + r.acc_month,
       acc_prev_month: a.acc_prev_month + r.acc_prev_month,
+      yellow_cards: a.yellow_cards + (r.yellow_cards || 0),
+      red_cards: a.red_cards + (r.red_cards || 0),
     }),
-    { sub_today: 0, sub_month: 0, acc_today: 0, acc_month: 0, acc_prev_month: 0 },
+    { sub_today: 0, sub_month: 0, acc_today: 0, acc_month: 0, acc_prev_month: 0, yellow_cards: 0, red_cards: 0 },
   );
 
   // Ô tiêu đề bấm được để sắp xếp; mũi tên chỉ chiều đang áp dụng.
@@ -166,23 +171,25 @@ const Leaderboard = () => {
                       <SortHead label="Tin duyệt tháng này" k="acc_month" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
                       <SortHead label="Tin duyệt tháng trước" k="acc_prev_month" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
                       <SortHead label="Tỷ lệ duyệt hôm nay" k="rate" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
-                      <TableHead className="text-right text-xs leading-tight px-2 min-w-[52px]">Thẻ đỏ</TableHead>
-                      <TableHead className="text-right text-xs leading-tight px-2 min-w-[52px]">Thẻ vàng</TableHead>
+                      <SortHead label="Thẻ đỏ" k="red_cards" className="text-right text-xs leading-tight px-2 min-w-[52px]" />
+                      <SortHead label="Thẻ vàng" k="yellow_cards" className="text-right text-xs leading-tight px-2 min-w-[52px]" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {sorted.map((r) => (
                       <TableRow key={r.email}>
-                        <TableCell className="font-medium whitespace-nowrap">{r.full_name || "—"}</TableCell>
+                        <TableCell className="font-medium whitespace-nowrap">
+                          {r.full_name || "—"}
+                          {r.banned && <span className="ml-1.5 text-[10px] font-bold text-red-600 border border-red-400 rounded px-1 py-0.5 align-middle">⛔ CẤM</span>}
+                        </TableCell>
                         <TableCell className="text-muted-foreground text-xs whitespace-nowrap max-w-[220px] truncate" title={r.email}>{r.email}</TableCell>
                         <TableCell className="text-right px-2">{r.acc_today}</TableCell>
                         <TableCell className="text-right px-2">{r.sub_today}</TableCell>
                         <TableCell className="text-right px-2 font-semibold">{r.acc_month}</TableCell>
                         <TableCell className="text-right px-2 text-muted-foreground">{r.acc_prev_month}</TableCell>
                         <TableCell className="text-right px-2">{rate(r.acc_today, r.sub_today)}</TableCell>
-                        {/* Thẻ phạt: cơ chế chưa áp dụng — tạm 0 cho tất cả. */}
-                        <TableCell className="text-right px-2 text-red-600">0</TableCell>
-                        <TableCell className="text-right px-2 text-yellow-600">0</TableCell>
+                        <TableCell className={`text-right px-2 ${r.red_cards > 0 ? "font-bold text-red-600" : "text-muted-foreground"}`}>{r.red_cards}</TableCell>
+                        <TableCell className={`text-right px-2 ${r.yellow_cards > 0 ? "font-bold text-yellow-600" : "text-muted-foreground"}`}>{r.yellow_cards}</TableCell>
                       </TableRow>
                     ))}
                     <TableRow className="border-t-2 font-bold bg-muted/40">
@@ -193,8 +200,8 @@ const Leaderboard = () => {
                       <TableCell className="text-right px-2">{sum.acc_month}</TableCell>
                       <TableCell className="text-right px-2">{sum.acc_prev_month}</TableCell>
                       <TableCell className="text-right px-2">{rate(sum.acc_today, sum.sub_today)}</TableCell>
-                      <TableCell className="text-right px-2 text-red-600">0</TableCell>
-                      <TableCell className="text-right px-2 text-yellow-600">0</TableCell>
+                      <TableCell className="text-right px-2 text-red-600">{sum.red_cards}</TableCell>
+                      <TableCell className="text-right px-2 text-yellow-600">{sum.yellow_cards}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
