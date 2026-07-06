@@ -79,8 +79,9 @@ const AdminContributions = () => {
   const [reason, setReason] = useState<string>("format");
   const [note, setNote] = useState("");
   const [removing, setRemoving] = useState(false);
-  // Hệ thống thẻ: hàng chờ + công phát hiện + danh sách bị cấm.
+  // Hệ thống thẻ: hàng chờ + thẻ đã chốt + công phát hiện + danh sách bị cấm.
   const [pendingCards, setPendingCards] = useState<CardRow[]>([]);
+  const [decidedCards, setDecidedCards] = useState<CardRow[]>([]);
   const [voteTally, setVoteTally] = useState<Record<string, { up: number; down: number }>>({});
   const [reporterStats, setReporterStats] = useState<{ id: string; yellow: number; red: number; yellowMonth: number; redMonth: number }[]>([]);
   const [bannedUsers, setBannedUsers] = useState<BannedUser[]>([]);
@@ -141,6 +142,13 @@ const AdminContributions = () => {
     const cp = (cardsPending as CardRow[]) ?? [];
     setPendingCards(cp);
 
+    // Thẻ đã chốt (để soát lại / HỦY thẻ xác nhận nhầm).
+    const { data: cardsDecided } = await (supabase as any).from("news_cards")
+      .select("*").in("status", ["approved", "rejected", "amnestied"])
+      .order("reviewed_at", { ascending: false }).limit(30);
+    const cd = (cardsDecided as CardRow[]) ?? [];
+    setDecidedCards(cd);
+
     // Tally vote của các thẻ đang chờ (admin đọc trực tiếp qua RLS).
     if (cp.length) {
       const { data: votes } = await (supabase as any).from("news_card_votes")
@@ -178,6 +186,7 @@ const AdminContributions = () => {
     const ids = [...new Set([
       ...rows.map((r) => r.submitted_by),
       ...cp.flatMap((c) => [c.author_id, c.reporter_id]),
+      ...cd.flatMap((c) => [c.author_id, c.reporter_id]),
       ...((cardsApproved as any[]) ?? []).map((c) => c.reporter_id),
     ])].filter(Boolean);
     if (ids.length) {
@@ -238,6 +247,18 @@ const AdminContributions = () => {
     if (error) { toast.error(error.message || "Không xử lý được."); return; }
     toast.success("Đã từ chối báo cáo.");
     setPendingCards((prev) => prev.filter((x) => x.id !== c.id));
+  };
+
+  // HỦY 1 thẻ đã xác nhận (approved → rejected). Không tự mở khóa người đang
+  // bị cấm — dùng nút Mở khóa riêng (tránh tự động 2 chiều khó lường).
+  const revokeCard = async (c: CardRow) => {
+    if (!window.confirm(`Hủy ${CARD_LABEL[c.card_type]} của "${c.news_title.slice(0, 60)}"?`)) return;
+    const { error } = await (supabase as any).rpc("review_news_card", {
+      _card_id: c.id, _approve: false, _final_type: null, _note: "Hủy bởi quản lý",
+    });
+    if (error) { toast.error(error.message || "Không hủy được thẻ."); return; }
+    toast.success("Đã hủy thẻ — không còn tính vào ai nữa.");
+    load();
   };
 
   const liftBan = async (u: BannedUser) => {
@@ -347,6 +368,55 @@ const AdminContributions = () => {
               )}
           </CardContent>
         </Card>
+
+        {/* ===== Thẻ đã chốt — soát lại / hủy thẻ xác nhận nhầm ===== */}
+        {decidedCards.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">🗂️ Thẻ đã chốt (30 gần nhất)</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                "Hủy thẻ" dùng khi thẻ được xác nhận nhầm — thẻ không còn tính cho ai. Lưu ý: hủy thẻ KHÔNG tự mở khóa người đang bị cấm (dùng nút Mở khóa ở mục dưới).
+              </p>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tin</TableHead>
+                    <TableHead className="w-28">Tác giả</TableHead>
+                    <TableHead className="w-28">Người báo</TableHead>
+                    <TableHead className="w-20">Mức</TableHead>
+                    <TableHead className="w-24">Trạng thái</TableHead>
+                    <TableHead className="w-24"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {decidedCards.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell>
+                        <div className="text-sm line-clamp-1">{c.news_title}</div>
+                        <div className="text-xs text-muted-foreground line-clamp-1">{(c as any).review_note || ""}</div>
+                      </TableCell>
+                      <TableCell className="text-xs">{nameById[c.author_id] || "—"}</TableCell>
+                      <TableCell className="text-xs">{nameById[c.reporter_id] || "—"}</TableCell>
+                      <TableCell className="text-sm">{CARD_LABEL[c.card_type]}</TableCell>
+                      <TableCell className="text-xs">
+                        {c.status === "approved" ? <span className="text-green-700 font-medium">✅ Đã tính</span>
+                          : c.status === "rejected" ? <span className="text-muted-foreground">❌ Đã hủy</span>
+                          : <span className="text-muted-foreground">🕊️ Ân xá</span>}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {c.status === "approved" && (
+                          <Button variant="ghost" size="sm" className="text-red-600" onClick={() => revokeCard(c)}>Hủy thẻ</Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
 
         {/* ===== Công phát hiện thẻ (căn cứ thưởng tiền mặt ngoài hệ thống) ===== */}
         <Card>
