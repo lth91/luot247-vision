@@ -81,6 +81,7 @@ const AdminContributions = () => {
   const [removing, setRemoving] = useState(false);
   // Hệ thống thẻ: hàng chờ + công phát hiện + danh sách bị cấm.
   const [pendingCards, setPendingCards] = useState<CardRow[]>([]);
+  const [voteTally, setVoteTally] = useState<Record<string, { up: number; down: number }>>({});
   const [reporterStats, setReporterStats] = useState<{ id: string; yellow: number; red: number; yellowMonth: number; redMonth: number }[]>([]);
   const [bannedUsers, setBannedUsers] = useState<BannedUser[]>([]);
   // Dialog duyệt thẻ: thẻ đang chọn + mức cuối + ghi chú.
@@ -137,6 +138,20 @@ const AdminContributions = () => {
       .select("*").eq("status", "pending").order("created_at", { ascending: false }).limit(100);
     const cp = (cardsPending as CardRow[]) ?? [];
     setPendingCards(cp);
+
+    // Tally vote của các thẻ đang chờ (admin đọc trực tiếp qua RLS).
+    if (cp.length) {
+      const { data: votes } = await (supabase as any).from("news_card_votes")
+        .select("card_id, vote").in("card_id", cp.map((c) => c.id));
+      const tally: Record<string, { up: number; down: number }> = {};
+      ((votes as any[]) ?? []).forEach((v) => {
+        const t = (tally[v.card_id] ??= { up: 0, down: 0 });
+        if (v.vote === 1) t.up++; else t.down++;
+      });
+      setVoteTally(tally);
+    } else {
+      setVoteTally({});
+    }
 
     const { data: cardsApproved } = await (supabase as any).from("news_cards")
       .select("reporter_id, card_type, reviewed_at").eq("status", "approved").limit(1000);
@@ -288,7 +303,10 @@ const AdminContributions = () => {
 
         {/* ===== Thẻ chờ duyệt ===== */}
         <Card>
-          <CardHeader><CardTitle className="text-base">🚩 Thẻ chờ duyệt ({pendingCards.length})</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-base">🚩 Thẻ đang biểu quyết ({pendingCards.length})</CardTitle>
+            <p className="text-xs text-muted-foreground">Cộng đồng vote trên trang Bảng xếp hạng, chênh ±3 tự chốt. Admin có thể PHỦ QUYẾT ngay tại đây không cần chờ vote.</p>
+          </CardHeader>
           <CardContent>
             {isLoading ? <p className="text-sm text-muted-foreground py-6 text-center">Đang tải...</p>
               : pendingCards.length === 0 ? <p className="text-sm text-muted-foreground py-6 text-center">Không có báo cáo nào chờ xử lý. 🎉</p>
@@ -313,7 +331,10 @@ const AdminContributions = () => {
                         </TableCell>
                         <TableCell className="text-xs">{nameById[c.author_id] || "—"}</TableCell>
                         <TableCell className="text-xs">{nameById[c.reporter_id] || "—"}</TableCell>
-                        <TableCell className="text-sm">{CARD_LABEL[c.card_type]}</TableCell>
+                        <TableCell className="text-sm whitespace-nowrap">
+                          {CARD_LABEL[c.card_type]}
+                          <div className="text-xs text-muted-foreground">👍{voteTally[c.id]?.up ?? 0} 👎{voteTally[c.id]?.down ?? 0}</div>
+                        </TableCell>
                         <TableCell className="text-right whitespace-nowrap">
                           <Button variant="ghost" size="sm" className="text-green-700" onClick={() => openReview(c)}>Xác nhận</Button>
                           <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => quickReject(c)}>Từ chối</Button>

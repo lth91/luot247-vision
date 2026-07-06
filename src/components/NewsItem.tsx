@@ -266,7 +266,7 @@ export const NewsItem = ({
                 placeholder="Nêu cụ thể tin sai ở điểm nào — admin sẽ đối chiếu trước khi tính thẻ..." />
             </div>
             <p className="text-xs text-muted-foreground">
-              Thẻ chỉ được tính sau khi admin xác nhận. Báo đúng thẻ đỏ được ghi nhận khen thưởng.
+              Thẻ sẽ được cả nhóm biểu quyết trên trang Bảng xếp hạng (ẩn danh người báo) — chênh 3 phiếu "chuẩn" thì thẻ được tính. Báo đúng thẻ đỏ được ghi nhận khen thưởng.
             </p>
           </div>
           <DialogFooter>

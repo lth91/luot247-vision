@@ -1,6 +1,11 @@
--- Hệ thống THẺ VÀNG / THẺ ĐỎ cho tin nhân viên gửi (chốt 04/07):
+-- Hệ thống THẺ VÀNG / THẺ ĐỎ cho tin nhân viên gửi (chốt 04-05/07):
 --   • Nhân viên whitelist báo thẻ tin của NHAU (không tự báo tin mình) qua RPC.
---   • Thẻ chỉ TÍNH sau khi admin duyệt (chống trả đũa/phe phái).
+--   • Thẻ được CỘNG ĐỒNG BIỂU QUYẾT (không có ai chuyên duyệt): mọi thành viên
+--     whitelist vote 👍 chuẩn / 👎 oan (trừ tác giả + người báo); chênh lệch
+--     đạt +3 → thẻ TÍNH (approved), −3 → HỦY (rejected). Ẩn danh người báo
+--     với người vote (chống trả đũa); admin thấy đầy đủ để khen thưởng.
+--   • Admin giữ quyền PHỦ QUYẾT: duyệt/hủy thẳng bất kỳ thẻ nào qua
+--     review_news_card, bất kể vote.
 --   • VÀNG = lỗi nhẹ, ĐỎ = lỗi nặng; quy đổi 2 vàng = 1 đỏ khi đếm ngưỡng cấm.
 --   • Đủ 3 đỏ hiệu lực (đỏ + floor(vàng/2)) → profiles.submission_banned=true,
 --     edge submit-news/bulk chặn gửi; admin "Mở khóa" để ân xá (thẻ → amnestied).
@@ -89,7 +94,122 @@ $$;
 REVOKE ALL ON FUNCTION public.report_news_card(uuid, text, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.report_news_card(uuid, text, text) TO authenticated;
 
--- ===== 4) RPC: admin duyệt thẻ =====
+-- ===== 3b) Bảng vote + RPC biểu quyết =====
+CREATE TABLE IF NOT EXISTS public.news_card_votes (
+  card_id uuid NOT NULL REFERENCES public.news_cards(id) ON DELETE CASCADE,
+  voter_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  vote smallint NOT NULL CHECK (vote IN (-1, 1)),   -- 1 = thẻ chuẩn, -1 = thẻ oan
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (card_id, voter_id)
+);
+
+ALTER TABLE public.news_card_votes ENABLE ROW LEVEL SECURITY;
+
+-- Vote đi qua RPC; admin đọc trực tiếp để hiển thị tally trong trang quản trị.
+DROP POLICY IF EXISTS "Admins view votes" ON public.news_card_votes;
+CREATE POLICY "Admins view votes" ON public.news_card_votes
+  FOR SELECT USING (public.has_role(auth.uid(), 'admin'));
+
+-- Vote 1 thẻ đang chờ; tự chốt khi chênh lệch đạt ±3. Được đổi vote khi còn pending.
+CREATE OR REPLACE FUNCTION public.vote_news_card(_card_id uuid, _agree boolean)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_card public.news_cards%ROWTYPE;
+  v_net int;
+BEGIN
+  IF NOT public.is_submission_allowed() THEN
+    RAISE EXCEPTION 'Chỉ thành viên nhóm gửi tin mới được biểu quyết.';
+  END IF;
+
+  SELECT * INTO v_card FROM public.news_cards WHERE id = _card_id;
+  IF v_card.id IS NULL THEN
+    RAISE EXCEPTION 'Thẻ không tồn tại.';
+  END IF;
+  IF v_card.status <> 'pending' THEN
+    RAISE EXCEPTION 'Thẻ này đã được chốt.';
+  END IF;
+  IF v_card.author_id = auth.uid() THEN
+    RAISE EXCEPTION 'Bạn là tác giả tin — không tham gia biểu quyết thẻ của chính mình.';
+  END IF;
+  IF v_card.reporter_id = auth.uid() THEN
+    RAISE EXCEPTION 'Bạn là người báo thẻ — không cần vote thêm.';
+  END IF;
+
+  INSERT INTO public.news_card_votes (card_id, voter_id, vote)
+  VALUES (_card_id, auth.uid(), CASE WHEN _agree THEN 1 ELSE -1 END)
+  ON CONFLICT (card_id, voter_id) DO UPDATE SET vote = EXCLUDED.vote, created_at = now();
+
+  SELECT COALESCE(SUM(vote), 0) INTO v_net FROM public.news_card_votes WHERE card_id = _card_id;
+
+  -- Tự chốt theo ngưỡng ±3 (trigger recalc ban chạy theo status update).
+  IF v_net >= 3 THEN
+    UPDATE public.news_cards
+    SET status = 'approved', reviewed_at = now(), review_note = 'Tự chốt theo biểu quyết (chênh +' || v_net || ')'
+    WHERE id = _card_id AND status = 'pending';
+  ELSIF v_net <= -3 THEN
+    UPDATE public.news_cards
+    SET status = 'rejected', reviewed_at = now(), review_note = 'Tự hủy theo biểu quyết (chênh ' || v_net || ')'
+    WHERE id = _card_id AND status = 'pending';
+  END IF;
+
+  RETURN jsonb_build_object('ok', true, 'net', v_net);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.vote_news_card(uuid, boolean) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.vote_news_card(uuid, boolean) TO authenticated;
+
+-- Danh sách thẻ đang biểu quyết cho thành viên (ẨN người báo; kèm tally + vote của tôi).
+CREATE OR REPLACE FUNCTION public.get_voting_cards()
+RETURNS TABLE(
+  id uuid,
+  news_title text,
+  card_type text,
+  reason text,
+  created_at timestamptz,
+  author_name text,
+  up_votes int,
+  down_votes int,
+  my_vote int,
+  can_vote boolean
+)
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT public.is_submission_allowed() THEN
+    RAISE EXCEPTION 'Chỉ thành viên nhóm gửi tin mới xem được.';
+  END IF;
+
+  RETURN QUERY
+  SELECT
+    nc.id,
+    nc.news_title,
+    nc.card_type,
+    nc.reason,
+    nc.created_at,
+    COALESCE(p.display_name, split_part(p.email, '@', 1), '—'),
+    COALESCE(COUNT(v.vote) FILTER (WHERE v.vote = 1), 0)::int,
+    COALESCE(COUNT(v.vote) FILTER (WHERE v.vote = -1), 0)::int,
+    COALESCE(MAX(v.vote) FILTER (WHERE v.voter_id = auth.uid()), 0)::int,
+    (nc.author_id <> auth.uid() AND nc.reporter_id <> auth.uid())
+  FROM public.news_cards nc
+  LEFT JOIN public.profiles p ON p.id = nc.author_id
+  LEFT JOIN public.news_card_votes v ON v.card_id = nc.id
+  WHERE nc.status = 'pending'
+  GROUP BY nc.id, nc.news_title, nc.card_type, nc.reason, nc.created_at,
+           nc.author_id, nc.reporter_id, p.display_name, p.email
+  ORDER BY nc.created_at DESC;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_voting_cards() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_voting_cards() TO authenticated;
+
+-- ===== 4) RPC: admin PHỦ QUYẾT (duyệt/hủy thẳng, bất kể vote) =====
 CREATE OR REPLACE FUNCTION public.review_news_card(_card_id uuid, _approve boolean, _final_type text DEFAULT NULL, _note text DEFAULT NULL)
 RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER
@@ -103,16 +223,18 @@ BEGIN
     RAISE EXCEPTION 'Loại thẻ không hợp lệ.';
   END IF;
 
+  -- Phủ quyết được cả thẻ đã chốt bằng vote (trừ thẻ đã ân xá).
+  -- Lưu ý: hạ approved → rejected KHÔNG tự gỡ cấm — dùng lift_submission_ban.
   UPDATE public.news_cards
   SET status = CASE WHEN _approve THEN 'approved' ELSE 'rejected' END,
       card_type = coalesce(_final_type, card_type),   -- admin quyết mức cuối
       reviewed_by = auth.uid(),
       reviewed_at = now(),
       review_note = nullif(trim(coalesce(_note, '')), '')
-  WHERE id = _card_id AND status = 'pending';
+  WHERE id = _card_id AND status IN ('pending', 'approved', 'rejected');
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'Thẻ không tồn tại hoặc đã được xử lý.';
+    RAISE EXCEPTION 'Thẻ không tồn tại hoặc đã ân xá.';
   END IF;
   RETURN jsonb_build_object('ok', true);
 END;
