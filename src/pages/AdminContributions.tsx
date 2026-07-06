@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { categoryLabel } from "@/lib/newsCategories";
 import { getRelativeTime } from "@/lib/dateUtils";
+import { useContributionManager } from "@/hooks/useContributionManager";
 
 // Lý do gỡ tin ↔ mức ảnh hưởng điểm (khớp migration 20260629050000).
 // Tổng điểm trừ = thu hồi 10 thưởng gốc + phạt theo lý do.
@@ -100,20 +101,22 @@ const AdminContributions = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Gate admin-only.
+  // Gate: admin HOẶC "quản lý đóng góp" (contribution_managers — vd long@denco.vn).
+  // userRole vẫn load riêng để quyết nút "Gỡ tin" (chỉ admin gỡ được).
+  const isManager = useContributionManager(session?.user?.id);
   useEffect(() => {
     if (!sessionChecked) return;
     if (!session) { navigate("/auth"); return; }
     supabase.from("user_roles").select("role").eq("user_id", session.user.id).maybeSingle()
-      .then(({ data }) => {
-        const role = data?.role || null;
-        setUserRole(role);
-        if (role !== "admin") {
-          toast.error("Bạn không có quyền truy cập trang này.");
-          navigate("/");
-        }
-      });
+      .then(({ data }) => setUserRole(data?.role || null));
   }, [sessionChecked, session, navigate]);
+
+  useEffect(() => {
+    if (isManager === false) {
+      toast.error("Bạn không có quyền truy cập trang này.");
+      navigate("/");
+    }
+  }, [isManager, navigate]);
 
   const load = async () => {
     setIsLoading(true);
@@ -188,7 +191,7 @@ const AdminContributions = () => {
     setIsLoading(false);
   };
 
-  useEffect(() => { if (userRole === "admin") load(); }, [userRole]);
+  useEffect(() => { if (isManager === true) load(); }, [isManager]);
 
   // Gỡ mềm tin kèm lý do → trigger DB tự thu hồi thưởng + phạt theo mức.
   const confirmTakedown = async () => {
@@ -246,7 +249,7 @@ const AdminContributions = () => {
     load();
   };
 
-  if (userRole !== "admin") {
+  if (isManager !== true) {
     return (
       <div className="min-h-screen bg-background">
         <Header user={session?.user} userRole={userRole} />
@@ -429,7 +432,10 @@ const AdminContributions = () => {
                         <TableCell className="text-xs">{nameById[n.submitted_by] || "—"}</TableCell>
                         <TableCell className="text-right text-xs text-muted-foreground">{getRelativeTime(n.created_at)}</TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" className="text-red-600" onClick={() => openTakedown(n)}>Gỡ</Button>
+                          {/* Gỡ tin + phạt điểm: chỉ admin (RLS UPDATE news); manager chỉ xem. */}
+                          {userRole === "admin" && (
+                            <Button variant="ghost" size="sm" className="text-red-600" onClick={() => openTakedown(n)}>Gỡ</Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

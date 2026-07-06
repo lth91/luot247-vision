@@ -45,6 +45,44 @@ CREATE POLICY "Admins manage all cards" ON public.news_cards
   FOR ALL USING (public.has_role(auth.uid(), 'admin'))
   WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
+-- ===== 1b) Quyền "Quản lý đóng góp" cấp theo NGƯỜI (không phải admin) =====
+-- long@denco.vn (sếp) cần vào /quan-ly-dong-gop (phủ quyết thẻ, mở khóa, xem
+-- công phát hiện) nhưng KHÔNG được cấp admin toàn hệ thống. Admin nghiễm nhiên
+-- là manager. Manager KHÔNG gỡ tin được (RLS UPDATE news vẫn admin/mod).
+CREATE TABLE IF NOT EXISTS public.contribution_managers (
+  user_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.contribution_managers ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins manage contribution managers" ON public.contribution_managers;
+CREATE POLICY "Admins manage contribution managers" ON public.contribution_managers
+  FOR ALL USING (public.has_role(auth.uid(), 'admin'))
+  WITH CHECK (public.has_role(auth.uid(), 'admin'));
+
+CREATE OR REPLACE FUNCTION public.is_contribution_manager()
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT public.has_role(auth.uid(), 'admin')
+      OR EXISTS (SELECT 1 FROM public.contribution_managers m WHERE m.user_id = auth.uid());
+$$;
+
+REVOKE ALL ON FUNCTION public.is_contribution_manager() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_contribution_manager() TO authenticated;
+
+-- Seed: cấp quyền cho long@denco.vn (nếu tài khoản đã tồn tại).
+INSERT INTO public.contribution_managers (user_id)
+SELECT id FROM auth.users WHERE email = 'long@denco.vn'
+ON CONFLICT (user_id) DO NOTHING;
+
+-- Manager đọc được thẻ để trang quản lý hiển thị (quyền GHI vẫn qua RPC/admin).
+DROP POLICY IF EXISTS "Managers view all cards" ON public.news_cards;
+CREATE POLICY "Managers view all cards" ON public.news_cards
+  FOR SELECT USING (public.is_contribution_manager());
+
 -- ===== 2) Cột cấm gửi tin =====
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS submission_banned boolean NOT NULL DEFAULT false;
@@ -105,10 +143,10 @@ CREATE TABLE IF NOT EXISTS public.news_card_votes (
 
 ALTER TABLE public.news_card_votes ENABLE ROW LEVEL SECURITY;
 
--- Vote đi qua RPC; admin đọc trực tiếp để hiển thị tally trong trang quản trị.
+-- Vote đi qua RPC; admin + manager đọc trực tiếp để hiển thị tally trang quản trị.
 DROP POLICY IF EXISTS "Admins view votes" ON public.news_card_votes;
 CREATE POLICY "Admins view votes" ON public.news_card_votes
-  FOR SELECT USING (public.has_role(auth.uid(), 'admin'));
+  FOR SELECT USING (public.is_contribution_manager());
 
 -- Vote 1 thẻ đang chờ; tự chốt khi chênh lệch đạt ±3. Được đổi vote khi còn pending.
 CREATE OR REPLACE FUNCTION public.vote_news_card(_card_id uuid, _agree boolean)
@@ -216,8 +254,8 @@ LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF NOT public.has_role(auth.uid(), 'admin') THEN
-    RAISE EXCEPTION 'Chỉ admin được duyệt thẻ.';
+  IF NOT public.is_contribution_manager() THEN
+    RAISE EXCEPTION 'Chỉ quản lý đóng góp được duyệt thẻ.';
   END IF;
   IF _final_type IS NOT NULL AND _final_type NOT IN ('yellow', 'red') THEN
     RAISE EXCEPTION 'Loại thẻ không hợp lệ.';
@@ -250,8 +288,8 @@ LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF NOT public.has_role(auth.uid(), 'admin') THEN
-    RAISE EXCEPTION 'Chỉ admin được mở khóa.';
+  IF NOT public.is_contribution_manager() THEN
+    RAISE EXCEPTION 'Chỉ quản lý đóng góp được mở khóa.';
   END IF;
   -- Thẻ đã tính chuyển 'amnestied' (giữ lịch sử, hết đếm) rồi mới gỡ cấm —
   -- tránh trigger re-ban ngay ở thẻ kế tiếp.
