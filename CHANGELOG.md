@@ -1,3 +1,10 @@
+# [1.79.0](https://github.com/lth91/luot247-vision/compare/v1.78.1...v1.79.0) (2026-07-07)
+
+
+### Features
+
+* **cards:** thẻ vàng/đỏ — báo lỗi chéo, cộng đồng biểu quyết ±3, 3 đỏ cấm gửi tin ([#114](https://github.com/lth91/luot247-vision/issues/114)) ([a8ffe86](https://github.com/lth91/luot247-vision/commit/a8ffe86a83075e470a4f6a6ec16861f482585503))
+
 ## [1.78.1](https://github.com/lth91/luot247-vision/compare/v1.78.0...v1.78.1) (2026-07-05)
 
 
