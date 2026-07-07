@@ -10,6 +10,7 @@ import { useSearchParams } from "react-router-dom";
 import { SUBMISSION_CATEGORIES, categoryLabel } from "@/lib/newsCategories";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { ListFilter } from "lucide-react";
+import { useSubmissionAllowed } from "@/hooks/useSubmissionAllowed";
 
 // Logger chỉ chạy ở dev; production (Vercel) im lặng hoàn toàn.
 // Trước đây 55 console.log rải trong scroll handler + interval 5s + loop từng
@@ -20,6 +21,8 @@ const dbg: (...args: unknown[]) => void = import.meta.env.DEV ? console.log : ()
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  // Thành viên whitelist mới thấy nút 🚩 báo thẻ trên tin của đồng nghiệp.
+  const canReport = useSubmissionAllowed(session?.user?.id) === true;
   const [isLoading, setIsLoading] = useState(true);
   const [showReadNews, setShowReadNews] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -835,6 +838,9 @@ const Index = () => {
                   createdAt={item.updated_at}  // Use updated_at to show approval time
                   isAuthenticated={!!session}
                   isLast={index === arr.length - 1}
+                  submittedBy={item.submitted_by}
+                  currentUserId={session?.user?.id}
+                  canReport={canReport}
                 />
               </div>
             ))}

@@ -282,6 +282,21 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                     </>
                   )}
 
+                  {/* Role manager (vd long@denco.vn): thấy đúng 1 mục Quản lý
+                      đóng góp, không thấy khối Quản trị của admin/mod. */}
+                  {userRole === "manager" && (
+                    <Button
+                      variant="ghost"
+                      className="justify-start"
+                      onClick={() => {
+                        setOpen(false);
+                        navigate("/quan-ly-dong-gop");
+                      }}
+                    >
+                      🗂️ Quản lý đóng góp
+                    </Button>
+                  )}
+
                   <div className="border-t pt-4">
                     <div className="flex items-center justify-between px-2 py-2">
                       <Label htmlFor="reading-mode" className="text-sm">

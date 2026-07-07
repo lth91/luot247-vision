@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -20,6 +21,9 @@ interface DashRow {
   acc_today: number;
   acc_month: number;
   acc_prev_month: number;
+  yellow_cards: number;
+  red_cards: number;
+  banned: boolean;
 }
 
 interface ViewStats {
@@ -30,11 +34,25 @@ interface ViewStats {
   total: number;
 }
 
+// Thẻ đang biểu quyết (RPC get_voting_cards — ẩn danh người báo).
+interface VotingCard {
+  id: string;
+  news_title: string;
+  card_type: "yellow" | "red";
+  reason: string;
+  created_at: string;
+  author_name: string;
+  up_votes: number;
+  down_votes: number;
+  my_vote: number;      // 1 / -1 / 0 (chưa vote)
+  can_vote: boolean;    // false nếu là tác giả hoặc người báo
+}
+
 // Tỷ lệ duyệt = duyệt/gửi; chưa gửi tin nào → "—".
 const rate = (acc: number, sub: number) => (sub > 0 ? `${Math.round((acc / sub) * 100)}%` : "—");
 
 // Cột sắp xếp được: tên + các cột số + tỷ lệ (rate tính từ acc/sub, "—" xếp cuối).
-type SortKey = "full_name" | "sub_today" | "sub_month" | "acc_today" | "acc_month" | "acc_prev_month" | "rate";
+type SortKey = "full_name" | "sub_today" | "sub_month" | "acc_today" | "acc_month" | "acc_prev_month" | "rate" | "yellow_cards" | "red_cards";
 
 const sortVal = (r: DashRow, key: SortKey): number | string =>
   key === "full_name" ? (r.full_name || "") :
@@ -48,6 +66,7 @@ const Leaderboard = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [rows, setRows] = useState<DashRow[]>([]);
   const [views, setViews] = useState<ViewStats | null>(null);
+  const [votingCards, setVotingCards] = useState<VotingCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   // null = giữ thứ tự mặc định từ RPC (tin duyệt tháng này giảm dần).
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" } | null>(null);
@@ -96,16 +115,30 @@ const Leaderboard = () => {
     (async () => {
       setIsLoading(true);
       // RPC mới hơn types.ts auto-generated → cast any (pattern chung của repo).
-      const [dash, stats] = await Promise.all([
+      const [dash, stats, voting] = await Promise.all([
         (supabase as any).rpc("get_submission_dashboard"),
         (supabase as any).rpc("get_view2_stats"),
+        (supabase as any).rpc("get_voting_cards"),
       ]);
       setRows((dash.data as DashRow[]) ?? []);
       const s = Array.isArray(stats.data) ? stats.data[0] : stats.data;
       setViews((s as ViewStats) ?? null);
+      setVotingCards((voting.data as VotingCard[]) ?? []);
       setIsLoading(false);
     })();
   }, [allowed]);
+
+  // Vote thẻ chuẩn/oan → cập nhật lại danh sách (thẻ đạt ±3 sẽ biến mất) + bảng thẻ.
+  const castVote = async (card: VotingCard, agree: boolean) => {
+    const { error } = await (supabase as any).rpc("vote_news_card", { _card_id: card.id, _agree: agree });
+    if (error) { toast.error(error.message || "Không vote được."); return; }
+    const [voting, dash] = await Promise.all([
+      (supabase as any).rpc("get_voting_cards"),
+      (supabase as any).rpc("get_submission_dashboard"),
+    ]);
+    setVotingCards((voting.data as VotingCard[]) ?? []);
+    setRows((dash.data as DashRow[]) ?? []);
+  };
 
   // Dòng TỔNG CỘNG.
   const sum = rows.reduce(
@@ -115,8 +148,10 @@ const Leaderboard = () => {
       acc_today: a.acc_today + r.acc_today,
       acc_month: a.acc_month + r.acc_month,
       acc_prev_month: a.acc_prev_month + r.acc_prev_month,
+      yellow_cards: a.yellow_cards + (r.yellow_cards || 0),
+      red_cards: a.red_cards + (r.red_cards || 0),
     }),
-    { sub_today: 0, sub_month: 0, acc_today: 0, acc_month: 0, acc_prev_month: 0 },
+    { sub_today: 0, sub_month: 0, acc_today: 0, acc_month: 0, acc_prev_month: 0, yellow_cards: 0, red_cards: 0 },
   );
 
   // Ô tiêu đề bấm được để sắp xếp; mũi tên chỉ chiều đang áp dụng.
@@ -166,23 +201,25 @@ const Leaderboard = () => {
                       <SortHead label="Tin duyệt tháng này" k="acc_month" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
                       <SortHead label="Tin duyệt tháng trước" k="acc_prev_month" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
                       <SortHead label="Tỷ lệ duyệt hôm nay" k="rate" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
-                      <TableHead className="text-right text-xs leading-tight px-2 min-w-[52px]">Thẻ đỏ</TableHead>
-                      <TableHead className="text-right text-xs leading-tight px-2 min-w-[52px]">Thẻ vàng</TableHead>
+                      <SortHead label="Thẻ đỏ" k="red_cards" className="text-right text-xs leading-tight px-2 min-w-[52px]" />
+                      <SortHead label="Thẻ vàng" k="yellow_cards" className="text-right text-xs leading-tight px-2 min-w-[52px]" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {sorted.map((r) => (
                       <TableRow key={r.email}>
-                        <TableCell className="font-medium whitespace-nowrap">{r.full_name || "—"}</TableCell>
+                        <TableCell className="font-medium whitespace-nowrap">
+                          {r.full_name || "—"}
+                          {r.banned && <span className="ml-1.5 text-[10px] font-bold text-red-600 border border-red-400 rounded px-1 py-0.5 align-middle">⛔ CẤM</span>}
+                        </TableCell>
                         <TableCell className="text-muted-foreground text-xs whitespace-nowrap max-w-[220px] truncate" title={r.email}>{r.email}</TableCell>
                         <TableCell className="text-right px-2">{r.acc_today}</TableCell>
                         <TableCell className="text-right px-2">{r.sub_today}</TableCell>
                         <TableCell className="text-right px-2 font-semibold">{r.acc_month}</TableCell>
                         <TableCell className="text-right px-2 text-muted-foreground">{r.acc_prev_month}</TableCell>
                         <TableCell className="text-right px-2">{rate(r.acc_today, r.sub_today)}</TableCell>
-                        {/* Thẻ phạt: cơ chế chưa áp dụng — tạm 0 cho tất cả. */}
-                        <TableCell className="text-right px-2 text-red-600">0</TableCell>
-                        <TableCell className="text-right px-2 text-yellow-600">0</TableCell>
+                        <TableCell className={`text-right px-2 ${r.red_cards > 0 ? "font-bold text-red-600" : "text-muted-foreground"}`}>{r.red_cards}</TableCell>
+                        <TableCell className={`text-right px-2 ${r.yellow_cards > 0 ? "font-bold text-yellow-600" : "text-muted-foreground"}`}>{r.yellow_cards}</TableCell>
                       </TableRow>
                     ))}
                     <TableRow className="border-t-2 font-bold bg-muted/40">
@@ -193,8 +230,8 @@ const Leaderboard = () => {
                       <TableCell className="text-right px-2">{sum.acc_month}</TableCell>
                       <TableCell className="text-right px-2">{sum.acc_prev_month}</TableCell>
                       <TableCell className="text-right px-2">{rate(sum.acc_today, sum.sub_today)}</TableCell>
-                      <TableCell className="text-right px-2 text-red-600">0</TableCell>
-                      <TableCell className="text-right px-2 text-yellow-600">0</TableCell>
+                      <TableCell className="text-right px-2 text-red-600">{sum.red_cards}</TableCell>
+                      <TableCell className="text-right px-2 text-yellow-600">{sum.yellow_cards}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
@@ -202,6 +239,52 @@ const Leaderboard = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Thẻ đang biểu quyết — cả nhóm vote, chênh ±3 tự chốt, ẩn danh người báo */}
+        {votingCards.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">🚩 Thẻ đang biểu quyết ({votingCards.length})</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Cả nhóm cùng đánh giá: 👍 thẻ chuẩn / 👎 thẻ oan. Chênh lệch đạt <b>3 phiếu</b> thì thẻ tự chốt. Người báo được ẩn danh; tác giả tin và người báo không tham gia vote.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {votingCards.map((c) => (
+                <div key={c.id} className="rounded-lg border p-3 space-y-1.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium leading-snug">
+                        {c.card_type === "red" ? "🟥" : "🟨"} {c.news_title}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Tác giả: <b>{c.author_name}</b> · đề xuất {c.card_type === "red" ? "Thẻ đỏ" : "Thẻ vàng"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Lý do: {c.reason}</p>
+                    </div>
+                    <div className="shrink-0 flex items-center gap-1.5">
+                      <button type="button"
+                        disabled={!c.can_vote}
+                        onClick={() => castVote(c, true)}
+                        className={`text-xs rounded-md border px-2 py-1.5 ${c.my_vote === 1 ? "bg-green-600 text-white border-green-600" : "hover:bg-muted"} disabled:opacity-40`}>
+                        👍 Chuẩn {c.up_votes}
+                      </button>
+                      <button type="button"
+                        disabled={!c.can_vote}
+                        onClick={() => castVote(c, false)}
+                        className={`text-xs rounded-md border px-2 py-1.5 ${c.my_vote === -1 ? "bg-red-600 text-white border-red-600" : "hover:bg-muted"} disabled:opacity-40`}>
+                        👎 Oan {c.down_votes}
+                      </button>
+                    </div>
+                  </div>
+                  {!c.can_vote && (
+                    <p className="text-[11px] text-muted-foreground">Bạn là tác giả tin hoặc người báo thẻ này — không tham gia vote.</p>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Khối thống kê lượt xem toàn site (nền vàng như mẫu của sếp) */}
         {views && (
