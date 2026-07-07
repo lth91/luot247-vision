@@ -1,3 +1,10 @@
+## [1.79.1](https://github.com/lth91/luot247-vision/compare/v1.79.0...v1.79.1) (2026-07-07)
+
+
+### Bug Fixes
+
+* **submission:** import Sheet không vứt kết quả AI đã chấm khi quá ngân sách thời gian ([#115](https://github.com/lth91/luot247-vision/issues/115)) ([9cec031](https://github.com/lth91/luot247-vision/commit/9cec031e0fa3d74f1f726a67e144b8675db2923e))
+
 # [1.79.0](https://github.com/lth91/luot247-vision/compare/v1.78.1...v1.79.0) (2026-07-07)
 
 
