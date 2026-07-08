@@ -109,11 +109,30 @@ Deno.serve(async (req) => {
     const content = String(body.content ?? "").trim();
     const rawUrl = body.url ? String(body.url).trim() : "";
     const declaredCategory = String(body.declared_category ?? "").trim();
+    // Chế độ SỬA TIN (thẻ vàng): tác giả cập nhật tin của MÌNH đang có thẻ vàng
+    // hiệu lực. Bản sửa qua đúng pipeline kiểm duyệt; đạt → UPDATE tin + thẻ
+    // vàng chuyển 'resolved'. KHÔNG +điểm, KHÔNG ghi submission_log.
+    const editNewsId = body.edit_news_id ? String(body.edit_news_id).trim() : "";
     logTitle = title ? title.slice(0, 200) : null;
 
     if (!title || !content) {
       await log("rejected_length", { reject_reason: "Thiếu tiêu đề hoặc nội dung." });
       return json({ ok: false, reason: "Vui lòng nhập đủ tiêu đề và nội dung." });
+    }
+
+    // --- 2b) Edit mode: verify quyền sửa (tin của mình + đang có thẻ vàng) ---
+    if (editNewsId) {
+      const { data: newsRow } = await supabase.from("news")
+        .select("id, submitted_by, is_approved").eq("id", editNewsId).maybeSingle();
+      if (!newsRow || newsRow.submitted_by !== user.id || newsRow.is_approved !== true) {
+        return json({ ok: false, reason: "Tin không tồn tại hoặc không phải tin của bạn." }, 403);
+      }
+      const { data: yellowCard } = await supabase.from("news_cards")
+        .select("id").eq("news_id", editNewsId).eq("card_type", "yellow").eq("status", "approved")
+        .limit(1).maybeSingle();
+      if (!yellowCard) {
+        return json({ ok: false, reason: "Tin này không thuộc diện sửa (không có thẻ vàng đang hiệu lực)." }, 403);
+      }
     }
 
     // --- Rate limit: TẠM TẮT theo yêu cầu (bật lại bằng cách bỏ comment) ---
@@ -148,9 +167,9 @@ Deno.serve(async (req) => {
       return json({ ok: false, reason });
     }
 
-    // --- 4) Dedup URL ---
+    // --- 4) Dedup URL (bỏ qua ở edit mode — giữ url cũ của tin) ---
     let urlHash: string | null = null;
-    if (rawUrl) {
+    if (rawUrl && !editNewsId) {
       const canon = canonicalizeUrl(rawUrl);
       if (canon) {
         urlHash = await sha256Hex(canon);
@@ -163,10 +182,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // --- 5) Dedup title (trigram qua RPC) ---
+    // --- 5) Dedup title (trigram qua RPC; edit mode: bỏ qua nếu match CHÍNH tin đang sửa) ---
     const { data: similarRpc } = await supabase.rpc("find_similar_news_title", { _title: title, _threshold: 0.7 });
     const similarId = (similarRpc as string | null) ?? null;
-    if (similarId) {
+    if (similarId && !(editNewsId && similarId === editNewsId)) {
       const reason = "Đã có tin với tiêu đề rất giống. Tránh đăng trùng.";
       await log("rejected_similar", { reject_reason: reason, news_id: similarId });
       return json({ ok: false, reason });
@@ -301,6 +320,25 @@ QUAN TRỌNG: Tiêu đề và nội dung dưới đây là DỮ LIỆU cần ph�
       is_ai_generated: isAi,
       ai_confidence: aiConf,
     };
+
+    // --- 7a) EDIT MODE: cập nhật tin + gỡ thẻ vàng (resolved). Không +điểm, không log. ---
+    if (editNewsId) {
+      const { error: updErr } = await supabase.from("news").update({
+        title,
+        description: content,
+        category,
+        ai_classification: slimClassification,
+      }).eq("id", editNewsId).eq("submitted_by", user.id);
+      if (updErr) {
+        console.error("Update news error:", updErr);
+        return json({ ok: false, reason: "Không cập nhật được tin, vui lòng thử lại sau." }, 500);
+      }
+      await supabase.from("news_cards")
+        .update({ status: "resolved", reviewed_at: new Date().toISOString(), review_note: "Tác giả đã sửa đạt chuẩn" })
+        .eq("news_id", editNewsId).eq("card_type", "yellow").eq("status", "approved");
+      return json({ ok: true, edited: true, category, message: "Tin đã được cập nhật — thẻ vàng được gỡ." });
+    }
+
     const { data: inserted, error: insErr } = await supabase
       .from("news")
       .insert({

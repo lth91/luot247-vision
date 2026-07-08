@@ -70,7 +70,7 @@ export const NewsItem = ({
       toast.error(error.message || "Không gửi được báo cáo.");
       return;
     }
-    toast.success("Đã gửi báo cáo thẻ — chờ admin xác nhận.");
+    toast.success(cardType === "red" ? "Thẻ đỏ đã có hiệu lực — tin bị gỡ khỏi trang." : "Thẻ vàng đã có hiệu lực — tác giả cần sửa tin.");
     setReportOpen(false);
     setCardReason("");
     setCardType("yellow");
@@ -265,8 +265,8 @@ export const NewsItem = ({
               <Textarea value={cardReason} onChange={(e) => setCardReason(e.target.value)} rows={3}
                 placeholder="Nêu cụ thể tin sai ở điểm nào — admin sẽ đối chiếu trước khi tính thẻ..." />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Thẻ sẽ được cả nhóm biểu quyết trên trang Bảng xếp hạng (ẩn danh người báo) — chênh 3 phiếu "chuẩn" thì thẻ được tính. Báo đúng thẻ đỏ được ghi nhận khen thưởng.
+            <p className="text-xs text-red-600 font-medium">
+              ⚠️ Thẻ có hiệu lực NGAY khi gửi — thẻ đỏ sẽ GỠ TIN lập tức. Cân nhắc kỹ; báo sai sẽ bị quản lý hủy thẻ và ghi nhận. Báo đúng thẻ đỏ được khen thưởng.
             </p>
           </div>
           <DialogFooter>

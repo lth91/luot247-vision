@@ -47,6 +47,65 @@ const SubmitNews = () => {
   const [rejects, setRejects] = useState<any[] | null>(null);
   const [rejectsLoading, setRejectsLoading] = useState(false);
 
+  // TIN CẦN SỬA (thẻ vàng đang hiệu lực trên tin của mình — RPC ẩn người báo).
+  interface YellowCard {
+    card_id: string; news_id: string; news_title: string; reason: string;
+    created_at: string; current_title: string; current_description: string;
+  }
+  const [yellowCards, setYellowCards] = useState<YellowCard[]>([]);
+  const [editingCard, setEditingCard] = useState<YellowCard | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+
+  const loadYellowCards = async () => {
+    const { data } = await (supabase as any).rpc("get_my_yellow_cards");
+    setYellowCards((data as YellowCard[]) ?? []);
+  };
+
+  const openEditCard = (c: YellowCard) => {
+    setEditingCard(c);
+    setEditTitle(c.current_title);
+    setEditContent(c.current_description || "");
+  };
+
+  // Bộ đếm cho form sửa (quota nội dung tự tính theo tiêu đề, như form gửi lẻ).
+  const editTitleWords = countWords(editTitle);
+  const editContentWords = countWords(editContent);
+  const editRefTitle = editTitleWords > 0 ? editTitleWords : 15;
+  const editContentMin = totalMin - editRefTitle;
+  const editContentMax = totalMax - editRefTitle;
+  const editLengthOk =
+    editTitleWords >= titleMin && editTitleWords <= titleMax &&
+    editTitleWords + editContentWords >= totalMin && editTitleWords + editContentWords <= totalMax;
+
+  const submitEdit = async () => {
+    if (!editingCard || !editLengthOk || editSaving) return;
+    setEditSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("submit-news", {
+        body: { title: editTitle.trim(), content: editContent.trim(), edit_news_id: editingCard.news_id },
+      });
+      if (error) {
+        let reason = "Cập nhật thất bại, vui lòng thử lại.";
+        try { const j = await (error as any)?.context?.json?.(); if (j?.reason) reason = j.reason; } catch { /* ignore */ }
+        toast.error(reason);
+        return;
+      }
+      if (data?.ok) {
+        toast.success(data.message || "Tin đã được cập nhật — thẻ vàng được gỡ.");
+        setEditingCard(null);
+        loadYellowCards();
+      } else {
+        toast.error(data?.reason || "Bản sửa chưa đạt kiểm duyệt.");
+      }
+    } catch {
+      toast.error("Có lỗi xảy ra, vui lòng thử lại.");
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const loadRejects = async () => {
     if (!session?.user) return;
     setRejectsLoading(true);
@@ -108,6 +167,12 @@ const SubmitNews = () => {
         .then(({ data }) => setUserRole(data?.role || null));
     }
   }, [session]);
+
+  // Đếm thẻ vàng ngay khi vào trang (hiện badge trên tab "Tin cần sửa").
+  useEffect(() => {
+    if (allowed === true) loadYellowCards();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allowed]);
 
   // Gate: chỉ user đã đăng nhập mới gửi tin.
   useEffect(() => {
@@ -233,10 +298,13 @@ const SubmitNews = () => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="single" onValueChange={(v) => { if (v === "rejects" && rejects === null) loadRejects(); }}>
-              <TabsList className="grid w-full grid-cols-3 mb-5">
+              <TabsList className="grid w-full grid-cols-4 mb-5">
                 <TabsTrigger value="single">Gửi 1 tin</TabsTrigger>
-                <TabsTrigger value="bulk">Import Google Sheet</TabsTrigger>
+                <TabsTrigger value="bulk">Import Sheet</TabsTrigger>
                 <TabsTrigger value="rejects">Tin bị loại</TabsTrigger>
+                <TabsTrigger value="yellow">
+                  🟨 Cần sửa{yellowCards.length > 0 ? ` (${yellowCards.length})` : ""}
+                </TabsTrigger>
               </TabsList>
 
               {/* TAB 1 — gửi lẻ */}
@@ -373,6 +441,64 @@ const SubmitNews = () => {
                       </li>
                     ))}
                   </ul>
+                )}
+              </TabsContent>
+
+              {/* TAB 4 — tin bị thẻ vàng: tác giả sửa tại chỗ, đạt chuẩn là thẻ tự gỡ */}
+              <TabsContent value="yellow" className="space-y-4">
+                {yellowCards.length === 0 && !editingCard && (
+                  <p className="text-sm text-muted-foreground py-6 text-center">
+                    Không có tin nào bị thẻ vàng. 🎉
+                  </p>
+                )}
+
+                {!editingCard && yellowCards.length > 0 && (
+                  <ul className="divide-y rounded-lg border">
+                    {yellowCards.map((c) => (
+                      <li key={c.card_id} className="p-3 flex items-start justify-between gap-3">
+                        <div className="space-y-1 min-w-0">
+                          <p className="text-sm font-medium leading-snug">🟨 {c.news_title}</p>
+                          <p className="text-xs text-yellow-700">Lý do thẻ: {c.reason}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Sửa đạt chuẩn thì tin giữ nguyên trên trang và thẻ vàng tự gỡ.
+                          </p>
+                        </div>
+                        <Button variant="outline" size="sm" className="shrink-0"
+                          onClick={() => openEditCard(c)}>
+                          ✏️ Sửa tin
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {editingCard && (
+                  <div className="space-y-5 rounded-lg border p-4">
+                    <p className="text-xs text-yellow-700">Lý do thẻ: {editingCard.reason}</p>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="edit-title">Tiêu đề</Label>
+                        <WordHint count={editTitleWords} min={titleMin} max={titleMax} />
+                      </div>
+                      <Input id="edit-title" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} disabled={editSaving} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="edit-content">Nội dung</Label>
+                        <WordHint count={editContentWords} min={editContentMin} max={editContentMax} />
+                      </div>
+                      <Textarea id="edit-content" value={editContent} onChange={(e) => setEditContent(e.target.value)} rows={8} disabled={editSaving} />
+                      <p className="text-[11px] text-muted-foreground">
+                        Bản sửa sẽ qua kiểm duyệt AI như tin mới — đạt mới được cập nhật, không đạt thì tin cũ giữ nguyên.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" className="flex-1" onClick={() => setEditingCard(null)} disabled={editSaving}>Huỷ</Button>
+                      <Button className="flex-1" onClick={submitEdit} disabled={!editLengthOk || editSaving}>
+                        {editSaving ? "Đang kiểm duyệt bản sửa..." : "Cập nhật tin"}
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </TabsContent>
             </Tabs>
