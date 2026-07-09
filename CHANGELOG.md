@@ -1,3 +1,10 @@
+## [1.83.1](https://github.com/lth91/luot247-vision/compare/v1.83.0...v1.83.1) (2026-07-09)
+
+
+### Bug Fixes
+
+* **submission:** nới kiểm duyệt cho luồng SỬA tin thẻ vàng ([#120](https://github.com/lth91/luot247-vision/issues/120)) ([fc0c26c](https://github.com/lth91/luot247-vision/commit/fc0c26c90b145a0c84ac7e434864b69442eac984))
+
 # [1.83.0](https://github.com/lth91/luot247-vision/compare/v1.82.0...v1.83.0) (2026-07-09)
 
 
