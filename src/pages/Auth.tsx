@@ -18,7 +18,9 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
   
-  const isAdminEmail = email.trim() === "longth91@gmail.com";
+  // Các email PHẢI nhập mật khẩu thật (tài khoản quyền cao — không auto-login).
+  const PASSWORD_REQUIRED_EMAILS = ["longth91@gmail.com", "manager@luot247.com"];
+  const isAdminEmail = PASSWORD_REQUIRED_EMAILS.includes(email.trim().toLowerCase());
   useEffect(() => {
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -43,7 +45,7 @@ const Auth = () => {
       const trimmedEmail = email.trim();
       
       // Check if this is admin email - require real password
-      const isAdmin = trimmedEmail === "longth91@gmail.com";
+      const isAdmin = PASSWORD_REQUIRED_EMAILS.includes(trimmedEmail.toLowerCase());
       
       if (isAdmin && !password) {
         toast.error("Vui lòng nhập mật khẩu");
