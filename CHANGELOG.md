@@ -1,3 +1,10 @@
+# [1.83.0](https://github.com/lth91/luot247-vision/compare/v1.82.0...v1.83.0) (2026-07-09)
+
+
+### Features
+
+* **auth:** manager@luot247.com đăng nhập bằng mật khẩu thật như admin ([#119](https://github.com/lth91/luot247-vision/issues/119)) ([a4040e9](https://github.com/lth91/luot247-vision/commit/a4040e9eb49daff3d9c61fb6cd53778f313b6929))
+
 # [1.82.0](https://github.com/lth91/luot247-vision/compare/v1.81.0...v1.82.0) (2026-07-09)
 
 
