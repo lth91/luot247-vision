@@ -1,3 +1,10 @@
+# [1.81.0](https://github.com/lth91/luot247-vision/compare/v1.80.0...v1.81.0) (2026-07-09)
+
+
+### Features
+
+* **cards:** thông báo chủ động cho người bị thẻ vàng + hiện lý do thẻ ở trang quản lý ([#117](https://github.com/lth91/luot247-vision/issues/117)) ([9d4a5eb](https://github.com/lth91/luot247-vision/commit/9d4a5ebcb38114898e046889d23f76549c8f0135))
+
 # [1.80.0](https://github.com/lth91/luot247-vision/compare/v1.79.1...v1.80.0) (2026-07-08)
 
 
