@@ -1,3 +1,10 @@
+## [1.83.2](https://github.com/lth91/luot247-vision/compare/v1.83.1...v1.83.2) (2026-07-09)
+
+
+### Performance Improvements
+
+* **submission:** bật prompt caching cho LLM kiểm duyệt (giảm ~70-90% chi phí input) ([#121](https://github.com/lth91/luot247-vision/issues/121)) ([240304c](https://github.com/lth91/luot247-vision/commit/240304c6461b04ff20883f5763f5ca9091958ac2))
+
 ## [1.83.1](https://github.com/lth91/luot247-vision/compare/v1.83.0...v1.83.1) (2026-07-09)
 
 
