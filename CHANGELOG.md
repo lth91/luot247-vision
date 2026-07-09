@@ -1,3 +1,10 @@
+## [1.83.3](https://github.com/lth91/luot247-vision/compare/v1.83.2...v1.83.3) (2026-07-09)
+
+
+### Bug Fixes
+
+* **dashboard:** cột Tin đăng đếm TIN thật (DISTINCT tiêu đề) thay vì đếm lượt chấm ([#122](https://github.com/lth91/luot247-vision/issues/122)) ([f59329d](https://github.com/lth91/luot247-vision/commit/f59329df90600b84f78ad2c1096ef2ec9c9e58b8))
+
 ## [1.83.2](https://github.com/lth91/luot247-vision/compare/v1.83.1...v1.83.2) (2026-07-09)
 
 
