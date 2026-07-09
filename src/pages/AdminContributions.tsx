@@ -177,7 +177,11 @@ const AdminContributions = () => {
                     <TableRow key={c.id}>
                       <TableCell>
                         <div className="text-sm line-clamp-1">{c.news_title}</div>
-                        <div className="text-xs text-muted-foreground line-clamp-1">{(c as any).review_note || ""}</div>
+                        {/* LÝ DO người báo viết — thông tin chính để hậu kiểm thẻ */}
+                        <div className="text-xs text-yellow-800 dark:text-yellow-300 line-clamp-2">Lý do: {c.reason}</div>
+                        {(c as any).review_note && (c as any).review_note !== "Tự xác nhận khi báo" && (
+                          <div className="text-xs text-muted-foreground line-clamp-1">{(c as any).review_note}</div>
+                        )}
                       </TableCell>
                       <TableCell className="text-xs">{nameById[c.author_id] || "—"}</TableCell>
                       <TableCell className="text-xs">{nameById[c.reporter_id] || "—"}</TableCell>
