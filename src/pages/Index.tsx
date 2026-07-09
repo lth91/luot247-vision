@@ -23,6 +23,17 @@ const Index = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   // Thành viên whitelist mới thấy nút 🚩 báo thẻ trên tin của đồng nghiệp.
   const canReport = useSubmissionAllowed(session?.user?.id) === true;
+
+  // Thông báo chủ động: tác giả có tin bị THẺ VÀNG → banner "cần sửa" trên trang chủ.
+  const [yellowCount, setYellowCount] = useState(0);
+  useEffect(() => {
+    if (!canReport) { setYellowCount(0); return; }
+    let cancelled = false;
+    (supabase as any).rpc("get_my_yellow_cards").then(({ data }: { data: unknown }) => {
+      if (!cancelled) setYellowCount(Array.isArray(data) ? data.length : 0);
+    });
+    return () => { cancelled = true; };
+  }, [canReport]);
   const [isLoading, setIsLoading] = useState(true);
   const [showReadNews, setShowReadNews] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -764,6 +775,17 @@ const Index = () => {
       />
 
       <main className="w-full max-w-2xl mx-auto px-4 py-4">
+        {/* Banner thẻ vàng: tác giả có tin cần sửa thấy ngay khi vào trang chủ */}
+        {yellowCount > 0 && (
+          <button
+            type="button"
+            onClick={() => (window.location.href = "/gui-tin?tab=yellow")}
+            className="mb-3 w-full rounded-lg border border-yellow-400 bg-yellow-100 dark:bg-yellow-900/30 px-4 py-2.5 text-left text-sm font-medium text-yellow-900 dark:text-yellow-200 hover:bg-yellow-200 dark:hover:bg-yellow-900/50"
+          >
+            🟨 Bạn có {yellowCount} tin bị thẻ vàng cần sửa — bấm để sửa ngay
+          </button>
+        )}
+
         {/* Bộ lọc chuyên mục — "TẤT CẢ" + 9 mục = 10 nút xếp lưới 2 cột đều
             (5 nút/cột) trên desktop; mobile 1 cột (mỗi nhãn 1 dòng). */}
         {!isLoading && (

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
@@ -28,6 +28,9 @@ function WordHint({ count, min, max, prefix }: { count: number; min: number; max
 
 const SubmitNews = () => {
   const navigate = useNavigate();
+  // ?tab=yellow (từ banner/badge thẻ vàng) → mở sẵn tab "Cần sửa".
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") === "yellow" ? "yellow" : "single";
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
@@ -297,7 +300,7 @@ const SubmitNews = () => {
             </p>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="single" onValueChange={(v) => { if (v === "rejects" && rejects === null) loadRejects(); }}>
+            <Tabs defaultValue={initialTab} onValueChange={(v) => { if (v === "rejects" && rejects === null) loadRejects(); }}>
               <TabsList className="grid w-full grid-cols-4 mb-5">
                 <TabsTrigger value="single">Gửi 1 tin</TabsTrigger>
                 <TabsTrigger value="bulk">Import Sheet</TabsTrigger>

@@ -25,6 +25,17 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
   const [readingMode, setReadingMode] = useState(false);
   // Chỉ email trong whitelist (hoặc admin) thấy mục "Gửi tin".
   const canSubmit = useSubmissionAllowed(user?.id);
+
+  // Badge thẻ vàng trên mục "Gửi tin" — nhắc tác giả có tin cần sửa.
+  const [yellowCount, setYellowCount] = useState(0);
+  useEffect(() => {
+    if (canSubmit !== true) { setYellowCount(0); return; }
+    let cancelled = false;
+    (supabase as any).rpc("get_my_yellow_cards").then(({ data }: { data: unknown }) => {
+      if (!cancelled) setYellowCount(Array.isArray(data) ? data.length : 0);
+    });
+    return () => { cancelled = true; };
+  }, [canSubmit]);
   
   // Use ReadingContext for synchronization and read news toggle
   const { syncToFlipMode, syncToScrollMode, shouldHideReadNews, setShouldHideReadNews } = useReadingContext();
@@ -173,7 +184,7 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                           navigate("/gui-tin");
                         }}
                       >
-                        ✍️ Gửi tin
+                        ✍️ Gửi tin{yellowCount > 0 ? ` 🟨${yellowCount}` : ""}
                       </Button>
 
                       <Button
