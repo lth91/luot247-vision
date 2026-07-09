@@ -7,6 +7,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { getRelativeTime } from "@/lib/dateUtils";
@@ -129,6 +132,19 @@ const AdminContributions = () => {
     load();
   };
 
+  // Dialog xem đầy đủ nội dung 1 thẻ.
+  const [detailCard, setDetailCard] = useState<CardRow | null>(null);
+
+  // XÓA HẲN thẻ khỏi lịch sử (chỉ thẻ KHÔNG còn hiệu lực — thẻ approved phải Hủy trước).
+  const deleteCard = async (c: CardRow) => {
+    if (!window.confirm(`Xóa hẳn thẻ của "${c.news_title.slice(0, 60)}" khỏi lịch sử?`)) return;
+    const { error } = await (supabase as any).rpc("delete_news_card", { _card_id: c.id });
+    if (error) { toast.error(error.message || "Không xóa được thẻ."); return; }
+    toast.success("Đã xóa thẻ khỏi lịch sử.");
+    setDetailCard(null);
+    load();
+  };
+
   const liftBan = async (u: BannedUser) => {
     const { error } = await (supabase as any).rpc("lift_submission_ban", { _user_id: u.id });
     if (error) { toast.error(error.message || "Không mở khóa được."); return; }
@@ -192,9 +208,12 @@ const AdminContributions = () => {
                           : c.status === "rejected" ? <span className="text-muted-foreground">❌ Đã hủy</span>
                           : <span className="text-muted-foreground">🕊️ Ân xá</span>}
                       </TableCell>
-                      <TableCell className="text-right">
-                        {c.status === "approved" && (
+                      <TableCell className="text-right whitespace-nowrap">
+                        <Button variant="ghost" size="sm" onClick={() => setDetailCard(c)}>Chi tiết</Button>
+                        {c.status === "approved" ? (
                           <Button variant="ghost" size="sm" className="text-red-600" onClick={() => revokeCard(c)}>Hủy thẻ</Button>
+                        ) : (
+                          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => deleteCard(c)}>Xóa</Button>
                         )}
                       </TableCell>
                     </TableRow>
@@ -264,6 +283,61 @@ const AdminContributions = () => {
 
       </main>
 
+      {/* Dialog xem đầy đủ nội dung thẻ */}
+      <Dialog open={!!detailCard} onOpenChange={(o) => { if (!o) setDetailCard(null); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {detailCard ? `${CARD_LABEL[detailCard.card_type]} — ` : ""}
+              {detailCard?.status === "approved" ? "Đang hiệu lực"
+                : detailCard?.status === "resolved" ? "Đã khắc phục"
+                : detailCard?.status === "rejected" ? "Đã hủy" : "Ân xá"}
+            </DialogTitle>
+          </DialogHeader>
+          {detailCard && (
+            <div className="space-y-3 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Tin bị báo</p>
+                <p className="font-medium">{detailCard.news_title}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Lý do người báo viết</p>
+                <p className="whitespace-pre-wrap">{detailCard.reason}</p>
+              </div>
+              {(detailCard as any).review_note && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Ghi chú xử lý</p>
+                  <p>{(detailCard as any).review_note}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Tác giả</p>
+                  <p>{nameById[detailCard.author_id] || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Người báo</p>
+                  <p>{nameById[detailCard.reporter_id] || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Báo lúc</p>
+                  <p>{new Date(detailCard.created_at).toLocaleString("vi-VN")}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Chốt lúc</p>
+                  <p>{(detailCard as any).reviewed_at ? new Date((detailCard as any).reviewed_at).toLocaleString("vi-VN") : "—"}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            {detailCard && detailCard.status !== "approved" && (
+              <Button variant="outline" className="text-red-600" onClick={() => deleteCard(detailCard)}>Xóa khỏi lịch sử</Button>
+            )}
+            <Button variant="ghost" onClick={() => setDetailCard(null)}>Đóng</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
