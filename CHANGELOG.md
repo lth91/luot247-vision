@@ -1,3 +1,10 @@
+# [1.82.0](https://github.com/lth91/luot247-vision/compare/v1.81.0...v1.82.0) (2026-07-09)
+
+
+### Features
+
+* **cards:** nút Chi tiết xem đầy đủ thẻ + nút Xóa thẻ đã hủy khỏi lịch sử ([#118](https://github.com/lth91/luot247-vision/issues/118)) ([bcbf2f4](https://github.com/lth91/luot247-vision/commit/bcbf2f4c9287ca6c9802f4e400dca951f2edf0a7))
+
 # [1.81.0](https://github.com/lth91/luot247-vision/compare/v1.80.0...v1.81.0) (2026-07-09)
 
 
