@@ -1,3 +1,10 @@
+# [1.84.0](https://github.com/lth91/luot247-vision/compare/v1.83.3...v1.84.0) (2026-07-12)
+
+
+### Features
+
+* **dashboard:** thêm cột Duyệt hôm qua + bỏ chữ "Tin" ở tên cột ([#123](https://github.com/lth91/luot247-vision/issues/123)) ([9344475](https://github.com/lth91/luot247-vision/commit/9344475473fe033a49ef3141ab1d021448db223d))
+
 ## [1.83.3](https://github.com/lth91/luot247-vision/compare/v1.83.2...v1.83.3) (2026-07-09)
 
 
