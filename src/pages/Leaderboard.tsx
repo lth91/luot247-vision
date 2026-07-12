@@ -18,6 +18,7 @@ interface DashRow {
   sub_today: number;
   sub_month: number;
   acc_today: number;
+  acc_yesterday: number;
   acc_month: number;
   acc_prev_month: number;
   yellow_cards: number;
@@ -37,12 +38,12 @@ interface ViewStats {
 const rate = (acc: number, sub: number) => (sub > 0 ? `${Math.round((acc / sub) * 100)}%` : "—");
 
 // Cột sắp xếp được: tên + các cột số + tỷ lệ (rate tính từ acc/sub, "—" xếp cuối).
-type SortKey = "full_name" | "sub_today" | "sub_month" | "acc_today" | "acc_month" | "acc_prev_month" | "rate" | "yellow_cards" | "red_cards";
+type SortKey = "full_name" | "sub_today" | "sub_month" | "acc_today" | "acc_yesterday" | "acc_month" | "acc_prev_month" | "rate" | "yellow_cards" | "red_cards";
 
 const sortVal = (r: DashRow, key: SortKey): number | string =>
   key === "full_name" ? (r.full_name || "") :
   key === "rate" ? (r.sub_today > 0 ? r.acc_today / r.sub_today : -1) :
-  r[key];
+  (r[key] ?? 0); // acc_yesterday có thể undefined nếu SQL mới chưa chạy
 
 const Leaderboard = () => {
   const navigate = useNavigate();
@@ -116,12 +117,13 @@ const Leaderboard = () => {
       sub_today: a.sub_today + r.sub_today,
       sub_month: a.sub_month + r.sub_month,
       acc_today: a.acc_today + r.acc_today,
+      acc_yesterday: a.acc_yesterday + (r.acc_yesterday || 0),
       acc_month: a.acc_month + r.acc_month,
       acc_prev_month: a.acc_prev_month + r.acc_prev_month,
       yellow_cards: a.yellow_cards + (r.yellow_cards || 0),
       red_cards: a.red_cards + (r.red_cards || 0),
     }),
-    { sub_today: 0, sub_month: 0, acc_today: 0, acc_month: 0, acc_prev_month: 0, yellow_cards: 0, red_cards: 0 },
+    { sub_today: 0, sub_month: 0, acc_today: 0, acc_yesterday: 0, acc_month: 0, acc_prev_month: 0, yellow_cards: 0, red_cards: 0 },
   );
 
   // Ô tiêu đề bấm được để sắp xếp; mũi tên chỉ chiều đang áp dụng.
@@ -163,13 +165,15 @@ const Leaderboard = () => {
                   {/* Ghim từng ô th (sticky trên thead không ổn định giữa các trình duyệt) */}
                   <TableHeader className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-card [&_th]:shadow-[inset_0_-1px_0_hsl(var(--border))]">
                     <TableRow>
-                      {/* Tiêu đề cột cho phép xuống 2 dòng để 10 cột vừa màn desktop, khỏi cuộn ngang */}
+                      {/* Tiêu đề cột cho phép xuống 2 dòng để 11 cột vừa màn desktop, khỏi cuộn ngang.
+                          Tên cột theo yêu cầu sếp 09/07: bỏ chữ "Tin", "đăng" → "Up", thêm "Duyệt hôm qua". */}
                       <SortHead label="Tên" k="full_name" className="whitespace-nowrap [&_button]:justify-start" />
                       <TableHead className="whitespace-nowrap">Email đăng ký</TableHead>
-                      <SortHead label="Tin duyệt hôm nay" k="acc_today" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
-                      <SortHead label="Tin đăng hôm nay" k="sub_today" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
-                      <SortHead label="Tin duyệt tháng này" k="acc_month" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
-                      <SortHead label="Tin duyệt tháng trước" k="acc_prev_month" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
+                      <SortHead label="Duyệt hôm nay" k="acc_today" className="text-right text-xs leading-tight px-2 min-w-[70px]" />
+                      <SortHead label="Up hôm nay" k="sub_today" className="text-right text-xs leading-tight px-2 min-w-[70px]" />
+                      <SortHead label="Duyệt hôm qua" k="acc_yesterday" className="text-right text-xs leading-tight px-2 min-w-[70px]" />
+                      <SortHead label="Duyệt tháng này" k="acc_month" className="text-right text-xs leading-tight px-2 min-w-[70px]" />
+                      <SortHead label="Duyệt tháng trước" k="acc_prev_month" className="text-right text-xs leading-tight px-2 min-w-[70px]" />
                       <SortHead label="Tỷ lệ duyệt hôm nay" k="rate" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
                       <SortHead label="Thẻ đỏ" k="red_cards" className="text-right text-xs leading-tight px-2 min-w-[52px]" />
                       <SortHead label="Thẻ vàng" k="yellow_cards" className="text-right text-xs leading-tight px-2 min-w-[52px]" />
@@ -185,6 +189,7 @@ const Leaderboard = () => {
                         <TableCell className="text-muted-foreground text-xs whitespace-nowrap max-w-[220px] truncate" title={r.email}>{r.email}</TableCell>
                         <TableCell className="text-right px-2">{r.acc_today}</TableCell>
                         <TableCell className="text-right px-2">{r.sub_today}</TableCell>
+                        <TableCell className="text-right px-2">{r.acc_yesterday ?? 0}</TableCell>
                         <TableCell className="text-right px-2 font-semibold">{r.acc_month}</TableCell>
                         <TableCell className="text-right px-2 text-muted-foreground">{r.acc_prev_month}</TableCell>
                         <TableCell className="text-right px-2">{rate(r.acc_today, r.sub_today)}</TableCell>
@@ -197,6 +202,7 @@ const Leaderboard = () => {
                       <TableCell />
                       <TableCell className="text-right px-2">{sum.acc_today}</TableCell>
                       <TableCell className="text-right px-2">{sum.sub_today}</TableCell>
+                      <TableCell className="text-right px-2">{sum.acc_yesterday}</TableCell>
                       <TableCell className="text-right px-2">{sum.acc_month}</TableCell>
                       <TableCell className="text-right px-2">{sum.acc_prev_month}</TableCell>
                       <TableCell className="text-right px-2">{rate(sum.acc_today, sum.sub_today)}</TableCell>
