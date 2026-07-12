@@ -131,7 +131,7 @@ const Leaderboard = () => {
     <TableHead className={className}>
       <button type="button" onClick={() => toggleSort(k)}
         className="w-full inline-flex items-center justify-end gap-0.5 hover:text-foreground">
-        <span>{label}</span>
+        <span className="whitespace-pre-line">{label}</span>
         <span className="text-[10px] shrink-0">{sort?.key === k ? (sort.dir === "desc" ? "▼" : "▲") : "⇅"}</span>
       </button>
     </TableHead>
@@ -169,12 +169,14 @@ const Leaderboard = () => {
                           Tên cột theo yêu cầu sếp 09/07: bỏ chữ "Tin", "đăng" → "Up", thêm "Duyệt hôm qua". */}
                       <SortHead label="Tên" k="full_name" className="whitespace-nowrap [&_button]:justify-start" />
                       <TableHead className="whitespace-nowrap">Email đăng ký</TableHead>
-                      <SortHead label="Duyệt hôm nay" k="acc_today" className="text-right text-xs leading-tight px-2 min-w-[70px]" />
-                      <SortHead label="Up hôm nay" k="sub_today" className="text-right text-xs leading-tight px-2 min-w-[70px]" />
-                      <SortHead label="Duyệt hôm qua" k="acc_yesterday" className="text-right text-xs leading-tight px-2 min-w-[70px]" />
-                      <SortHead label="Duyệt tháng này" k="acc_month" className="text-right text-xs leading-tight px-2 min-w-[70px]" />
-                      <SortHead label="Duyệt tháng trước" k="acc_prev_month" className="text-right text-xs leading-tight px-2 min-w-[70px]" />
-                      <SortHead label="Tỷ lệ duyệt hôm nay" k="rate" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
+                      {/* \n = điểm ngắt dòng cố định (SortHead render whitespace-pre-line):
+                          "hôm nay"/"hôm qua"/"tháng này" luôn nguyên cụm trên 1 dòng */}
+                      <SortHead label={"Duyệt\nhôm nay"} k="acc_today" className="text-right text-xs leading-tight px-2 min-w-[70px]" />
+                      <SortHead label={"Up\nhôm nay"} k="sub_today" className="text-right text-xs leading-tight px-2 min-w-[70px]" />
+                      <SortHead label={"Duyệt\nhôm qua"} k="acc_yesterday" className="text-right text-xs leading-tight px-2 min-w-[70px]" />
+                      <SortHead label={"Duyệt\ntháng này"} k="acc_month" className="text-right text-xs leading-tight px-2 min-w-[70px]" />
+                      <SortHead label={"Duyệt\ntháng trước"} k="acc_prev_month" className="text-right text-xs leading-tight px-2 min-w-[70px]" />
+                      <SortHead label={"Tỷ lệ duyệt\nhôm nay"} k="rate" className="text-right text-xs leading-tight px-2 min-w-[80px]" />
                       <SortHead label="Thẻ đỏ" k="red_cards" className="text-right text-xs leading-tight px-2 min-w-[52px]" />
                       <SortHead label="Thẻ vàng" k="yellow_cards" className="text-right text-xs leading-tight px-2 min-w-[52px]" />
                     </TableRow>
