@@ -1,3 +1,10 @@
+# [1.88.0](https://github.com/lth91/luot247-vision/compare/v1.87.0...v1.88.0) (2026-07-14)
+
+
+### Features
+
+* **crawl:** PR4 cron tự động + bảo trì hàng đợi + giám sát Telegram ([#128](https://github.com/lth91/luot247-vision/issues/128)) ([f60b695](https://github.com/lth91/luot247-vision/commit/f60b6958524bc0fc58927dc7de9923bec6bc75da))
+
 # [1.87.0](https://github.com/lth91/luot247-vision/compare/v1.86.0...v1.87.0) (2026-07-14)
 
 
