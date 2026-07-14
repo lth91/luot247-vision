@@ -1,3 +1,10 @@
+# [1.91.0](https://github.com/lth91/luot247-vision/compare/v1.90.0...v1.91.0) (2026-07-14)
+
+
+### Features
+
+* **crawl:** mode discover_feeds — dò RSS của danh sách domain từ egress Supabase ([#131](https://github.com/lth91/luot247-vision/issues/131)) ([80cb216](https://github.com/lth91/luot247-vision/commit/80cb216065d474088c3ac514c3bc4533e1671e0e))
+
 # [1.90.0](https://github.com/lth91/luot247-vision/compare/v1.89.0...v1.90.0) (2026-07-14)
 
 
