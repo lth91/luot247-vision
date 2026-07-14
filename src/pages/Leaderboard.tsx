@@ -26,6 +26,16 @@ interface DashRow {
   banned: boolean;
 }
 
+// Công duyệt tin AI — từ RPC get_review_dashboard (đếm review_log theo whitelist).
+interface ReviewRow {
+  full_name: string | null;
+  email: string;
+  duyet_today: number;
+  loai_today: number;
+  duyet_month: number;
+  loai_month: number;
+}
+
 interface ViewStats {
   yesterday: number;
   today: number;
@@ -52,6 +62,8 @@ const Leaderboard = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [rows, setRows] = useState<DashRow[]>([]);
   const [views, setViews] = useState<ViewStats | null>(null);
+  const [reviewRows, setReviewRows] = useState<ReviewRow[]>([]);
+  const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   // null = giữ thứ tự mặc định từ RPC (tin duyệt tháng này giảm dần).
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" } | null>(null);
@@ -100,13 +112,21 @@ const Leaderboard = () => {
     (async () => {
       setIsLoading(true);
       // RPC mới hơn types.ts auto-generated → cast any (pattern chung của repo).
-      const [dash, stats] = await Promise.all([
+      const [dash, stats, review, pending] = await Promise.all([
         (supabase as any).rpc("get_submission_dashboard"),
         (supabase as any).rpc("get_view2_stats"),
+        (supabase as any).rpc("get_review_dashboard"),
+        (supabase as any)
+          .from("news")
+          .select("id", { count: "exact", head: true })
+          .eq("review_status", "pending"),
       ]);
       setRows((dash.data as DashRow[]) ?? []);
       const s = Array.isArray(stats.data) ? stats.data[0] : stats.data;
       setViews((s as ViewStats) ?? null);
+      // RPC công duyệt có thể chưa migrate → lỗi thì ẩn bảng, không vỡ trang.
+      setReviewRows(review.error ? [] : ((review.data as ReviewRow[]) ?? []));
+      setPendingCount(pending.error ? null : (pending.count ?? 0));
       setIsLoading(false);
     })();
   }, [allowed]);
@@ -217,6 +237,73 @@ const Leaderboard = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* ===== Công duyệt tin AI: ai duyệt/loại bao nhiêu (từ review_log) ===== */}
+        {reviewRows.length > 0 && (() => {
+          const active = reviewRows.filter((r) => r.duyet_month + r.loai_month > 0);
+          const idle = reviewRows.length - active.length;
+          const rsum = active.reduce(
+            (a, r) => ({
+              duyet_today: a.duyet_today + r.duyet_today,
+              loai_today: a.loai_today + r.loai_today,
+              duyet_month: a.duyet_month + r.duyet_month,
+              loai_month: a.loai_month + r.loai_month,
+            }),
+            { duyet_today: 0, loai_today: 0, duyet_month: 0, loai_month: 0 },
+          );
+          return (
+            <Card>
+              <CardContent className="p-0">
+                <div className="flex items-center justify-between px-4 pt-4">
+                  <h2 className="font-bold">🤖 Công duyệt tin AI</h2>
+                  {pendingCount !== null && (
+                    <span className={`text-xs font-medium rounded px-2 py-1 ${pendingCount > 300 ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200" : "bg-muted text-muted-foreground"}`}>
+                      Hàng đợi còn {pendingCount} tin
+                    </span>
+                  )}
+                </div>
+                {active.length === 0 ? (
+                  <p className="text-sm text-muted-foreground px-4 py-6">
+                    Tháng này chưa ai duyệt tin AI. Nhân viên vào menu → 🤖 Duyệt tin AI để bắt đầu.
+                  </p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Tên</TableHead>
+                        <TableHead className="text-right text-xs leading-tight px-2 whitespace-pre-line">{"Duyệt\nhôm nay"}</TableHead>
+                        <TableHead className="text-right text-xs leading-tight px-2 whitespace-pre-line">{"Loại\nhôm nay"}</TableHead>
+                        <TableHead className="text-right text-xs leading-tight px-2 whitespace-pre-line">{"Duyệt\ntháng này"}</TableHead>
+                        <TableHead className="text-right text-xs leading-tight px-2 whitespace-pre-line">{"Loại\ntháng này"}</TableHead>
+                        <TableHead className="text-right text-xs leading-tight px-2 whitespace-pre-line">{"Tỷ lệ\nduyệt"}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {active.map((r) => (
+                        <TableRow key={r.email}>
+                          <TableCell className="font-medium whitespace-nowrap" title={r.email}>{r.full_name || r.email}</TableCell>
+                          <TableCell className="text-right px-2">{r.duyet_today}</TableCell>
+                          <TableCell className="text-right px-2 text-muted-foreground">{r.loai_today}</TableCell>
+                          <TableCell className="text-right px-2 font-semibold">{r.duyet_month}</TableCell>
+                          <TableCell className="text-right px-2 text-muted-foreground">{r.loai_month}</TableCell>
+                          <TableCell className="text-right px-2">{rate(r.duyet_month, r.duyet_month + r.loai_month)}</TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="border-t-2 font-bold bg-muted/40">
+                        <TableCell>TỔNG CỘNG{idle > 0 ? ` (${idle} người chưa duyệt)` : ""}</TableCell>
+                        <TableCell className="text-right px-2">{rsum.duyet_today}</TableCell>
+                        <TableCell className="text-right px-2">{rsum.loai_today}</TableCell>
+                        <TableCell className="text-right px-2">{rsum.duyet_month}</TableCell>
+                        <TableCell className="text-right px-2">{rsum.loai_month}</TableCell>
+                        <TableCell className="text-right px-2">{rate(rsum.duyet_month, rsum.duyet_month + rsum.loai_month)}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Khối thống kê lượt xem toàn site (nền vàng như mẫu của sếp) */}
         {views && (
