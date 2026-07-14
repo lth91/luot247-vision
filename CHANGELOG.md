@@ -1,3 +1,10 @@
+# [1.86.0](https://github.com/lth91/luot247-vision/compare/v1.85.1...v1.86.0) (2026-07-14)
+
+
+### Features
+
+* **review:** PR2 hàng đợi duyệt tin AI — RPC duyệt/loại + bảng công duyệt ([#126](https://github.com/lth91/luot247-vision/issues/126)) ([bfcfe49](https://github.com/lth91/luot247-vision/commit/bfcfe49701275260c30c103b908767f89772aa57))
+
 ## [1.85.1](https://github.com/lth91/luot247-vision/compare/v1.85.0...v1.85.1) (2026-07-14)
 
 
