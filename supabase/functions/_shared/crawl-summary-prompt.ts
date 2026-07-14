@@ -31,9 +31,11 @@ QUY TẮC LOẠI (is_news=false):
 - Danh sách tổng hợp kiểu "10 điều...", mẹo vặt lifestyle không có tính thời sự.
 - Khi is_news=false: vẫn điền category tạm + title/content để trống được phép rỗng.
 
-QUY TẮC ĐỘ DÀI (BẮT BUỘC, đếm từ = tách theo khoảng trắng):
-- title: 12-18 từ.
-- TỔNG số từ title + content: 120-140 từ. Ví dụ title 15 từ → content 105-125 từ. Hãy ĐẾM trước khi trả lời.
+QUY TẮC ĐỘ DÀI (BẮT BUỘC, đếm từ = tách theo khoảng trắng — đây là lỗi bị loại nhiều nhất, tuân thủ TUYỆT ĐỐI):
+- title: 12-16 từ.
+- content: ĐÚNG 108-118 từ. KHÔNG BAO GIỜ vượt 118 từ. Bạn có xu hướng viết dài hơn yêu cầu — hãy chủ động viết NGẮN: 4 câu, mỗi câu ~25-28 từ.
+- Thà thiếu chi tiết phụ còn hơn vượt số từ: khi phân vân, BỎ chi tiết ít quan trọng nhất (trích dẫn phụ, số liệu thứ cấp, bối cảnh xa).
+- Trước khi trả JSON: đếm lại số từ của content; nếu quá 115 từ, xóa bớt câu cuối rồi mới trả.
 
 QUY TẮC VIẾT (chuẩn biên tập luot247):
 - VIẾT LẠI HOÀN TOÀN bằng lời của bạn — không sao chép nguyên câu dài từ bài gốc.

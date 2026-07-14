@@ -228,6 +228,22 @@ function countWords(s: string): number {
   return s.trim().split(/\s+/).filter(Boolean).length;
 }
 
+// Haiku hay viết lố vài chục từ dù prompt đã ép — cắt NGUYÊN CÂU từ cuối lên
+// cho tới khi tổng (title+content) lọt trần. Câu cuối bản tin thường là chi
+// tiết phụ nên cắt được; nếu cắt xong tụt dưới sàn thì trả nguyên bản để
+// caller retry/needs_edit.
+function trimToFit(title: string, content: string): string {
+  const tw = countWords(title);
+  if (tw + countWords(content) <= TOTAL_MAX) return content;
+  const sentences = content.split(/(?<=[.!?…])\s+/);
+  while (sentences.length > 1 && tw + countWords(sentences.join(" ")) > TOTAL_MAX) {
+    sentences.pop();
+  }
+  const trimmed = sentences.join(" ");
+  const total = tw + countWords(trimmed);
+  return total >= TOTAL_MIN && total <= TOTAL_MAX ? trimmed : content;
+}
+
 interface LlmResult {
   is_news: boolean;
   reject_reason: string;
@@ -453,14 +469,20 @@ async function handle(req: Request): Promise<Response> {
           if (!r) { stats.errors.push(`${src.name}: LLM trả về không parse được`); continue; }
           if (!r.is_news) { stats.rejectedNonNews++; continue; }
 
+          // Vượt trần → cắt câu cuối (rẻ, không tốn LLM). Vẫn lệch → retry 1 lần
+          // với feedback, cắt tiếp; cuối cùng mới đánh needs_edit.
+          r.content = trimToFit(r.title, r.content);
           let tw = countWords(r.title), total = tw + countWords(r.content);
           let needsEdit = false;
           if (tw < TITLE_MIN || tw > TITLE_MAX || total < TOTAL_MIN || total > TOTAL_MAX) {
             if (llmCalls < maxLlmCalls) {
               llmCalls++; stats.llmCalls++;
-              const fb = `\n\nLƯU Ý RETRY: bản trước có tiêu đề ${tw} từ, tổng ${total} từ — KHÔNG đạt chuẩn (tiêu đề ${TITLE_MIN}-${TITLE_MAX}, tổng ${TOTAL_MIN}-${TOTAL_MAX}). Viết lại và ĐẾM KỸ số từ.`;
+              const fb = `\n\nLƯU Ý RETRY: bản trước có tiêu đề ${tw} từ, tổng ${total} từ — KHÔNG đạt chuẩn (tiêu đề ${TITLE_MIN}-${TITLE_MAX}, tổng ${TOTAL_MIN}-${TOTAL_MAX}). Viết lại NGẮN HƠN HẲN và đếm kỹ số từ.`;
               const r2 = await rewriteWithClaude(origTitle, content, publishedAt.slice(0, 10), anthropicKey, supabase, fb);
-              if (r2 && r2.is_news && r2.title && r2.content) r = r2;
+              if (r2 && r2.is_news && r2.title && r2.content) {
+                r2.content = trimToFit(r2.title, r2.content);
+                r = r2;
+              }
             }
             tw = countWords(r.title); total = tw + countWords(r.content);
             if (tw < TITLE_MIN || tw > TITLE_MAX || total < TOTAL_MIN || total > TOTAL_MAX) {
