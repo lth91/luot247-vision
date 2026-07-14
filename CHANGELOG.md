@@ -1,3 +1,10 @@
+# [1.85.0](https://github.com/lth91/luot247-vision/compare/v1.84.0...v1.85.0) (2026-07-14)
+
+
+### Features
+
+* **crawl:** PR1 pipeline AI crawl tin tổng hợp — edge crawl-news + bảng nguồn + hàng đợi duyệt ([#124](https://github.com/lth91/luot247-vision/issues/124)) ([269a4a1](https://github.com/lth91/luot247-vision/commit/269a4a103e9347a8a39e49329ca13222507911ec))
+
 # [1.84.0](https://github.com/lth91/luot247-vision/compare/v1.83.3...v1.84.0) (2026-07-12)
 
 
