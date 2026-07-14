@@ -1,3 +1,10 @@
+# [1.90.0](https://github.com/lth91/luot247-vision/compare/v1.89.0...v1.90.0) (2026-07-14)
+
+
+### Features
+
+* **dashboard:** PR6 bảng Công duyệt tin AI trong /bang-xep-hang ([#130](https://github.com/lth91/luot247-vision/issues/130)) ([d172455](https://github.com/lth91/luot247-vision/commit/d1724554e6ceb1fddc9c9f5458b63e5c621451a9))
+
 # [1.89.0](https://github.com/lth91/luot247-vision/compare/v1.88.0...v1.89.0) (2026-07-14)
 
 
