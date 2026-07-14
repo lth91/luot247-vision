@@ -192,6 +192,17 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                         className="justify-start"
                         onClick={() => {
                           setOpen(false);
+                          navigate("/duyet-tin-ai");
+                        }}
+                      >
+                        🤖 Duyệt tin AI
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        className="justify-start"
+                        onClick={() => {
+                          setOpen(false);
                           navigate("/bang-xep-hang");
                         }}
                       >

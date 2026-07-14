@@ -23,6 +23,7 @@ import SubmitNews from "./pages/SubmitNews";
 import MyContribution from "./pages/MyContribution";
 import Leaderboard from "./pages/Leaderboard";
 import AdminContributions from "./pages/AdminContributions";
+import ReviewQueue from "./pages/ReviewQueue";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
@@ -85,6 +86,7 @@ const App = () => {
                 <Route path="/diem-cua-toi" element={<MyContribution />} />
                 <Route path="/bang-xep-hang" element={<Leaderboard />} />
                 <Route path="/quan-ly-dong-gop" element={<AdminContributions />} />
+                <Route path="/duyet-tin-ai" element={<ReviewQueue />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
