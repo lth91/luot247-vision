@@ -39,6 +39,15 @@ interface PendingNews {
   } | null;
 }
 
+interface HistoryRow {
+  created_at: string;
+  reviewer_name: string;
+  action: "approve" | "approve_edited" | "reject";
+  news_title: string;
+  reason: string | null;
+  news_id: string | null;
+}
+
 const REJECT_REASONS = [
   "Trùng tin đã có",
   "Sai chuyên mục nghiêm trọng",
@@ -71,6 +80,11 @@ const ReviewQueue = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState<string>("all");
   const [busyId, setBusyId] = useState<string | null>(null);
+  // view: hàng đợi hay lịch sử đã xử lý
+  const [view, setView] = useState<"queue" | "history">("queue");
+  const [history, setHistory] = useState<HistoryRow[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [onlyRejected, setOnlyRejected] = useState(false);
 
   // Dialog Sửa
   const [editItem, setEditItem] = useState<PendingNews | null>(null);
@@ -128,6 +142,21 @@ const ReviewQueue = () => {
   useEffect(() => {
     if (allowed === true) loadQueue();
   }, [allowed]);
+
+  const loadHistory = async (rejectedOnly: boolean) => {
+    setHistoryLoading(true);
+    const { data, error } = await (supabase as any).rpc("get_review_history", {
+      _limit: 150,
+      _only_rejected: rejectedOnly,
+    });
+    if (error) toast.error("Không tải được lịch sử: " + error.message);
+    else setHistory((data as HistoryRow[]) ?? []);
+    setHistoryLoading(false);
+  };
+
+  useEffect(() => {
+    if (view === "history" && allowed === true) loadHistory(onlyRejected);
+  }, [view, onlyRejected, allowed]);
 
   const counts = useMemo(() => {
     const m: Record<string, number> = { all: rows.length };
@@ -214,12 +243,69 @@ const ReviewQueue = () => {
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h1 className="text-xl font-bold">🤖 Duyệt tin AI</h1>
-          <Button variant="outline" size="sm" onClick={loadQueue} disabled={isLoading}>
-            {isLoading ? "Đang tải..." : "↻ Tải lại"}
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant={view === "queue" ? "default" : "outline"} onClick={() => setView("queue")}>
+              Hàng đợi ({counts.all ?? 0})
+            </Button>
+            <Button size="sm" variant={view === "history" ? "default" : "outline"} onClick={() => setView("history")}>
+              📜 Lịch sử
+            </Button>
+            {view === "queue" && (
+              <Button variant="outline" size="sm" onClick={loadQueue} disabled={isLoading}>
+                {isLoading ? "Đang tải..." : "↻"}
+              </Button>
+            )}
+          </div>
         </div>
 
+        {/* ===== VIEW LỊCH SỬ: ai duyệt/loại tin nào, lý do ===== */}
+        {view === "history" && (
+          <div className="space-y-3">
+            <div className="flex gap-1.5">
+              <Button size="sm" variant={onlyRejected ? "outline" : "default"} onClick={() => setOnlyRejected(false)}>
+                Tất cả
+              </Button>
+              <Button size="sm" variant={onlyRejected ? "default" : "outline"} onClick={() => setOnlyRejected(true)}>
+                Chỉ tin bị loại
+              </Button>
+            </div>
+            {historyLoading ? (
+              <p className="text-sm text-muted-foreground py-10 text-center">Đang tải lịch sử...</p>
+            ) : history.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-10 text-center">Chưa có lượt duyệt/loại nào.</p>
+            ) : (
+              <div className="space-y-2">
+                {history.map((h, i) => (
+                  <Card key={i}>
+                    <CardContent className="p-3 space-y-1">
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                        {h.action === "reject"
+                          ? <Badge variant="destructive">🗑 Loại</Badge>
+                          : h.action === "approve_edited"
+                            ? <Badge className="bg-blue-600 hover:bg-blue-600">✏️ Duyệt có sửa</Badge>
+                            : <Badge className="bg-green-600 hover:bg-green-600">✅ Duyệt</Badge>}
+                        <span className="font-medium">{h.reviewer_name}</span>
+                        <span className="text-muted-foreground">
+                          {new Date(h.created_at).toLocaleString("vi-VN", {
+                            timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit",
+                            hour: "2-digit", minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-sm leading-snug">{h.news_title}</p>
+                      {h.action === "reject" && h.reason && (
+                        <p className="text-xs text-red-700 dark:text-red-400">Lý do: {h.reason}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Tab chuyên mục — bấm để lọc; badge = số tin chờ */}
+        {view === "queue" && (
         <div className="flex flex-wrap gap-1.5">
           <Button size="sm" variant={tab === "all" ? "default" : "outline"} onClick={() => setTab("all")}>
             Tất cả ({counts.all ?? 0})
@@ -233,7 +319,9 @@ const ReviewQueue = () => {
           ))}
         </div>
 
-        {isLoading ? (
+        )}
+
+        {view === "queue" && (isLoading ? (
           <p className="text-sm text-muted-foreground py-10 text-center">Đang tải hàng đợi...</p>
         ) : visible.length === 0 ? (
           <p className="text-sm text-muted-foreground py-10 text-center">
@@ -288,7 +376,7 @@ const ReviewQueue = () => {
               );
             })}
           </div>
-        )}
+        ))}
 
         {/* ===== Dialog Sửa & Duyệt ===== */}
         <Dialog open={!!editItem} onOpenChange={(o) => !o && setEditItem(null)}>
