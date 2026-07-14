@@ -367,6 +367,62 @@ async function handle(req: Request): Promise<Response> {
     return json({ ok: true, mode: "check_sources", total: results.length, bad, results });
   }
 
+  // ===== MODE: discover_feeds — dò RSS của danh sách domain bất kỳ =====
+  // (khảo sát nguồn mới từ egress Supabase; không đụng DB, không LLM)
+  // Cách dò mỗi domain: tải trang chủ → gom ứng viên từ <link rel=alternate
+  // type=rss+xml>, các href chứa "rss/feed", + các path phổ biến → fetch thử
+  // từng ứng viên, đếm <item>/<entry>. Trả tối đa 3 feed sống/domain.
+  if (body?.mode === "discover_feeds") {
+    const urls: string[] = Array.isArray(body.urls) ? (body.urls as unknown[]).map(String) : [];
+    if (urls.length === 0) return json({ error: "Thiếu urls[]" }, 400);
+    const started = Date.now();
+    const results: unknown[] = [];
+    const CONC = 8;
+    for (let i = 0; i < urls.length; i += CONC) {
+      if (Date.now() - started > 130000) {
+        results.push(...urls.slice(i).map((u) => ({ domain: u, error: "hết thời gian — gọi lại với phần còn thiếu" })));
+        break;
+      }
+      const batch = urls.slice(i, i + CONC);
+      await Promise.all(batch.map(async (raw) => {
+        try {
+          const home = new URL(raw.trim());
+          const res = await fetchWithTimeout(home.toString(), 12000);
+          const html = await res.text();
+          const cands = new Set<string>();
+          for (const m of html.match(/<link[^>]+type=["']application\/(?:rss|atom)\+xml["'][^>]*>/gi) ?? []) {
+            const href = m.match(/href=["']([^"']+)["']/i)?.[1];
+            if (href) { try { cands.add(new URL(href, home).toString()); } catch { /* href hỏng */ } }
+          }
+          const aRe = /href=["']([^"']*(?:\.rss|\/rss\b|\/feed\b)[^"']*)["']/gi;
+          let am: RegExpExecArray | null; let n = 0;
+          while ((am = aRe.exec(html)) !== null && n < 8) {
+            try { cands.add(new URL(am[1], home).toString()); n++; } catch { /* bỏ */ }
+          }
+          for (const p of ["/rss", "/rss.xml", "/feed", "/rss/home.rss", "/rss/tin-moi-nhat.rss", "/rss/trang-chu.rss"]) {
+            cands.add(new URL(p, home.origin).toString());
+          }
+          const feeds: { url: string; items: number }[] = [];
+          for (const c of Array.from(cands).slice(0, 10)) {
+            try {
+              const r = await fetchWithTimeout(c, 8000);
+              if (!r.ok) continue;
+              const t = await r.text();
+              const items = (t.match(/<item[\s>]/gi) ?? []).length + (t.match(/<entry[\s>]/gi) ?? []).length;
+              if (items > 0) feeds.push({ url: c, items });
+              if (feeds.length >= 3) break;
+            } catch { /* ứng viên chết, thử cái sau */ }
+          }
+          results.push({ domain: home.hostname, http: res.status, feeds });
+        } catch (e) {
+          results.push({ domain: raw, error: (e as Error).message.slice(0, 100) });
+        }
+      }));
+    }
+    const withFeeds = (results as { feeds?: unknown[] }[]).filter((r) => (r.feeds?.length ?? 0) > 0).length;
+    return json({ ok: true, mode: "discover_feeds", total: urls.length, with_feeds: withFeeds, results });
+  }
+
   // ===== MODE: crawl =====
   if (!anthropicKey) return json({ error: "ANTHROPIC_API_KEY chưa được set" }, 500);
 
