@@ -445,7 +445,7 @@ async function handle(req: Request): Promise<Response> {
         const tier = Number(w.tier) >= 1 && Number(w.tier) <= 3 ? Number(w.tier) : 2;
         try {
           const home = new URL(baseUrl);
-          const res = await fetchWithTimeout(home.toString(), 12000);
+          const res = await fetchWithTimeout(home.toString(), 15000);
           const html = await res.text();
           const cands = new Set<string>();
           for (const m of html.match(/<link[^>]+type=["']application\/(?:rss|atom)\+xml["'][^>]*>/gi) ?? []) {
@@ -457,11 +457,31 @@ async function handle(req: Request): Promise<Response> {
           while ((am = aRe.exec(html)) !== null && n < 12) {
             try { cands.add(new URL(am[1], home).toString()); n++; } catch { /* bỏ */ }
           }
-          for (const p of ["/rss", "/rss.xml", "/feed", "/rss/home.rss", "/rss/tin-moi-nhat.rss", "/rss/trang-chu.rss"]) {
+          // v2: nhiều báo VN (Báo Tin Tức, Dân Việt, Znews...) không khai feed
+          // trên trang chủ mà gom vào TRANG MỤC LỤC RSS riêng — quét thêm.
+          for (const idx of ["/rss", "/rss.html", "/rss.htm"]) {
+            try {
+              const ir = await fetchWithTimeout(new URL(idx, home.origin).toString(), 10000);
+              if (!ir.ok) continue;
+              const ih = await ir.text();
+              const iRe = /href=["']([^"']*\.rss[^"']*)["']/gi;
+              let im: RegExpExecArray | null; let k = 0;
+              while ((im = iRe.exec(ih)) !== null && k < 20) {
+                try { cands.add(new URL(im[1], home).toString()); k++; } catch { /* bỏ */ }
+              }
+              if (k > 0) break; // trang mục lục đầu tiên có feed là đủ
+            } catch { /* không có trang mục lục này */ }
+          }
+          for (const p of [
+            "/rss", "/rss.xml", "/feed",
+            "/rss/home.rss", "/rss/tin-moi-nhat.rss", "/rss/trang-chu.rss",
+            "/rss/thoi-su.rss", "/rss/tin-moi.rss", "/rss/tin-tuc.rss",
+            "/thoi-su.rss", "/tin-moi-nhat.rss", "/trang-chu.rss", "/home.rss",
+          ]) {
             cands.add(new URL(p, home.origin).toString());
           }
           const feeds: { url: string; items: number }[] = [];
-          for (const c of Array.from(cands).filter((u) => !URL_NOISE_RE.test(u)).slice(0, 12)) {
+          for (const c of Array.from(cands).filter((u) => !URL_NOISE_RE.test(u)).slice(0, 18)) {
             try {
               const r = await fetchWithTimeout(c, 8000);
               if (!r.ok) continue;
