@@ -1,3 +1,10 @@
+## [1.85.1](https://github.com/lth91/luot247-vision/compare/v1.85.0...v1.85.1) (2026-07-14)
+
+
+### Bug Fixes
+
+* **crawl:** trị bệnh viết lố số từ — ép chỉ tiêu content 108-118 + cắt câu cuối tự động ([#125](https://github.com/lth91/luot247-vision/issues/125)) ([f5a598a](https://github.com/lth91/luot247-vision/commit/f5a598a26a58092d31dc10015aac210fa40090de))
+
 # [1.85.0](https://github.com/lth91/luot247-vision/compare/v1.84.0...v1.85.0) (2026-07-14)
 
 
