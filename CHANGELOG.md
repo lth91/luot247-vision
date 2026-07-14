@@ -1,3 +1,10 @@
+## [1.92.1](https://github.com/lth91/luot247-vision/compare/v1.92.0...v1.92.1) (2026-07-14)
+
+
+### Bug Fixes
+
+* **crawl:** bộ dò RSS v2 — quét thêm trang mục lục /rss(.html|.htm) + mở rộng path ([#134](https://github.com/lth91/luot247-vision/issues/134)) ([31c7438](https://github.com/lth91/luot247-vision/commit/31c74384f91231ead460cdda7f9137480a0b1c83))
+
 # [1.92.0](https://github.com/lth91/luot247-vision/compare/v1.91.0...v1.92.0) (2026-07-14)
 
 
