@@ -35,6 +35,7 @@ export const NewsItem = ({
   id,
   title,
   description,
+  url,
   createdAt,
   isAuthenticated,
   isLast = false,
@@ -170,6 +171,23 @@ export const NewsItem = ({
                   </p>
                 ))}
             </div>
+          )}
+
+          {/* Tin AI crawl có link bài gốc — ghi nguồn theo domain (bản quyền:
+              chỉ tóm tắt + dẫn link). Tin gửi tay không có url → không render. */}
+          {url && (
+            <p className="text-xs text-muted-foreground mb-2 -mt-1">
+              Theo{" "}
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-foreground"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {(() => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return "nguồn"; } })()} ↗
+              </a>
+            </p>
           )}
 
           <div className="flex items-center justify-between">
