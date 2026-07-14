@@ -31,3 +31,5 @@ verify_jwt = false
 verify_jwt = false
 [functions.crawl-news]
 verify_jwt = false
+[functions.crawl-health-check]
+verify_jwt = false
