@@ -1,3 +1,10 @@
+# [1.92.0](https://github.com/lth91/luot247-vision/compare/v1.91.0...v1.92.0) (2026-07-14)
+
+
+### Features
+
+* **crawl:** mode add_sources — dò RSS rồi tự seed crawl_sources (chỉ feed sống) ([#133](https://github.com/lth91/luot247-vision/issues/133)) ([c9d4337](https://github.com/lth91/luot247-vision/commit/c9d433789adfd4f4ab14ec33903529892bde929d))
+
 # [1.91.0](https://github.com/lth91/luot247-vision/compare/v1.90.0...v1.91.0) (2026-07-14)
 
 
