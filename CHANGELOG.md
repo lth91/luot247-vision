@@ -1,3 +1,10 @@
+# [1.89.0](https://github.com/lth91/luot247-vision/compare/v1.88.0...v1.89.0) (2026-07-14)
+
+
+### Features
+
+* **feed:** PR5 giới hạn feed trang chủ 14 ngày + ghi nguồn bài gốc ([#129](https://github.com/lth91/luot247-vision/issues/129)) ([56e50e9](https://github.com/lth91/luot247-vision/commit/56e50e9e2d5fd11a8629f5a7df617749d940626e))
+
 # [1.88.0](https://github.com/lth91/luot247-vision/compare/v1.87.0...v1.88.0) (2026-07-14)
 
 
