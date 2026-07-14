@@ -423,6 +423,88 @@ async function handle(req: Request): Promise<Response> {
     return json({ ok: true, mode: "discover_feeds", total: urls.length, with_feeds: withFeeds, results });
   }
 
+  // ===== MODE: add_sources — dò feed của từng trang rồi TỰ SEED crawl_sources =====
+  // body: {mode:"add_sources", sources:[{name, base_url, default_category, tier}]}
+  // Mỗi trang: dò RSS như discover_feeds → lấy tối đa 3 feed sống → INSERT
+  // (ON CONFLICT list_url bỏ qua). Chỉ feed chạy thật mới vào bảng.
+  if (body?.mode === "add_sources") {
+    const wanted = Array.isArray(body.sources) ? (body.sources as Record<string, unknown>[]) : [];
+    if (wanted.length === 0) return json({ error: "Thiếu sources[]" }, 400);
+    const started = Date.now();
+    const report: unknown[] = [];
+    for (let i = 0; i < wanted.length; i += 6) {
+      if (Date.now() - started > 130000) {
+        report.push(...wanted.slice(i).map((w) => ({ name: w.name, error: "hết thời gian — gọi lại với phần còn thiếu" })));
+        break;
+      }
+      const batch = wanted.slice(i, i + 6);
+      await Promise.all(batch.map(async (w) => {
+        const name = String(w.name ?? "");
+        const baseUrl = String(w.base_url ?? "");
+        const cat = String(w.default_category ?? "xa-hoi-van-hoa");
+        const tier = Number(w.tier) >= 1 && Number(w.tier) <= 3 ? Number(w.tier) : 2;
+        try {
+          const home = new URL(baseUrl);
+          const res = await fetchWithTimeout(home.toString(), 12000);
+          const html = await res.text();
+          const cands = new Set<string>();
+          for (const m of html.match(/<link[^>]+type=["']application\/(?:rss|atom)\+xml["'][^>]*>/gi) ?? []) {
+            const href = m.match(/href=["']([^"']+)["']/i)?.[1];
+            if (href) { try { cands.add(new URL(href, home).toString()); } catch { /* bỏ */ } }
+          }
+          const aRe = /href=["']([^"']*(?:\.rss|\/rss\b|\/feed\b)[^"']*)["']/gi;
+          let am: RegExpExecArray | null; let n = 0;
+          while ((am = aRe.exec(html)) !== null && n < 12) {
+            try { cands.add(new URL(am[1], home).toString()); n++; } catch { /* bỏ */ }
+          }
+          for (const p of ["/rss", "/rss.xml", "/feed", "/rss/home.rss", "/rss/tin-moi-nhat.rss", "/rss/trang-chu.rss"]) {
+            cands.add(new URL(p, home.origin).toString());
+          }
+          const feeds: { url: string; items: number }[] = [];
+          for (const c of Array.from(cands).filter((u) => !URL_NOISE_RE.test(u)).slice(0, 12)) {
+            try {
+              const r = await fetchWithTimeout(c, 8000);
+              if (!r.ok) continue;
+              const t = await r.text();
+              const items = (t.match(/<item[\s>]/gi) ?? []).length + (t.match(/<entry[\s>]/gi) ?? []).length;
+              if (items >= 5) feeds.push({ url: c, items });
+              if (feeds.length >= 3) break;
+            } catch { /* ứng viên chết */ }
+          }
+          if (feeds.length === 0) {
+            report.push({ name, base_url: baseUrl, added: 0, note: "không tìm thấy RSS sống — cần URL feed thủ công" });
+            return;
+          }
+          let added = 0;
+          const addedUrls: string[] = [];
+          for (let k = 0; k < feeds.length; k++) {
+            const label = feeds.length > 1
+              ? `${name} — ${new URL(feeds[k].url).pathname.replace(/^\/|\.rss$|\.xml$/gi, "").replace(/\//g, " ").trim() || `feed ${k + 1}`}`
+              : name;
+            const { error: insErr } = await supabase.from("crawl_sources").insert({
+              name: label.slice(0, 120),
+              base_url: home.origin,
+              list_url: feeds[k].url,
+              feed_type: "rss",
+              default_category: cat,
+              tier,
+              is_active: true,
+            });
+            if (!insErr) { added++; addedUrls.push(feeds[k].url); }
+            else if (!String(insErr.message).includes("duplicate")) {
+              report.push({ name, insert_error: insErr.message.slice(0, 120) });
+            }
+          }
+          report.push({ name, base_url: baseUrl, added, feeds: addedUrls });
+        } catch (e) {
+          report.push({ name, base_url: baseUrl, error: (e as Error).message.slice(0, 100) });
+        }
+      }));
+    }
+    const totalAdded = (report as { added?: number }[]).reduce((a, r) => a + (r.added ?? 0), 0);
+    return json({ ok: true, mode: "add_sources", total_added: totalAdded, report });
+  }
+
   // ===== MODE: crawl =====
   if (!anthropicKey) return json({ error: "ANTHROPIC_API_KEY chưa được set" }, 500);
 
