@@ -1,3 +1,10 @@
+# [1.87.0](https://github.com/lth91/luot247-vision/compare/v1.86.0...v1.87.0) (2026-07-14)
+
+
+### Features
+
+* **review:** PR3 trang duyệt tin AI /duyet-tin-ai cho nhân viên whitelist ([#127](https://github.com/lth91/luot247-vision/issues/127)) ([07ef0bd](https://github.com/lth91/luot247-vision/commit/07ef0bd96c6a256fff819b5d53912371b18162d1))
+
 # [1.86.0](https://github.com/lth91/luot247-vision/compare/v1.85.1...v1.86.0) (2026-07-14)
 
 
