@@ -34,14 +34,16 @@ CREATE POLICY "Admins see all review log" ON public.review_log
 -- Ghi: chỉ qua RPC SECURITY DEFINER / service role — không mở policy INSERT.
 
 -- ===== 2) Helper đếm từ (khớp countWords = split(/\s+/) của frontend/edge) =====
+-- Đếm cụm \S+ ≡ JS split(/\s+/).filter(Boolean).length. KHÔNG dùng
+-- trim()+regexp_split_to_array: trim() Postgres chỉ cắt space thường, tab/
+-- newline đầu-cuối sẽ sinh phần tử rỗng → đếm dư 1-2 từ so với form
+-- (verify 13/13 case khớp JS trên PG16).
 CREATE OR REPLACE FUNCTION public.count_words(_s text)
 RETURNS int
 LANGUAGE sql IMMUTABLE
 AS $$
-  SELECT CASE
-    WHEN trim(COALESCE(_s, '')) = '' THEN 0
-    ELSE array_length(regexp_split_to_array(trim(_s), '\s+'), 1)
-  END;
+  SELECT count(*)::int
+  FROM regexp_matches(coalesce(_s, ''), '\S+', 'g');
 $$;
 
 -- ===== 3) RPC duyệt =====
