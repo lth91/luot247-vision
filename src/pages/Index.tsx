@@ -670,11 +670,28 @@ const Index = () => {
     const lastNewsCount = localStorage.getItem('luot247_last_news_count');
     const lastNewsTimestamp = localStorage.getItem('luot247_last_news_timestamp');
     
-    const { data, error } = await supabase
+    // Giới hạn feed: 14 ngày gần nhất + trần 4000 tin. Pipeline AI crawl đẩy
+    // sản lượng lên ~2.000 tin/ngày — tải TOÀN BỘ bảng như trước sẽ phình vô
+    // hạn (60k+ tin/tháng). Tin cũ hơn vẫn xem được qua deep-link /tin/:id
+    // (fallback tải lẻ bên dưới).
+    const sinceIso = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString();
+    const { data: dataRaw, error } = await supabase
       .from("news")
       .select("*")
       .eq("is_approved", true)  // Only show approved news
-      .order("updated_at", { ascending: false });  // Sort by approval time
+      .gte("updated_at", sinceIso)
+      .order("updated_at", { ascending: false })  // Sort by approval time
+      .limit(4000);
+
+    // Deep-link /tin/:id trỏ tới tin cũ hơn cửa sổ 14 ngày → tải lẻ tin đó
+    // và nối vào cuối danh sách để scroll/highlight vẫn hoạt động.
+    let data = dataRaw;
+    const deepId = window.location.pathname.match(/^\/tin\/([a-f0-9-]+)$/)?.[1];
+    if (!error && deepId && data && !data.some((n) => n.id === deepId)) {
+      const { data: single } = await supabase
+        .from("news").select("*").eq("id", deepId).eq("is_approved", true).maybeSingle();
+      if (single) data = [...data, single];
+    }
 
     if (error) {
       toast.error("Không thể tải tin tức");
