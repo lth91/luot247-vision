@@ -228,6 +228,29 @@ function countWords(s: string): number {
   return s.trim().split(/\s+/).filter(Boolean).length;
 }
 
+// Chuẩn hiển thị theo yêu cầu sếp 15/07: tiêu đề VIẾT HOA, nội dung 2 khổ.
+// toUpperCase của JS xử lý đúng tiếng Việt có dấu (đ→Đ, ơ→Ơ...).
+function formatTitle(s: string): string {
+  return s.trim().toUpperCase();
+}
+
+// Đảm bảo content có đúng 2 khổ: nếu LLM chưa tự chia (không có xuống dòng),
+// cắt tại ranh giới CÂU gần giữa nhất rồi chèn 1 dòng trống. Không đổi số từ.
+function ensureTwoParagraphs(content: string): string {
+  const flat = content.trim();
+  if (/\n/.test(flat)) return flat; // đã có khổ sẵn
+  const sentences = flat.split(/(?<=[.!?…])\s+/).filter(Boolean);
+  if (sentences.length < 2) return flat;
+  const totalW = countWords(flat);
+  let acc = 0, cut = 0;
+  for (let i = 0; i < sentences.length - 1; i++) {
+    acc += countWords(sentences[i]);
+    cut = i;
+    if (acc >= totalW / 2) break;
+  }
+  return sentences.slice(0, cut + 1).join(" ") + "\n\n" + sentences.slice(cut + 1).join(" ");
+}
+
 // Haiku hay viết lố vài chục từ dù prompt đã ép — cắt NGUYÊN CÂU từ cuối lên
 // cho tới khi tổng (title+content) lọt trần. Câu cuối bản tin thường là chi
 // tiết phụ nên cắt được; nếu cắt xong tụt dưới sàn thì trả nguyên bản để
@@ -421,6 +444,35 @@ async function handle(req: Request): Promise<Response> {
     }
     const withFeeds = (results as { feeds?: unknown[] }[]).filter((r) => (r.feeds?.length ?? 0) > 0).length;
     return json({ ok: true, mode: "discover_feeds", total: urls.length, with_feeds: withFeeds, results });
+  }
+
+  // ===== MODE: reformat_pending — áp chuẩn hiển thị mới cho tin ĐANG CHỜ =====
+  // (one-shot theo yêu cầu sếp 15/07: tiêu đề HOA + 2 khổ; không tốn LLM)
+  if (body?.mode === "reformat_pending") {
+    const { data: rows, error } = await supabase
+      .from("news")
+      .select("id, title, description")
+      .eq("review_status", "pending")
+      .is("submitted_by", null)
+      .limit(2000);
+    if (error) return json({ error: error.message }, 500);
+    const list = (rows ?? []) as { id: string; title: string; description: string | null }[];
+    let updated = 0;
+    const errs: string[] = [];
+    for (let i = 0; i < list.length; i += 25) {
+      const batch = list.slice(i, i + 25);
+      await Promise.all(batch.map(async (row) => {
+        const newTitle = formatTitle(row.title ?? "");
+        const newDesc = ensureTwoParagraphs(row.description ?? "");
+        if (newTitle === row.title && newDesc === (row.description ?? "")) return;
+        const { error: uErr } = await supabase.from("news")
+          .update({ title: newTitle, description: newDesc })
+          .eq("id", row.id);
+        if (uErr) errs.push(uErr.message.slice(0, 80));
+        else updated++;
+      }));
+    }
+    return json({ ok: true, mode: "reformat_pending", total: list.length, updated, errors: errs.slice(0, 5) });
   }
 
   // ===== MODE: add_sources — dò feed của từng trang rồi TỰ SEED crawl_sources =====
@@ -648,6 +700,11 @@ async function handle(req: Request): Promise<Response> {
             }
           }
           if (!r.title || !r.content) { stats.errors.push(`${src.name}: LLM thiếu title/content`); continue; }
+
+          // Chuẩn hiển thị: tiêu đề HOA toàn bộ + nội dung 2 khổ (sau mọi bước
+          // trim/retry vì trimToFit nối câu làm phẳng khổ).
+          r.title = formatTitle(r.title);
+          r.content = ensureTwoParagraphs(r.content);
 
           // Dedup lớp 3: trigram với tiêu đề MỚI (viết lại có thể trùng tin đã có).
           const { data: simId2 } = await supabase.rpc("find_similar_news_title", {
