@@ -350,7 +350,7 @@ const ReviewQueue = () => {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="font-semibold leading-snug">{item.title}</p>
-                        <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                        <p className="text-sm text-muted-foreground mt-1 whitespace-pre-line">{item.description}</p>
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5 text-xs">
