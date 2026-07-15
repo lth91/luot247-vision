@@ -275,7 +275,7 @@ const ReviewQueue = () => {
             ) : (
               // Ở Lịch sử: nút quay về hàng đợi
               <Button size="sm" variant="outline" onClick={() => setView("queue")}>
-                ← Hàng đợi
+                ← Quay về duyệt tin
               </Button>
             )}
           </div>
@@ -351,7 +351,7 @@ const ReviewQueue = () => {
           <p className="text-sm text-muted-foreground py-10 text-center">Đang tải hàng đợi...</p>
         ) : visible.length === 0 ? (
           <p className="text-sm text-muted-foreground py-10 text-center">
-            🎉 Hàng đợi trống — chưa có tin AI nào chờ duyệt.
+            Hệ thống đang xử lý, bạn nghỉ ngơi chút ....
           </p>
         ) : (
           <div className="space-y-3">
