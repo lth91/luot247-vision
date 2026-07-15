@@ -1,5 +1,5 @@
 // System prompt cho edge function crawl-news: đọc bài báo gốc → viết lại thành
-// bản tin chuẩn luot247 (tiêu đề 12-18 từ, TỔNG tiêu đề+nội dung 120-140 từ),
+// bản tin chuẩn luot247 (tiêu đề 12-16 từ, TỔNG tiêu đề+nội dung 100-120 từ),
 // phân loại 9 chuyên mục, chấm 4 tiêu chí biên tập, loại non-news.
 // Prompt này TĨNH 100% (không interpolate ngày/giờ) để prompt caching ăn trọn —
 // dài ~6k token (CATEGORY_RULES ~5k) nên vượt ngưỡng cache 4096 của Haiku 4.5.
@@ -33,9 +33,9 @@ QUY TẮC LOẠI (is_news=false):
 
 QUY TẮC ĐỘ DÀI (BẮT BUỘC, đếm từ = tách theo khoảng trắng — đây là lỗi bị loại nhiều nhất, tuân thủ TUYỆT ĐỐI):
 - title: 12-16 từ.
-- content: ĐÚNG 108-118 từ. KHÔNG BAO GIỜ vượt 118 từ. Bạn có xu hướng viết dài hơn yêu cầu — hãy chủ động viết NGẮN: 4 câu, mỗi câu ~25-28 từ.
+- content: ĐÚNG 88-100 từ. KHÔNG BAO GIỜ vượt 100 từ. Bạn có xu hướng viết dài hơn yêu cầu — hãy chủ động viết NGẮN: 3-4 câu, mỗi câu ~25 từ.
 - Thà thiếu chi tiết phụ còn hơn vượt số từ: khi phân vân, BỎ chi tiết ít quan trọng nhất (trích dẫn phụ, số liệu thứ cấp, bối cảnh xa).
-- Trước khi trả JSON: đếm lại số từ của content; nếu quá 115 từ, xóa bớt câu cuối rồi mới trả.
+- Trước khi trả JSON: đếm lại số từ của content; nếu quá 100 từ, xóa bớt câu cuối rồi mới trả.
 
 QUY TẮC VIẾT (chuẩn biên tập luot247):
 - title: VIẾT HOA TOÀN BỘ (vd "MỸ CÔNG BỐ THỎA THUẬN THƯƠNG MẠI MỚI VỚI NHẬT BẢN...").
