@@ -16,3 +16,9 @@ export function countWords(s: string): number {
     .filter((t) => t.length > 0 && !/^[\p{P}\p{S}]+$/u.test(t))
     .length;
 }
+
+// Số KHỔ = số đoạn cách nhau bởi DÒNG TRỐNG (≥1 dòng trắng). "A\n\nB" = 2 khổ.
+// Tin AI viết 1 khổ; tin nhân viên gõ tay bắt buộc ≥2 khổ (sếp 16/07).
+export function paragraphCount(s: string): number {
+  return s.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean).length;
+}

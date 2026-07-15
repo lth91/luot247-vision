@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { countWords, SUBMISSION_LIMITS } from "@/lib/newsCategories";
+import { countWords, paragraphCount, SUBMISSION_LIMITS } from "@/lib/newsCategories";
 import { useSubmissionAllowed } from "@/hooks/useSubmissionAllowed";
 
 const { titleMin, titleMax, totalMin, totalMax } = SUBMISSION_LIMITS;
@@ -80,7 +80,8 @@ const SubmitNews = () => {
   const editContentMax = totalMax - editRefTitle;
   const editLengthOk =
     editTitleWords >= titleMin && editTitleWords <= titleMax &&
-    editTitleWords + editContentWords >= totalMin && editTitleWords + editContentWords <= totalMax;
+    editTitleWords + editContentWords >= totalMin && editTitleWords + editContentWords <= totalMax &&
+    paragraphCount(editContent) >= 2;
 
   const submitEdit = async () => {
     if (!editingCard || !editLengthOk || editSaving) return;
@@ -195,7 +196,9 @@ const SubmitNews = () => {
   const lengthOk =
     titleWords >= titleMin && titleWords <= titleMax &&
     titleWords + contentWords >= totalMin && titleWords + contentWords <= totalMax;
-  const canSubmit = lengthOk && !isLoading;
+  // Bắt buộc 2 khổ (sếp 16/07): nội dung phải chia ≥2 đoạn cách nhau 1 dòng trống.
+  const twoParas = paragraphCount(content) >= 2;
+  const canSubmit = lengthOk && twoParas && !isLoading;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -332,6 +335,9 @@ const SubmitNews = () => {
                     <p className="text-[11px] text-muted-foreground">
                       Khoảng từ của nội dung tự điều chỉnh theo độ dài tiêu đề (tổng cả tin 120–140 từ) — bạn không cần tự cộng.
                     </p>
+                    <p className={`text-[11px] ${twoParas ? "text-green-600" : "text-red-600"}`}>
+                      {twoParas ? "✅ Đã chia 2 khổ" : "⚠️ Nội dung phải chia 2 khổ — để 1 DÒNG TRỐNG (Enter 2 lần) giữa 2 đoạn."}
+                    </p>
                   </div>
 
                   <p className="text-xs text-muted-foreground">
@@ -341,9 +347,11 @@ const SubmitNews = () => {
                   <Button type="submit" className="w-full" disabled={!canSubmit}>
                     {isLoading ? "Đang kiểm duyệt..." : "Gửi tin"}
                   </Button>
-                  {!lengthOk && (title || content) && (
+                  {!canSubmit && (title || content) && !isLoading && (
                     <p className="text-xs text-center text-muted-foreground">
-                      Cần tiêu đề {titleMin}–{titleMax} từ và nội dung {contentMin}–{contentMax} từ (theo tiêu đề hiện tại) để gửi.
+                      {!lengthOk
+                        ? `Cần tiêu đề ${titleMin}–${titleMax} từ và nội dung ${contentMin}–${contentMax} từ (theo tiêu đề hiện tại).`
+                        : "Cần chia nội dung thành 2 khổ (1 dòng trống giữa 2 đoạn) để gửi."}
                     </p>
                   )}
                 </form>
@@ -353,7 +361,7 @@ const SubmitNews = () => {
               <TabsContent value="bulk" className="space-y-4">
                 <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
                   <p className="font-medium text-foreground">Cách dùng:</p>
-                  <p>• Sheet có <b>2 cột</b>: cột A = <b>Tiêu đề</b> ({titleMin}–{titleMax} từ), cột B = <b>Nội dung</b> (nhắm <b>110–125 từ</b>; điều kiện thật: tổng cả tin {totalMin}–{totalMax} từ). Dòng 1 là tiêu đề cột.</p>
+                  <p>• Sheet có <b>2 cột</b>: cột A = <b>Tiêu đề</b> ({titleMin}–{titleMax} từ), cột B = <b>Nội dung</b> (nhắm <b>110–125 từ</b>; điều kiện thật: tổng cả tin {totalMin}–{totalMax} từ, <b>phải chia 2 khổ</b> — Alt+Enter 2 lần để có 1 dòng trống giữa 2 đoạn). Dòng 1 là tiêu đề cột.</p>
                   <p>• Đặt quyền chia sẻ Sheet: <b>Anyone with the link → Viewer</b>.</p>
                   <p>• Tối đa <b>100 tin/lần</b>. Mỗi tin qua kiểm duyệt AI như gửi lẻ; tin đạt được đăng + 10đ.</p>
                   <p>• <b>Import lại an toàn</b>: tin đã đăng sẽ tự bỏ qua (không trừ điểm, không tốn phí). Sửa tin lỗi rồi import lại cả sheet là được.</p>
@@ -491,6 +499,9 @@ const SubmitNews = () => {
                         <WordHint count={editContentWords} min={editContentMin} max={editContentMax} />
                       </div>
                       <Textarea id="edit-content" value={editContent} onChange={(e) => setEditContent(e.target.value)} rows={8} disabled={editSaving} />
+                      <p className={`text-[11px] ${paragraphCount(editContent) >= 2 ? "text-green-600" : "text-red-600"}`}>
+                        {paragraphCount(editContent) >= 2 ? "✅ Đã chia 2 khổ" : "⚠️ Nội dung phải chia 2 khổ — để 1 dòng trống giữa 2 đoạn."}
+                      </p>
                       <p className="text-[11px] text-muted-foreground">
                         Bản sửa sẽ qua kiểm duyệt AI như tin mới — đạt mới được cập nhật, không đạt thì tin cũ giữ nguyên.
                       </p>

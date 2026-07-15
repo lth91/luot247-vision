@@ -27,6 +27,11 @@ export function categoryLabel(slug: string | null | undefined): string {
 // v2 (16/07) — khớp trực giác con người/Word, mirror của _shared/word-count.ts:
 // gạch dài –/— là dấu câu ("3.000–4.000" = 2 từ, "Đà Nẵng – Hội An" không đếm
 // dấu gạch); token thuần dấu câu không phải từ; gạch nối ngắn giữ (COVID-19 = 1 từ).
+// Số KHỔ = đoạn cách nhau DÒNG TRỐNG (mirror _shared/word-count.ts).
+export function paragraphCount(s: string): number {
+  return s.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean).length;
+}
+
 export function countWords(s: string): number {
   return s
     .replace(/[–—]/g, " ")

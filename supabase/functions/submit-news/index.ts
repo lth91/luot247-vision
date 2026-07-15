@@ -5,7 +5,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 import { logLlmUsage } from "../_shared/llm-usage.ts";
-import { countWords } from "../_shared/word-count.ts";
+import { countWords, paragraphCount } from "../_shared/word-count.ts";
 import { canonicalizeUrl, sha256Hex } from "../_shared/url.ts";
 import { CATEGORY_RULES, isValidCategory, SUBMISSION_CATEGORY_SLUGS } from "../_shared/news-categories.ts";
 
@@ -162,6 +162,12 @@ Deno.serve(async (req) => {
     if (totalWords < TOTAL_MIN || totalWords > TOTAL_MAX) {
       // Báo theo khoảng NỘI DUNG tự tính từ tiêu đề — nhân viên sửa đúng ô, khỏi cộng tổng.
       const reason = `Với tiêu đề ${titleWords} từ, nội dung cần ${TOTAL_MIN - titleWords}–${TOTAL_MAX - titleWords} từ (hiện ${contentWords}).`;
+      await log("rejected_length", { reject_reason: reason });
+      return json({ ok: false, reason });
+    }
+    // Bắt buộc 2 KHỔ (sếp 16/07): nội dung phải chia ≥2 đoạn cách nhau 1 dòng trống.
+    if (paragraphCount(content) < 2) {
+      const reason = "Nội dung cần chia thành 2 khổ, cách nhau 1 dòng trống (nhấn Enter 2 lần giữa 2 đoạn).";
       await log("rejected_length", { reject_reason: reason });
       return json({ ok: false, reason });
     }
