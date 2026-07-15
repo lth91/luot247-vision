@@ -329,7 +329,10 @@ const ReviewQueue = () => {
         {view === "queue" && (
         <div className="flex flex-wrap gap-1.5">
           <Button size="sm" variant={tab === "all" ? "default" : "outline"} onClick={() => setTab("all")}>
-            Tất cả ({counts.all ?? 0})
+            {/* (đang tải/tổng tồn): 200 tin trên trang, 365 tin còn trong hàng đợi */}
+            Tất cả ({totalPending !== null && totalPending > (counts.all ?? 0)
+              ? `${counts.all ?? 0}/${totalPending}`
+              : (counts.all ?? 0)})
           </Button>
           {SUBMISSION_CATEGORIES.map((c) => (
             (counts[c.slug] ?? 0) > 0 && (
