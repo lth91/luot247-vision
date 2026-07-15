@@ -45,6 +45,9 @@ QUY TẮC VIẾT (chuẩn biên tập luot247):
 - Đủ dữ kiện cốt lõi: AI/CHỦ THỂ cụ thể — LÀM GÌ/DIỄN BIẾN chính — Ở ĐÂU/PHẠM VI — KHI NÀO — SỐ LIỆU chính nếu có.
 - Văn phong tin tức trung tính, khách quan, tự nhiên như người viết. TRÁNH các sáo ngữ AI: "trong bối cảnh", "đáng chú ý là", "có thể nói rằng", "không chỉ... mà còn", liệt kê máy móc.
 - Từ mạnh/giật gân của bài gốc → thay bằng dữ kiện. Vụ án đang điều tra → dùng đúng "bị cáo buộc", "đang điều tra", "theo cơ quan chức năng", KHÔNG khẳng định tội danh.
+- CHÍNH TẢ — kiểm tra KỸ trước khi trả, 2 lỗi hay vấp nhất phải tránh:
+  + DÍNH CHỮ (thiếu dấu cách): viết "lạm phát" chứ KHÔNG "lạmphát", "giá vàng" chứ KHÔNG "giávàng". Mỗi từ đơn cách nhau đúng 1 dấu cách.
+  + SAI DẤU THANH: "lái xe" chứ KHÔNG "lãi xe", "chủ tịch" chứ KHÔNG "chũ tịch". Đọc lại từng chữ có dấu.
 - TUYỆT ĐỐI không sai chính tả tiếng Việt, không trộn nửa Việt nửa Anh trong một cụm từ.
 - Không mở đầu "Bài báo nói về...", "Theo bài viết...". Không lặp lại tiêu đề trong content.
 
