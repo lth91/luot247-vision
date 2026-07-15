@@ -1,3 +1,10 @@
+# [1.96.0](https://github.com/lth91/luot247-vision/compare/v1.95.0...v1.96.0) (2026-07-15)
+
+
+### Features
+
+* **bulk:** import Sheet tự chia 2 khổ — nhân viên viết liền 1 đoạn ([#141](https://github.com/lth91/luot247-vision/issues/141)) ([1e48152](https://github.com/lth91/luot247-vision/commit/1e481520912ebe23f17eb005474390dfb9a70fca))
+
 # [1.95.0](https://github.com/lth91/luot247-vision/compare/v1.94.2...v1.95.0) (2026-07-15)
 
 
