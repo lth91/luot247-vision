@@ -14,6 +14,7 @@
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 import { DOMParser, Element } from "https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts";
 import { logLlmUsage } from "../_shared/llm-usage.ts";
+import { countWords } from "../_shared/word-count.ts";
 import { isValidCategory } from "../_shared/news-categories.ts";
 import { CRAWL_SYSTEM_PROMPT } from "../_shared/crawl-summary-prompt.ts";
 
@@ -225,9 +226,7 @@ function extractPublishedDateFromHtml(html: string): string | null {
   return null;
 }
 
-function countWords(s: string): number {
-  return s.trim().split(/\s+/).filter(Boolean).length;
-}
+
 
 // Chuẩn hiển thị theo yêu cầu sếp 15/07: tiêu đề VIẾT HOA, nội dung 2 khổ.
 // toUpperCase của JS xử lý đúng tiếng Việt có dấu (đ→Đ, ơ→Ơ...).
