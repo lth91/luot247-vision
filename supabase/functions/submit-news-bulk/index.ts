@@ -7,7 +7,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 import { logLlmUsage } from "../_shared/llm-usage.ts";
-import { countWords, paragraphCount } from "../_shared/word-count.ts";
+import { countWords, splitIntoTwoParagraphs } from "../_shared/word-count.ts";
 import { CATEGORY_RULES, isValidCategory, SUBMISSION_CATEGORY_SLUGS } from "../_shared/news-categories.ts";
 
 const corsHeaders = {
@@ -216,14 +216,6 @@ Deno.serve(async (req) => {
         logReject("rejected_length", title || "(trống)", reason);
         continue;
       }
-      // Bắt buộc 2 khổ: ô nội dung phải có 1 dòng trống ngăn 2 đoạn (Alt+Enter 2 lần).
-      if (paragraphCount(content) < 2) {
-        summary.rejected_length++;
-        const reason = "Nội dung cần chia 2 khổ (1 dòng trống ngăn 2 đoạn trong ô)";
-        issues.push({ row: rowNum, title: title.slice(0, 60), reason });
-        logReject("rejected_length", title || "(trống)", reason);
-        continue;
-      }
       lenValid.push(row);
     }
 
@@ -315,7 +307,7 @@ Deno.serve(async (req) => {
       }
       const category = isValidCategory(v.category) ? v.category : "xa-hoi-van-hoa";
       const { data: ins, error: insErr } = await supabase.from("news").insert({
-        title, description: content, category, is_approved: true, submitted_by: user.id,
+        title, description: splitIntoTwoParagraphs(content), category, is_approved: true, submitted_by: user.id,
         ai_classification: {
           category,
           category_confidence: v.category_confidence ?? 0,

@@ -22,3 +22,22 @@ export function countWords(s: string): number {
 export function paragraphCount(s: string): number {
   return s.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean).length;
 }
+
+// Tự chia nội dung thành ĐÚNG 2 KHỔ (cho luồng import Sheet — nhân viên viết
+// liền 1 đoạn, máy tách hộ). Đã có ≥2 khổ sẵn → giữ nguyên. Cắt tại ranh giới
+// CÂU gần giữa nhất; không đổi số từ. Chỉ 1 câu → trả 1 khổ (hiếm ở 110+ từ).
+export function splitIntoTwoParagraphs(content: string): string {
+  const flat = content.trim();
+  if (paragraphCount(flat) >= 2) return flat;
+  const oneLine = flat.replace(/\s*\n\s*/g, " ").replace(/\s+/g, " ").trim();
+  const sentences = oneLine.split(/(?<=[.!?…])\s+/).filter(Boolean);
+  if (sentences.length < 2) return oneLine;
+  const totalW = countWords(oneLine);
+  let acc = 0, cut = 0;
+  for (let i = 0; i < sentences.length - 1; i++) {
+    acc += countWords(sentences[i]);
+    cut = i;
+    if (acc >= totalW / 2) break;
+  }
+  return sentences.slice(0, cut + 1).join(" ") + "\n\n" + sentences.slice(cut + 1).join(" ");
+}
