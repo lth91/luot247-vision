@@ -1,3 +1,10 @@
+## [1.94.2](https://github.com/lth91/luot247-vision/compare/v1.94.1...v1.94.2) (2026-07-15)
+
+
+### Bug Fixes
+
+* **submission:** bộ đếm từ v2 — dấu gạch dài là dấu câu, khớp Word/đếm tay ([#139](https://github.com/lth91/luot247-vision/issues/139)) ([4f66efa](https://github.com/lth91/luot247-vision/commit/4f66efa9c57724624db99ee3e85ac48e0087fda3))
+
 ## [1.94.1](https://github.com/lth91/luot247-vision/compare/v1.94.0...v1.94.1) (2026-07-15)
 
 
