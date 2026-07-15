@@ -1,3 +1,10 @@
+# [1.97.0](https://github.com/lth91/luot247-vision/compare/v1.96.4...v1.97.0) (2026-07-15)
+
+
+### Features
+
+* **crawl:** AI phán xử tin nghi trùng vùng xám 45-70% + badge độ giống trang duyệt ([#146](https://github.com/lth91/luot247-vision/issues/146)) ([775dd53](https://github.com/lth91/luot247-vision/commit/775dd53e5e3a735f40f6f300f9f58ddbeea2fc57))
+
 ## [1.96.4](https://github.com/lth91/luot247-vision/compare/v1.96.3...v1.96.4) (2026-07-15)
 
 
