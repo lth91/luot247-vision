@@ -255,7 +255,7 @@ const Leaderboard = () => {
             <Card>
               <CardContent className="p-0">
                 <div className="flex items-center justify-between px-4 pt-4">
-                  <h2 className="font-bold">🤖 Công duyệt tin AI</h2>
+                  <h2 className="font-bold">🤖 Duyệt tin tự động</h2>
                   {pendingCount !== null && (
                     <span className={`text-xs font-medium rounded px-2 py-1 ${pendingCount > 300 ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200" : "bg-muted text-muted-foreground"}`}>
                       Hàng đợi còn {pendingCount} tin

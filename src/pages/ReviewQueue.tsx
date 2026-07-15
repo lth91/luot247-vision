@@ -251,7 +251,7 @@ const ReviewQueue = () => {
       <Header user={session?.user} userRole={userRole} />
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <h1 className="text-xl font-bold">🤖 Duyệt tin AI</h1>
+          <h1 className="text-xl font-bold">🤖 Tin tự động</h1>
           <div className="flex gap-2">
             <Button size="sm" variant={view === "queue" ? "default" : "outline"} onClick={() => setView("queue")}>
               {/* Hiện "đang tải/tổng" khi hàng đợi lớn hơn 1 trang 200 tin */}
