@@ -1,3 +1,10 @@
+# [1.95.0](https://github.com/lth91/luot247-vision/compare/v1.94.2...v1.95.0) (2026-07-15)
+
+
+### Features
+
+* **content:** tin AI 1 khổ, tin nhân viên bắt buộc 2 khổ (sếp 16/07) ([#140](https://github.com/lth91/luot247-vision/issues/140)) ([280fdc3](https://github.com/lth91/luot247-vision/commit/280fdc38a89c7867a281f6205d39aca681cf688f))
+
 ## [1.94.2](https://github.com/lth91/luot247-vision/compare/v1.94.1...v1.94.2) (2026-07-15)
 
 
