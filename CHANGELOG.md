@@ -1,3 +1,10 @@
+## [1.94.1](https://github.com/lth91/luot247-vision/compare/v1.94.0...v1.94.1) (2026-07-15)
+
+
+### Bug Fixes
+
+* **review:** hiện "đang tải/tổng" khi hàng đợi vượt 1 trang 200 tin ([#135](https://github.com/lth91/luot247-vision/issues/135)) ([1cc52cb](https://github.com/lth91/luot247-vision/commit/1cc52cb70fdeb103d35d1a5359e9ba23f3640757))
+
 # [1.94.0](https://github.com/lth91/luot247-vision/compare/v1.93.0...v1.94.0) (2026-07-15)
 
 
