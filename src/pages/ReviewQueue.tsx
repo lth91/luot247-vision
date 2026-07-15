@@ -262,11 +262,9 @@ const ReviewQueue = () => {
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h1 className="text-xl font-bold">🤖 Tin tự động</h1>
           <div className="flex gap-2">
+            {/* Số lượng đã hiện ở tab "Tất cả (200/430)" — nút này chỉ để chuyển view */}
             <Button size="sm" variant={view === "queue" ? "default" : "outline"} onClick={() => setView("queue")}>
-              {/* Hiện "đang tải/tổng" khi hàng đợi lớn hơn 1 trang 200 tin */}
-              Hàng đợi ({totalPending !== null && totalPending > (counts.all ?? 0)
-                ? `${counts.all ?? 0}/${totalPending}`
-                : (counts.all ?? 0)})
+              Hàng đợi
             </Button>
             <Button size="sm" variant={view === "history" ? "default" : "outline"} onClick={() => setView("history")}>
               📜 Lịch sử
