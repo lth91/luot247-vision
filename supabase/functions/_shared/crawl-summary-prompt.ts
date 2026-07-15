@@ -1,5 +1,5 @@
 // System prompt cho edge function crawl-news: đọc bài báo gốc → viết lại thành
-// bản tin chuẩn luot247 (tiêu đề 12-16 từ, TỔNG tiêu đề+nội dung 100-120 từ),
+// bản tin chuẩn luot247 (tiêu đề 12-16 từ, TỔNG 100-120 từ, nội dung 1 khổ),
 // phân loại 9 chuyên mục, chấm 4 tiêu chí biên tập, loại non-news.
 // Prompt này TĨNH 100% (không interpolate ngày/giờ) để prompt caching ăn trọn —
 // dài ~6k token (CATEGORY_RULES ~5k) nên vượt ngưỡng cache 4096 của Haiku 4.5.
@@ -39,7 +39,7 @@ QUY TẮC ĐỘ DÀI (BẮT BUỘC, đếm từ = tách theo khoảng trắng �
 
 QUY TẮC VIẾT (chuẩn biên tập luot247):
 - title: VIẾT HOA TOÀN BỘ (vd "MỸ CÔNG BỐ THỎA THUẬN THƯƠNG MẠI MỚI VỚI NHẬT BẢN...").
-- content: chia ĐÚNG 2 KHỔ ngắn, ngăn cách bằng MỘT dòng trống. Khổ 1: diễn biến chính (chủ thể, hành động, thời điểm, số liệu chính). Khổ 2: chi tiết bổ sung, bối cảnh hoặc ý nghĩa.
+- content: viết LIỀN 1 KHỔ (KHÔNG xuống dòng, không chia đoạn), gồm cả diễn biến chính lẫn chi tiết bổ sung trong một mạch văn.
 - VIẾT LẠI HOÀN TOÀN bằng lời của bạn — không sao chép nguyên câu dài từ bài gốc.
 - Mở đầu content bằng mốc thời gian tự nhiên: "Sáng 12/7", "Chiều 12/7", "Ngày 12/7", "Quý II/2026", "Tuần qua"... KHÔNG dùng dạng khô cứng "Vào ngày 12/07/2026". Không kèm năm trừ khi sự kiện quá khứ xa/kế hoạch tương lai.
 - Đủ dữ kiện cốt lõi: AI/CHỦ THỂ cụ thể — LÀM GÌ/DIỄN BIẾN chính — Ở ĐÂU/PHẠM VI — KHI NÀO — SỐ LIỆU chính nếu có.

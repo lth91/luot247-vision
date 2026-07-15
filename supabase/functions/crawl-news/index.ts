@@ -234,21 +234,10 @@ function formatTitle(s: string): string {
   return s.trim().toUpperCase();
 }
 
-// Đảm bảo content có đúng 2 khổ: nếu LLM chưa tự chia (không có xuống dòng),
-// cắt tại ranh giới CÂU gần giữa nhất rồi chèn 1 dòng trống. Không đổi số từ.
-function ensureTwoParagraphs(content: string): string {
-  const flat = content.trim();
-  if (/\n/.test(flat)) return flat; // đã có khổ sẵn
-  const sentences = flat.split(/(?<=[.!?…])\s+/).filter(Boolean);
-  if (sentences.length < 2) return flat;
-  const totalW = countWords(flat);
-  let acc = 0, cut = 0;
-  for (let i = 0; i < sentences.length - 1; i++) {
-    acc += countWords(sentences[i]);
-    cut = i;
-    if (acc >= totalW / 2) break;
-  }
-  return sentences.slice(0, cut + 1).join(" ") + "\n\n" + sentences.slice(cut + 1).join(" ");
+// Tin AI = 1 KHỔ (sếp 16/07): gộp mọi xuống dòng thành 1 đoạn liền mạch.
+// (Tin nhân viên gõ tay mới cần 2 khổ — xử lý ở submit-news.)
+function flattenToOneParagraph(content: string): string {
+  return content.replace(/\s*\n\s*/g, " ").replace(/\s+/g, " ").trim();
 }
 
 // Haiku hay viết lố vài chục từ dù prompt đã ép — cắt NGUYÊN CÂU từ cuối lên
@@ -463,10 +452,9 @@ async function handle(req: Request): Promise<Response> {
       const batch = list.slice(i, i + 25);
       await Promise.all(batch.map(async (row) => {
         const newTitle = formatTitle(row.title ?? "");
-        // Áp chuẩn mới 100-120: tin cũ viết theo khung 120-140 → cắt câu cuối
-        // cho lọt trần 120 (giữ sàn 100), rồi chia lại 2 khổ.
+        // Áp chuẩn mới 100-120 + 1 khổ: cắt câu cuối cho lọt trần 120, gộp 1 khổ.
         const trimmed = trimToFit(newTitle, (row.description ?? "").trim());
-        const newDesc = ensureTwoParagraphs(trimmed);
+        const newDesc = flattenToOneParagraph(trimmed);
         const tw = countWords(newTitle);
         const total = tw + countWords(newDesc);
         const needsEdit = tw < TITLE_MIN || tw > TITLE_MAX || total < TOTAL_MIN || total > TOTAL_MAX;
@@ -710,9 +698,9 @@ async function handle(req: Request): Promise<Response> {
           if (!r.title || !r.content) { stats.errors.push(`${src.name}: LLM thiếu title/content`); continue; }
 
           // Chuẩn hiển thị: tiêu đề HOA toàn bộ + nội dung 2 khổ (sau mọi bước
-          // trim/retry vì trimToFit nối câu làm phẳng khổ).
+          // trim/retry).
           r.title = formatTitle(r.title);
-          r.content = ensureTwoParagraphs(r.content);
+          r.content = flattenToOneParagraph(r.content);
 
           // Dedup lớp 3: trigram với tiêu đề MỚI (viết lại có thể trùng tin đã có).
           const { data: simId2 } = await supabase.rpc("find_similar_news_title", {

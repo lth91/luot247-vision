@@ -7,7 +7,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 import { logLlmUsage } from "../_shared/llm-usage.ts";
-import { countWords } from "../_shared/word-count.ts";
+import { countWords, paragraphCount } from "../_shared/word-count.ts";
 import { CATEGORY_RULES, isValidCategory, SUBMISSION_CATEGORY_SLUGS } from "../_shared/news-categories.ts";
 
 const corsHeaders = {
@@ -212,6 +212,14 @@ Deno.serve(async (req) => {
         const reason = (tw < TITLE_MIN || tw > TITLE_MAX)
           ? `Sai độ dài: tiêu đề ${tw} từ (cần ${TITLE_MIN}–${TITLE_MAX})`
           : `Sai độ dài: với tiêu đề ${tw} từ, nội dung cần ${TOTAL_MIN - tw}–${TOTAL_MAX - tw} từ (hiện ${cw})`;
+        issues.push({ row: rowNum, title: title.slice(0, 60), reason });
+        logReject("rejected_length", title || "(trống)", reason);
+        continue;
+      }
+      // Bắt buộc 2 khổ: ô nội dung phải có 1 dòng trống ngăn 2 đoạn (Alt+Enter 2 lần).
+      if (paragraphCount(content) < 2) {
+        summary.rejected_length++;
+        const reason = "Nội dung cần chia 2 khổ (1 dòng trống ngăn 2 đoạn trong ô)";
         issues.push({ row: rowNum, title: title.slice(0, 60), reason });
         logReject("rejected_length", title || "(trống)", reason);
         continue;
