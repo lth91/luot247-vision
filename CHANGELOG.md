@@ -1,3 +1,10 @@
+## [1.96.4](https://github.com/lth91/luot247-vision/compare/v1.96.3...v1.96.4) (2026-07-15)
+
+
+### Bug Fixes
+
+* **ui:** chỉnh nhãn theo sếp — 46 (20), Thống kê, Tin tự động (N), bỏ chú giải ([#145](https://github.com/lth91/luot247-vision/issues/145)) ([48b51e7](https://github.com/lth91/luot247-vision/commit/48b51e74eb7042396f9c491c2e44c8279aeae608))
+
 ## [1.96.3](https://github.com/lth91/luot247-vision/compare/v1.96.2...v1.96.3) (2026-07-15)
 
 
