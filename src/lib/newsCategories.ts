@@ -24,8 +24,16 @@ export function categoryLabel(slug: string | null | undefined): string {
 }
 
 // Đếm từ (khớp logic edge function) cho word-count live trên form.
+// v2 (16/07) — khớp trực giác con người/Word, mirror của _shared/word-count.ts:
+// gạch dài –/— là dấu câu ("3.000–4.000" = 2 từ, "Đà Nẵng – Hội An" không đếm
+// dấu gạch); token thuần dấu câu không phải từ; gạch nối ngắn giữ (COVID-19 = 1 từ).
 export function countWords(s: string): number {
-  return s.trim().split(/\s+/).filter(Boolean).length;
+  return s
+    .replace(/[–—]/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter((t) => t.length > 0 && !/^[\p{P}\p{S}]+$/u.test(t))
+    .length;
 }
 
 // Chốt với đội 03/07 (bản cuối): tiêu đề 12–18, TỔNG cả tin 120–140 (đúng

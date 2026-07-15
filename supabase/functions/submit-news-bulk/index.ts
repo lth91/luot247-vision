@@ -7,6 +7,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 import { logLlmUsage } from "../_shared/llm-usage.ts";
+import { countWords } from "../_shared/word-count.ts";
 import { CATEGORY_RULES, isValidCategory, SUBMISSION_CATEGORY_SLUGS } from "../_shared/news-categories.ts";
 
 const corsHeaders = {
@@ -23,9 +24,7 @@ const TITLE_MAX_CHARS = 400, CONTENT_MAX_CHARS = 4000;
 const MAX_ROWS = 100;       // trần số tin / lần import
 const LLM_BATCH = 10;       // số dòng / call LLM
 
-function countWords(s: string): number {
-  return s.trim().split(/\s+/).filter(Boolean).length;
-}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
