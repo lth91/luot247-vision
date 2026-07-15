@@ -1,3 +1,10 @@
+# [1.94.0](https://github.com/lth91/luot247-vision/compare/v1.93.0...v1.94.0) (2026-07-15)
+
+
+### Features
+
+* **crawl:** chuẩn tin tự động 100-120 từ (cả tiêu đề) + duyệt hôm qua cho công duyệt ([#137](https://github.com/lth91/luot247-vision/issues/137)) ([9739c14](https://github.com/lth91/luot247-vision/commit/9739c14733f26cb58a2c8110ba9d208fbbe918d1))
+
 # [1.93.0](https://github.com/lth91/luot247-vision/compare/v1.92.1...v1.93.0) (2026-07-15)
 
 
