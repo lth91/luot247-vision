@@ -36,6 +36,8 @@ interface PendingNews {
     category_confidence?: number;
     flags?: { is_ad?: boolean; missing_facts?: boolean; is_sensational?: boolean; legal_risk?: boolean };
     published_at_source?: string;
+    similar_title?: string;
+    similar_sim?: number;
   } | null;
 }
 
@@ -374,6 +376,11 @@ const ReviewQueue = () => {
                         {w.tw} + {w.total - w.tw} = {w.total} từ{w.ok ? " ✓" : " ✗"}
                       </Badge>
                       {item.ai_classification?.needs_edit && <Badge variant="destructive">✏️ Cần sửa số từ</Badge>}
+                      {typeof item.ai_classification?.similar_sim === "number" && item.ai_classification?.similar_title && (
+                        <Badge variant="outline" className="max-w-full whitespace-normal text-left border-amber-500 text-amber-600 dark:text-amber-400">
+                          ⚠️ Giống {Math.round(item.ai_classification.similar_sim * 100)}%: {item.ai_classification.similar_title}
+                        </Badge>
+                      )}
                       {flags.is_sensational && <Badge variant="destructive">Giật gân?</Badge>}
                       {flags.legal_risk && <Badge variant="destructive">Rủi ro pháp lý?</Badge>}
                       {flags.missing_facts && <Badge variant="destructive">Thiếu dữ kiện?</Badge>}
