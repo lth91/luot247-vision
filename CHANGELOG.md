@@ -1,3 +1,10 @@
+## [1.96.1](https://github.com/lth91/luot247-vision/compare/v1.96.0...v1.96.1) (2026-07-15)
+
+
+### Bug Fixes
+
+* **crawl:** tiêu đề tin AI không dùng dấu hai chấm (:) ([#142](https://github.com/lth91/luot247-vision/issues/142)) ([c2d8326](https://github.com/lth91/luot247-vision/commit/c2d8326501f2c85f1cfcf6885b8c97e87a4b0e7e))
+
 # [1.96.0](https://github.com/lth91/luot247-vision/compare/v1.95.0...v1.96.0) (2026-07-15)
 
 
