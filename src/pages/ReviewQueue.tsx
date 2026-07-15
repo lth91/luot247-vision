@@ -77,6 +77,7 @@ const ReviewQueue = () => {
   const [sessionChecked, setSessionChecked] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [rows, setRows] = useState<PendingNews[]>([]);
+  const [totalPending, setTotalPending] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState<string>("all");
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -124,17 +125,25 @@ const ReviewQueue = () => {
     setIsLoading(true);
     // RLS SELECT news là public; lọc đúng hàng đợi AI. Lấy 200 tin cũ nhất
     // trước (FIFO — tin vào trước duyệt trước, tránh tin "chìm" quá hạn).
-    const { data, error } = await (supabase as any)
-      .from("news")
-      .select("id, title, description, url, category, created_at, ai_classification")
-      .eq("review_status", "pending")
-      .is("submitted_by", null)
-      .order("created_at", { ascending: true })
-      .limit(200);
+    const [{ data, error }, countRes] = await Promise.all([
+      (supabase as any)
+        .from("news")
+        .select("id, title, description, url, category, created_at, ai_classification")
+        .eq("review_status", "pending")
+        .is("submitted_by", null)
+        .order("created_at", { ascending: true })
+        .limit(200),
+      (supabase as any)
+        .from("news")
+        .select("id", { count: "exact", head: true })
+        .eq("review_status", "pending")
+        .is("submitted_by", null),
+    ]);
     if (error) {
       toast.error("Không tải được hàng đợi: " + error.message);
     } else {
       setRows((data as PendingNews[]) ?? []);
+      setTotalPending(countRes.error ? null : (countRes.count ?? 0));
     }
     setIsLoading(false);
   };
@@ -245,7 +254,10 @@ const ReviewQueue = () => {
           <h1 className="text-xl font-bold">🤖 Duyệt tin AI</h1>
           <div className="flex gap-2">
             <Button size="sm" variant={view === "queue" ? "default" : "outline"} onClick={() => setView("queue")}>
-              Hàng đợi ({counts.all ?? 0})
+              {/* Hiện "đang tải/tổng" khi hàng đợi lớn hơn 1 trang 200 tin */}
+              Hàng đợi ({totalPending !== null && totalPending > (counts.all ?? 0)
+                ? `${counts.all ?? 0}/${totalPending}`
+                : (counts.all ?? 0)})
             </Button>
             <Button size="sm" variant={view === "history" ? "default" : "outline"} onClick={() => setView("history")}>
               📜 Lịch sử
@@ -375,6 +387,12 @@ const ReviewQueue = () => {
                 </Card>
               );
             })}
+            {totalPending !== null && totalPending > rows.length && (
+              <p className="text-xs text-muted-foreground text-center py-2">
+                Đang hiển thị {rows.length} tin CŨ NHẤT trong tổng {totalPending} tin chờ —
+                duyệt/loại bớt rồi bấm ↻ để tải đợt tiếp theo.
+              </p>
+            )}
           </div>
         ))}
 
