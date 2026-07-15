@@ -1,3 +1,10 @@
+## [1.96.2](https://github.com/lth91/luot247-vision/compare/v1.96.1...v1.96.2) (2026-07-15)
+
+
+### Bug Fixes
+
+* **crawl:** siết prompt chính tả — nhắc AI 2 lỗi hay vấp (dính chữ, sai dấu thanh) ([#143](https://github.com/lth91/luot247-vision/issues/143)) ([732eb00](https://github.com/lth91/luot247-vision/commit/732eb00ab0abaee31af13229e0b603c9597c494e))
+
 ## [1.96.1](https://github.com/lth91/luot247-vision/compare/v1.96.0...v1.96.1) (2026-07-15)
 
 
