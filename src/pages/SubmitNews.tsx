@@ -361,7 +361,7 @@ const SubmitNews = () => {
               <TabsContent value="bulk" className="space-y-4">
                 <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
                   <p className="font-medium text-foreground">Cách dùng:</p>
-                  <p>• Sheet có <b>2 cột</b>: cột A = <b>Tiêu đề</b> ({titleMin}–{titleMax} từ), cột B = <b>Nội dung</b> (nhắm <b>110–125 từ</b>; điều kiện thật: tổng cả tin {totalMin}–{totalMax} từ, <b>phải chia 2 khổ</b> — Alt+Enter 2 lần để có 1 dòng trống giữa 2 đoạn). Dòng 1 là tiêu đề cột.</p>
+                  <p>• Sheet có <b>2 cột</b>: cột A = <b>Tiêu đề</b> ({titleMin}–{titleMax} từ), cột B = <b>Nội dung</b> (nhắm <b>110–125 từ</b>; điều kiện thật: tổng cả tin {totalMin}–{totalMax} từ). Cứ viết liền 1 đoạn — <b>hệ thống tự chia 2 khổ</b> khi đăng. Dòng 1 là tiêu đề cột.</p>
                   <p>• Đặt quyền chia sẻ Sheet: <b>Anyone with the link → Viewer</b>.</p>
                   <p>• Tối đa <b>100 tin/lần</b>. Mỗi tin qua kiểm duyệt AI như gửi lẻ; tin đạt được đăng + 10đ.</p>
                   <p>• <b>Import lại an toàn</b>: tin đã đăng sẽ tự bỏ qua (không trừ điểm, không tốn phí). Sửa tin lỗi rồi import lại cả sheet là được.</p>
