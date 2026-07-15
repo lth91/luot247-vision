@@ -64,9 +64,9 @@ const sortVal = (r: DashRow, key: SortKey): number | string =>
   key === "acc_month" ? r.acc_month + (r.ai_month || 0) :
   (r[key] ?? 0);
 
-// Ô "46(20)": 46 = tổng tin duyệt (tay + tự động), (20) = phần tin tự động.
+// Ô "46 (20)": 46 = tổng tin duyệt (tay + tự động), (20) = phần tin tự động.
 const fmtDuyet = (tay: number, ai?: number) =>
-  ai && ai > 0 ? `${tay + ai}(${ai})` : `${tay}`;
+  ai && ai > 0 ? `${tay + ai} (${ai})` : `${tay}`;
 
 const Leaderboard = () => {
   const navigate = useNavigate();
@@ -197,10 +197,10 @@ const Leaderboard = () => {
       <Header user={session?.user} userRole={userRole} />
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <h1 className="text-xl font-bold">📊 Bảng theo dõi gửi tin</h1>
+          <h1 className="text-xl font-bold">📊 Thống kê</h1>
           {pendingCount !== null && (
             <span className={`text-xs font-medium rounded px-2 py-1 ${pendingCount > 300 ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200" : "bg-muted text-muted-foreground"}`}>
-              Hàng đợi còn {pendingCount} tin
+              Tin tự động ({pendingCount})
             </span>
           )}
         </div>
@@ -271,11 +271,6 @@ const Leaderboard = () => {
             )}
           </CardContent>
         </Card>
-
-        {/* Chú giải định dạng ô 46(20) — công duyệt tin tự động đã gộp vào bảng trên */}
-        <p className="text-xs text-muted-foreground -mt-4 px-1">
-          Định dạng <b>46(20)</b> ở các cột Duyệt: 46 = tổng tin đã duyệt, (20) = trong đó có 20 tin tự động (AI) do người này duyệt.
-        </p>
 
         {/* Khối thống kê lượt xem toàn site (nền vàng như mẫu của sếp) */}
         {views && (
