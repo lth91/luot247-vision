@@ -1,3 +1,10 @@
+# [1.93.0](https://github.com/lth91/luot247-vision/compare/v1.92.1...v1.93.0) (2026-07-15)
+
+
+### Features
+
+* **crawl:** chuẩn hiển thị theo sếp — tiêu đề VIẾT HOA + nội dung 2 khổ ([#136](https://github.com/lth91/luot247-vision/issues/136)) ([d1463f6](https://github.com/lth91/luot247-vision/commit/d1463f695b9f4c3a1448cac5bc155545571b96b0))
+
 ## [1.92.1](https://github.com/lth91/luot247-vision/compare/v1.92.0...v1.92.1) (2026-07-14)
 
 

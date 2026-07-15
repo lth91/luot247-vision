@@ -38,6 +38,8 @@ QUY TẮC ĐỘ DÀI (BẮT BUỘC, đếm từ = tách theo khoảng trắng �
 - Trước khi trả JSON: đếm lại số từ của content; nếu quá 115 từ, xóa bớt câu cuối rồi mới trả.
 
 QUY TẮC VIẾT (chuẩn biên tập luot247):
+- title: VIẾT HOA TOÀN BỘ (vd "MỸ CÔNG BỐ THỎA THUẬN THƯƠNG MẠI MỚI VỚI NHẬT BẢN...").
+- content: chia ĐÚNG 2 KHỔ ngắn, ngăn cách bằng MỘT dòng trống. Khổ 1: diễn biến chính (chủ thể, hành động, thời điểm, số liệu chính). Khổ 2: chi tiết bổ sung, bối cảnh hoặc ý nghĩa.
 - VIẾT LẠI HOÀN TOÀN bằng lời của bạn — không sao chép nguyên câu dài từ bài gốc.
 - Mở đầu content bằng mốc thời gian tự nhiên: "Sáng 12/7", "Chiều 12/7", "Ngày 12/7", "Quý II/2026", "Tuần qua"... KHÔNG dùng dạng khô cứng "Vào ngày 12/07/2026". Không kèm năm trừ khi sự kiện quá khứ xa/kế hoạch tương lai.
 - Đủ dữ kiện cốt lõi: AI/CHỦ THỂ cụ thể — LÀM GÌ/DIỄN BIẾN chính — Ở ĐÂU/PHẠM VI — KHI NÀO — SỐ LIỆU chính nếu có.
