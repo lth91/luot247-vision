@@ -231,7 +231,13 @@ function extractPublishedDateFromHtml(html: string): string | null {
 // Chuẩn hiển thị theo yêu cầu sếp 15/07: tiêu đề VIẾT HOA, nội dung 2 khổ.
 // toUpperCase của JS xử lý đúng tiếng Việt có dấu (đ→Đ, ơ→Ơ...).
 function formatTitle(s: string): string {
-  return s.trim().toUpperCase();
+  // HOA toàn bộ + BỎ dấu hai chấm (sếp 16/07: tiêu đề không dùng ":"). Giữ ":"
+  // giữa 2 chữ số (giờ 15:30, tỉ số 2:1); colon phân tách "X: Y" → thay space.
+  return s
+    .replace(/(?<!\d):(?!\d)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
 }
 
 // Tin AI = 1 KHỔ (sếp 16/07): gộp mọi xuống dòng thành 1 đoạn liền mạch.
