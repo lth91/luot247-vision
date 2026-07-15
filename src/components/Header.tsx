@@ -28,12 +28,22 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
 
   // Badge thẻ vàng trên mục "Gửi tin" — nhắc tác giả có tin cần sửa.
   const [yellowCount, setYellowCount] = useState(0);
+  // Số tin AI đang chờ duyệt — hiện ngay trên nhãn menu "N tin cần duyệt" (yêu cầu sếp 15/07).
+  const [pendingCount, setPendingCount] = useState(0);
   useEffect(() => {
-    if (canSubmit !== true) { setYellowCount(0); return; }
+    if (canSubmit !== true) { setYellowCount(0); setPendingCount(0); return; }
     let cancelled = false;
     (supabase as any).rpc("get_my_yellow_cards").then(({ data }: { data: unknown }) => {
       if (!cancelled) setYellowCount(Array.isArray(data) ? data.length : 0);
     });
+    (supabase as any)
+      .from("news")
+      .select("id", { count: "exact", head: true })
+      .eq("review_status", "pending")
+      .is("submitted_by", null)
+      .then(({ count }: { count: number | null }) => {
+        if (!cancelled) setPendingCount(count ?? 0);
+      });
     return () => { cancelled = true; };
   }, [canSubmit]);
   
@@ -195,7 +205,7 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                           navigate("/duyet-tin-ai");
                         }}
                       >
-                        🤖 Duyệt tin AI
+                        {pendingCount > 0 ? `🤖 Tin cần duyệt (${pendingCount})` : "🤖 Tin tự động"}
                       </Button>
 
                       <Button
