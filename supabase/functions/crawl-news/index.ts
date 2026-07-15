@@ -1,5 +1,5 @@
 // AI crawl tin tổng hợp từ RSS báo lớn VN → Haiku viết lại chuẩn luot247
-// (tiêu đề 12-18 từ, tổng 120-140 từ) → insert bảng news với is_approved=false,
+// (tiêu đề 12-18 từ, tổng 100-120 từ) → insert bảng news với is_approved=false,
 // review_status='pending' — nhân viên duyệt tay ở /duyet-tin-ai.
 // Port từ crawl-electricity-news (f1ac097), bỏ keyword điện, đổi đích ghi.
 //
@@ -32,8 +32,9 @@ const MAX_CONTENT_CHARS = 6000; // 140 từ output không cần hơn 6k chars in
 const DEFAULT_MAX_LLM_CALLS = 35; // van chống vọt chi phí mỗi run
 const MAX_ARTICLE_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 
-// Chuẩn độ dài (khớp submit-news + SubmitNews.tsx)
-const TITLE_MIN = 12, TITLE_MAX = 18, TOTAL_MIN = 120, TOTAL_MAX = 140;
+// Chuẩn độ dài TIN TỰ ĐỘNG (sếp 16/07): tổng title+content 100-120 từ.
+// (Tin nhân viên gõ tay ở submit-news vẫn giữ chuẩn riêng 120-140.)
+const TITLE_MIN = 12, TITLE_MAX = 18, TOTAL_MIN = 100, TOTAL_MAX = 120;
 
 // URL noise filter rẻ tiền (pre-LLM): trang không phải bài viết text.
 const URL_NOISE_RE = /\/(video|videos|podcast|podcasts|photo|photos|anh-|infographics?|interactive|quiz|lich-truyen-hinh|lich-chieu|tu-vi|xo-so|ket-qua-xo-so)[\/-]|\.(mp4|mp3)$/i;
@@ -451,22 +452,30 @@ async function handle(req: Request): Promise<Response> {
   if (body?.mode === "reformat_pending") {
     const { data: rows, error } = await supabase
       .from("news")
-      .select("id, title, description")
+      .select("id, title, description, ai_classification")
       .eq("review_status", "pending")
       .is("submitted_by", null)
       .limit(2000);
     if (error) return json({ error: error.message }, 500);
-    const list = (rows ?? []) as { id: string; title: string; description: string | null }[];
+    const list = (rows ?? []) as { id: string; title: string; description: string | null; ai_classification: Record<string, unknown> | null }[];
     let updated = 0;
     const errs: string[] = [];
     for (let i = 0; i < list.length; i += 25) {
       const batch = list.slice(i, i + 25);
       await Promise.all(batch.map(async (row) => {
         const newTitle = formatTitle(row.title ?? "");
-        const newDesc = ensureTwoParagraphs(row.description ?? "");
-        if (newTitle === row.title && newDesc === (row.description ?? "")) return;
+        // Áp chuẩn mới 100-120: tin cũ viết theo khung 120-140 → cắt câu cuối
+        // cho lọt trần 120 (giữ sàn 100), rồi chia lại 2 khổ.
+        const trimmed = trimToFit(newTitle, (row.description ?? "").trim());
+        const newDesc = ensureTwoParagraphs(trimmed);
+        const tw = countWords(newTitle);
+        const total = tw + countWords(newDesc);
+        const needsEdit = tw < TITLE_MIN || tw > TITLE_MAX || total < TOTAL_MIN || total > TOTAL_MAX;
+        const ai = { ...(row.ai_classification ?? {}), needs_edit: needsEdit, title_words: tw, total_words: total };
+        if (newTitle === row.title && newDesc === (row.description ?? "") &&
+            (row.ai_classification as { needs_edit?: boolean } | null)?.needs_edit === needsEdit) return;
         const { error: uErr } = await supabase.from("news")
-          .update({ title: newTitle, description: newDesc })
+          .update({ title: newTitle, description: newDesc, ai_classification: ai })
           .eq("id", row.id);
         if (uErr) errs.push(uErr.message.slice(0, 80));
         else updated++;
