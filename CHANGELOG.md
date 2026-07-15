@@ -1,3 +1,10 @@
+## [1.96.3](https://github.com/lth91/luot247-vision/compare/v1.96.2...v1.96.3) (2026-07-15)
+
+
+### Bug Fixes
+
+* **review:** bỏ nút "Hàng đợi" thừa ở màn hàng đợi (giữ nút quay về khi ở Lịch sử) ([#144](https://github.com/lth91/luot247-vision/issues/144)) ([786bebd](https://github.com/lth91/luot247-vision/commit/786bebdb5f2ba3b59d2469ec10d5ff36058b77a9))
+
 ## [1.96.2](https://github.com/lth91/luot247-vision/compare/v1.96.1...v1.96.2) (2026-07-15)
 
 
