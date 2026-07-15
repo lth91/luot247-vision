@@ -61,13 +61,16 @@ const CAT_LABEL: Record<string, string> = Object.fromEntries(
   SUBMISSION_CATEGORIES.map((c) => [c.slug, c.label]),
 );
 
-const { titleMin, titleMax, totalMin, totalMax } = SUBMISSION_LIMITS;
+const { titleMin, titleMax } = SUBMISSION_LIMITS;
+// Chuẩn riêng cho TIN TỰ ĐỘNG (sếp 16/07): tổng title+content 100-120 từ.
+// (SUBMISSION_LIMITS.totalMin/Max 120-140 chỉ áp cho tin nhân viên gõ tay.)
+const AI_TOTAL_MIN = 100, AI_TOTAL_MAX = 120;
 
 // Đếm từ + trạng thái đạt/không cho 1 tin (tổng = tiêu đề + nội dung).
 const wordInfo = (title: string, content: string) => {
   const tw = countWords(title);
   const total = tw + countWords(content);
-  const ok = tw >= titleMin && tw <= titleMax && total >= totalMin && total <= totalMax;
+  const ok = tw >= titleMin && tw <= titleMax && total >= AI_TOTAL_MIN && total <= AI_TOTAL_MAX;
   return { tw, total, ok };
 };
 
@@ -243,8 +246,14 @@ const ReviewQueue = () => {
   };
 
   const editWords = wordInfo(editTitle, editContent);
-  const editContentMin = Math.max(0, totalMin - (countWords(editTitle) || 15));
-  const editContentMax = Math.max(0, totalMax - (countWords(editTitle) || 15));
+  const editContentMin = Math.max(0, AI_TOTAL_MIN - (countWords(editTitle) || 15));
+  const editContentMax = Math.max(0, AI_TOTAL_MAX - (countWords(editTitle) || 15));
+  // Chỉ dẫn trực quan: còn phải bớt/thêm bao nhiêu từ nữa (yêu cầu sếp 16/07).
+  const editHint = editWords.total > AI_TOTAL_MAX
+    ? `⚠️ Cần BỚT ${editWords.total - AI_TOTAL_MAX} từ nữa`
+    : editWords.total < AI_TOTAL_MIN
+      ? `⚠️ Cần THÊM ${AI_TOTAL_MIN - editWords.total} từ nữa`
+      : "✅ Đạt chuẩn số từ — bấm Duyệt được";
 
   return (
     <div className="min-h-screen bg-background">
@@ -412,7 +421,10 @@ const ReviewQueue = () => {
               <div>
                 <Textarea rows={7} value={editContent} onChange={(e) => setEditContent(e.target.value)} placeholder="Nội dung" />
                 <p className={`text-xs mt-1 ${editWords.ok ? "text-muted-foreground" : "text-red-600"}`}>
-                  Nội dung: {editWords.total - editWords.tw} từ (cần {editContentMin}-{editContentMax}) — tổng {editWords.total}/{totalMin}-{totalMax} {editWords.ok ? "✓" : "✗"}
+                  Nội dung: {editWords.total - editWords.tw} từ (cần {editContentMin}-{editContentMax}) — tổng {editWords.total}/{AI_TOTAL_MIN}-{AI_TOTAL_MAX} {editWords.ok ? "✓" : "✗"}
+                </p>
+                <p className={`text-sm font-semibold mt-1 ${editWords.ok ? "text-green-600" : "text-red-600"}`}>
+                  {editHint}
                 </p>
               </div>
               <Select value={editCategory} onValueChange={setEditCategory}>

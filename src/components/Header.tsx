@@ -205,7 +205,7 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                           navigate("/duyet-tin-ai");
                         }}
                       >
-                        {pendingCount > 0 ? `🤖 ${pendingCount} tin cần duyệt` : "🤖 Tin tự động"}
+                        {pendingCount > 0 ? `🤖 Tin cần duyệt (${pendingCount})` : "🤖 Tin tự động"}
                       </Button>
 
                       <Button

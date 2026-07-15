@@ -24,6 +24,11 @@ interface DashRow {
   yellow_cards: number;
   red_cards: number;
   banned: boolean;
+  // Số tin TỰ ĐỘNG người này đã duyệt (gộp từ get_review_dashboard) — hiển thị
+  // dạng 46(20): 46 = tổng (tay + AI), (20) = phần tin AI. Yêu cầu sếp 16/07.
+  ai_today?: number;
+  ai_yesterday?: number;
+  ai_month?: number;
 }
 
 // Công duyệt tin AI — từ RPC get_review_dashboard (đếm review_log theo whitelist).
@@ -32,6 +37,7 @@ interface ReviewRow {
   email: string;
   duyet_today: number;
   loai_today: number;
+  duyet_yesterday: number;
   duyet_month: number;
   loai_month: number;
 }
@@ -53,7 +59,14 @@ type SortKey = "full_name" | "sub_today" | "sub_month" | "acc_today" | "acc_yest
 const sortVal = (r: DashRow, key: SortKey): number | string =>
   key === "full_name" ? (r.full_name || "") :
   key === "rate" ? (r.sub_today > 0 ? r.acc_today / r.sub_today : -1) :
-  (r[key] ?? 0); // acc_yesterday có thể undefined nếu SQL mới chưa chạy
+  key === "acc_today" ? r.acc_today + (r.ai_today || 0) :
+  key === "acc_yesterday" ? (r.acc_yesterday || 0) + (r.ai_yesterday || 0) :
+  key === "acc_month" ? r.acc_month + (r.ai_month || 0) :
+  (r[key] ?? 0);
+
+// Ô "46(20)": 46 = tổng tin duyệt (tay + tự động), (20) = phần tin tự động.
+const fmtDuyet = (tay: number, ai?: number) =>
+  ai && ai > 0 ? `${tay + ai}(${ai})` : `${tay}`;
 
 const Leaderboard = () => {
   const navigate = useNavigate();
@@ -62,7 +75,6 @@ const Leaderboard = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [rows, setRows] = useState<DashRow[]>([]);
   const [views, setViews] = useState<ViewStats | null>(null);
-  const [reviewRows, setReviewRows] = useState<ReviewRow[]>([]);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   // null = giữ thứ tự mặc định từ RPC (tin duyệt tháng này giảm dần).
@@ -121,11 +133,23 @@ const Leaderboard = () => {
           .select("id", { count: "exact", head: true })
           .eq("review_status", "pending"),
       ]);
-      setRows((dash.data as DashRow[]) ?? []);
+      // Gộp công duyệt tin tự động vào từng dòng theo email (RPC lỗi/chưa
+      // migrate → coi như 0, bảng vẫn chạy).
+      const reviewMap = new Map<string, ReviewRow>(
+        review.error ? [] : (((review.data as ReviewRow[]) ?? []).map((r) => [r.email, r])),
+      );
+      const dashRows = ((dash.data as DashRow[]) ?? []).map((r) => {
+        const rv = reviewMap.get(r.email);
+        return {
+          ...r,
+          ai_today: rv?.duyet_today ?? 0,
+          ai_yesterday: rv?.duyet_yesterday ?? 0,
+          ai_month: rv?.duyet_month ?? 0,
+        };
+      });
+      setRows(dashRows);
       const s = Array.isArray(stats.data) ? stats.data[0] : stats.data;
       setViews((s as ViewStats) ?? null);
-      // RPC công duyệt có thể chưa migrate → lỗi thì ẩn bảng, không vỡ trang.
-      setReviewRows(review.error ? [] : ((review.data as ReviewRow[]) ?? []));
       setPendingCount(pending.error ? null : (pending.count ?? 0));
       setIsLoading(false);
     })();
@@ -142,8 +166,11 @@ const Leaderboard = () => {
       acc_prev_month: a.acc_prev_month + r.acc_prev_month,
       yellow_cards: a.yellow_cards + (r.yellow_cards || 0),
       red_cards: a.red_cards + (r.red_cards || 0),
+      ai_today: a.ai_today + (r.ai_today || 0),
+      ai_yesterday: a.ai_yesterday + (r.ai_yesterday || 0),
+      ai_month: a.ai_month + (r.ai_month || 0),
     }),
-    { sub_today: 0, sub_month: 0, acc_today: 0, acc_yesterday: 0, acc_month: 0, acc_prev_month: 0, yellow_cards: 0, red_cards: 0 },
+    { sub_today: 0, sub_month: 0, acc_today: 0, acc_yesterday: 0, acc_month: 0, acc_prev_month: 0, yellow_cards: 0, red_cards: 0, ai_today: 0, ai_yesterday: 0, ai_month: 0 },
   );
 
   // Ô tiêu đề bấm được để sắp xếp; mũi tên chỉ chiều đang áp dụng.
@@ -169,7 +196,14 @@ const Leaderboard = () => {
     <div className="min-h-screen bg-background">
       <Header user={session?.user} userRole={userRole} />
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        <h1 className="text-xl font-bold">📊 Bảng theo dõi gửi tin</h1>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h1 className="text-xl font-bold">📊 Bảng theo dõi gửi tin</h1>
+          {pendingCount !== null && (
+            <span className={`text-xs font-medium rounded px-2 py-1 ${pendingCount > 300 ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200" : "bg-muted text-muted-foreground"}`}>
+              Hàng đợi còn {pendingCount} tin
+            </span>
+          )}
+        </div>
 
         <Card>
           <CardContent className="p-0">
@@ -209,10 +243,10 @@ const Leaderboard = () => {
                           {r.banned && <span className="ml-1.5 text-[10px] font-bold text-red-600 border border-red-400 rounded px-1 py-0.5 align-middle">⛔ CẤM</span>}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs whitespace-nowrap max-w-[220px] truncate" title={r.email}>{r.email}</TableCell>
-                        <TableCell className="text-right px-2">{r.acc_today}</TableCell>
+                        <TableCell className="text-right px-2">{fmtDuyet(r.acc_today, r.ai_today)}</TableCell>
                         <TableCell className="text-right px-2">{r.sub_today}</TableCell>
-                        <TableCell className="text-right px-2">{r.acc_yesterday ?? 0}</TableCell>
-                        <TableCell className="text-right px-2 font-semibold">{r.acc_month}</TableCell>
+                        <TableCell className="text-right px-2">{fmtDuyet(r.acc_yesterday ?? 0, r.ai_yesterday)}</TableCell>
+                        <TableCell className="text-right px-2 font-semibold">{fmtDuyet(r.acc_month, r.ai_month)}</TableCell>
                         <TableCell className="text-right px-2 text-muted-foreground">{r.acc_prev_month}</TableCell>
                         <TableCell className="text-right px-2">{rate(r.acc_today, r.sub_today)}</TableCell>
                         <TableCell className={`text-right px-2 ${r.red_cards > 0 ? "font-bold text-red-600" : "text-muted-foreground"}`}>{r.red_cards}</TableCell>
@@ -222,10 +256,10 @@ const Leaderboard = () => {
                     <TableRow className="border-t-2 font-bold bg-muted/40">
                       <TableCell>TỔNG CỘNG</TableCell>
                       <TableCell />
-                      <TableCell className="text-right px-2">{sum.acc_today}</TableCell>
+                      <TableCell className="text-right px-2">{fmtDuyet(sum.acc_today, sum.ai_today)}</TableCell>
                       <TableCell className="text-right px-2">{sum.sub_today}</TableCell>
-                      <TableCell className="text-right px-2">{sum.acc_yesterday}</TableCell>
-                      <TableCell className="text-right px-2">{sum.acc_month}</TableCell>
+                      <TableCell className="text-right px-2">{fmtDuyet(sum.acc_yesterday, sum.ai_yesterday)}</TableCell>
+                      <TableCell className="text-right px-2">{fmtDuyet(sum.acc_month, sum.ai_month)}</TableCell>
                       <TableCell className="text-right px-2">{sum.acc_prev_month}</TableCell>
                       <TableCell className="text-right px-2">{rate(sum.acc_today, sum.sub_today)}</TableCell>
                       <TableCell className="text-right px-2 text-red-600">{sum.red_cards}</TableCell>
@@ -238,72 +272,10 @@ const Leaderboard = () => {
           </CardContent>
         </Card>
 
-        {/* ===== Công duyệt tin AI: ai duyệt/loại bao nhiêu (từ review_log) ===== */}
-        {reviewRows.length > 0 && (() => {
-          const active = reviewRows.filter((r) => r.duyet_month + r.loai_month > 0);
-          const idle = reviewRows.length - active.length;
-          const rsum = active.reduce(
-            (a, r) => ({
-              duyet_today: a.duyet_today + r.duyet_today,
-              loai_today: a.loai_today + r.loai_today,
-              duyet_month: a.duyet_month + r.duyet_month,
-              loai_month: a.loai_month + r.loai_month,
-            }),
-            { duyet_today: 0, loai_today: 0, duyet_month: 0, loai_month: 0 },
-          );
-          return (
-            <Card>
-              <CardContent className="p-0">
-                <div className="flex items-center justify-between px-4 pt-4">
-                  <h2 className="font-bold">🤖 Duyệt tin tự động</h2>
-                  {pendingCount !== null && (
-                    <span className={`text-xs font-medium rounded px-2 py-1 ${pendingCount > 300 ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200" : "bg-muted text-muted-foreground"}`}>
-                      Hàng đợi còn {pendingCount} tin
-                    </span>
-                  )}
-                </div>
-                {active.length === 0 ? (
-                  <p className="text-sm text-muted-foreground px-4 py-6">
-                    Tháng này chưa ai duyệt tin AI. Nhân viên vào menu → 🤖 Duyệt tin AI để bắt đầu.
-                  </p>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Tên</TableHead>
-                        <TableHead className="text-right text-xs leading-tight px-2 whitespace-pre-line">{"Duyệt\nhôm nay"}</TableHead>
-                        <TableHead className="text-right text-xs leading-tight px-2 whitespace-pre-line">{"Loại\nhôm nay"}</TableHead>
-                        <TableHead className="text-right text-xs leading-tight px-2 whitespace-pre-line">{"Duyệt\ntháng này"}</TableHead>
-                        <TableHead className="text-right text-xs leading-tight px-2 whitespace-pre-line">{"Loại\ntháng này"}</TableHead>
-                        <TableHead className="text-right text-xs leading-tight px-2 whitespace-pre-line">{"Tỷ lệ\nduyệt"}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {active.map((r) => (
-                        <TableRow key={r.email}>
-                          <TableCell className="font-medium whitespace-nowrap" title={r.email}>{r.full_name || r.email}</TableCell>
-                          <TableCell className="text-right px-2">{r.duyet_today}</TableCell>
-                          <TableCell className="text-right px-2 text-muted-foreground">{r.loai_today}</TableCell>
-                          <TableCell className="text-right px-2 font-semibold">{r.duyet_month}</TableCell>
-                          <TableCell className="text-right px-2 text-muted-foreground">{r.loai_month}</TableCell>
-                          <TableCell className="text-right px-2">{rate(r.duyet_month, r.duyet_month + r.loai_month)}</TableCell>
-                        </TableRow>
-                      ))}
-                      <TableRow className="border-t-2 font-bold bg-muted/40">
-                        <TableCell>TỔNG CỘNG{idle > 0 ? ` (${idle} người chưa duyệt)` : ""}</TableCell>
-                        <TableCell className="text-right px-2">{rsum.duyet_today}</TableCell>
-                        <TableCell className="text-right px-2">{rsum.loai_today}</TableCell>
-                        <TableCell className="text-right px-2">{rsum.duyet_month}</TableCell>
-                        <TableCell className="text-right px-2">{rsum.loai_month}</TableCell>
-                        <TableCell className="text-right px-2">{rate(rsum.duyet_month, rsum.duyet_month + rsum.loai_month)}</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })()}
+        {/* Chú giải định dạng ô 46(20) — công duyệt tin tự động đã gộp vào bảng trên */}
+        <p className="text-xs text-muted-foreground -mt-4 px-1">
+          Định dạng <b>46(20)</b> ở các cột Duyệt: 46 = tổng tin đã duyệt, (20) = trong đó có 20 tin tự động (AI) do người này duyệt.
+        </p>
 
         {/* Khối thống kê lượt xem toàn site (nền vàng như mẫu của sếp) */}
         {views && (
