@@ -1,3 +1,10 @@
+## [1.98.1](https://github.com/lth91/luot247-vision/compare/v1.98.0...v1.98.1) (2026-07-16)
+
+
+### Bug Fixes
+
+* **crawl:** giảm nhãn "Cần sửa số từ" — cắt vế phụ sau dấu phẩy + cú nén AI giá rẻ ([#149](https://github.com/lth91/luot247-vision/issues/149)) ([17f82d5](https://github.com/lth91/luot247-vision/commit/17f82d5a0210cdafcd9f67101838ee7a1f7aecdd))
+
 # [1.98.0](https://github.com/lth91/luot247-vision/compare/v1.97.1...v1.98.0) (2026-07-16)
 
 
