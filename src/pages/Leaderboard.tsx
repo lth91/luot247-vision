@@ -221,7 +221,9 @@ const Leaderboard = () => {
                     <TableRow>
                       {/* Tiêu đề cột cho phép xuống 2 dòng để 11 cột vừa màn desktop, khỏi cuộn ngang.
                           Tên cột theo yêu cầu sếp 09/07: bỏ chữ "Tin", "đăng" → "Up", thêm "Duyệt hôm qua". */}
-                      <SortHead label="Tên" k="full_name" className="whitespace-nowrap [&_button]:justify-start" />
+                      {/* "Thành viên (xx)" theo yêu cầu sếp 16/07: xx = số người trong bảng
+                          để kiểm soát ra/vào nhóm. */}
+                      <SortHead label={`Thành viên (${rows.length})`} k="full_name" className="whitespace-nowrap [&_button]:justify-start" />
                       <TableHead className="whitespace-nowrap">Email đăng ký</TableHead>
                       {/* \n = điểm ngắt dòng cố định (SortHead render whitespace-pre-line):
                           "hôm nay"/"hôm qua"/"tháng này" luôn nguyên cụm trên 1 dòng */}
