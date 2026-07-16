@@ -1,3 +1,10 @@
+# [1.99.0](https://github.com/lth91/luot247-vision/compare/v1.98.1...v1.99.0) (2026-07-16)
+
+
+### Features
+
+* **leaderboard:** cột "Tên" thành "Thành viên (xx)" hiển thị quân số ([#150](https://github.com/lth91/luot247-vision/issues/150)) ([eb0631b](https://github.com/lth91/luot247-vision/commit/eb0631bf83f08ef89124b98111f250aabf04e424))
+
 ## [1.98.1](https://github.com/lth91/luot247-vision/compare/v1.98.0...v1.98.1) (2026-07-16)
 
 
