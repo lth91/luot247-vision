@@ -47,7 +47,10 @@ const About = () => {
           {/* Mission Content */}
           <Card className="p-8 shadow-lg border-2">
             <p className="text-muted-foreground leading-relaxed text-lg">
-              <span className="font-semibold text-red-600">LƯỚT 247</span> là bản tin vắn được biên soạn từ các nguồn tin chính thống tại Việt Nam, chọn lọc và tóm lược những thông tin quan trọng nhất trong ngày. Nền tảng hướng đến phục vụ cộng đồng với nội dung nhanh gọn, chính xác, đáng tin cậy, giúp người đọc cập nhật kịp thời các sự kiện, chính sách và vấn đề nổi bật trong nước.
+              <span className="font-semibold text-red-600">LƯỚT 247</span> – kênh thông tin chọn lọc từ các nguồn chính thống trong nước, tóm lược những sự kiện và chính sách quan trọng nhất mỗi ngày. Nhanh gọn, chính xác, đáng tin cậy, giúp cộng đồng dễ dàng cập nhật thời sự mà không mất nhiều thời gian.
+            </p>
+            <p className="text-muted-foreground leading-relaxed text-lg mt-4">
+              Đọc <span className="font-semibold text-red-600">LƯỚT 247</span> mỗi ngày, bạn vừa nắm bắt kịp thời dòng chảy sự kiện, vừa chủ động hơn trong công việc và cuộc sống.
             </p>
           </Card>
 
