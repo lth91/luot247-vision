@@ -1,3 +1,10 @@
+## [1.97.1](https://github.com/lth91/luot247-vision/compare/v1.97.0...v1.97.1) (2026-07-16)
+
+
+### Bug Fixes
+
+* **crawl:** chặn trần 1.5MB HTML trước khi parse + giảm song song 3→2, hết crash Memory limit exceeded ([#147](https://github.com/lth91/luot247-vision/issues/147)) ([36ea6fd](https://github.com/lth91/luot247-vision/commit/36ea6fda01606df6375d43d9901ba6eca0365898))
+
 # [1.97.0](https://github.com/lth91/luot247-vision/compare/v1.96.4...v1.97.0) (2026-07-15)
 
 
