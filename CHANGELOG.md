@@ -1,3 +1,10 @@
+# [1.100.0](https://github.com/lth91/luot247-vision/compare/v1.99.0...v1.100.0) (2026-07-16)
+
+
+### Features
+
+* **about:** lời giới thiệu 2 đoạn mới + tiêu đề "Thông tin liên hệ:" ([#151](https://github.com/lth91/luot247-vision/issues/151)) ([55c7368](https://github.com/lth91/luot247-vision/commit/55c736825f2e2f1a03b36f38ea910ddca31d7b43))
+
 # [1.99.0](https://github.com/lth91/luot247-vision/compare/v1.98.1...v1.99.0) (2026-07-16)
 
 
