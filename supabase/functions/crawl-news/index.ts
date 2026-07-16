@@ -262,12 +262,28 @@ function trimToFit(title: string, content: string): string {
   const tw = countWords(title);
   if (tw + countWords(content) <= TOTAL_MAX) return content;
   const sentences = content.split(/(?<=[.!?…])\s+/);
-  while (sentences.length > 1 && tw + countWords(sentences.join(" ")) > TOTAL_MAX) {
-    sentences.pop();
+  const kept = [...sentences];
+  while (kept.length > 1 && tw + countWords(kept.join(" ")) > TOTAL_MAX) {
+    kept.pop();
   }
-  const trimmed = sentences.join(" ");
+  const trimmed = kept.join(" ");
   const total = tw + countWords(trimmed);
-  return total >= TOTAL_MIN && total <= TOTAL_MAX ? trimmed : content;
+  if (total >= TOTAL_MIN && total <= TOTAL_MAX) return trimmed;
+
+  // Cắt nguyên câu bị "quá đà" (câu dài 25-30 từ, cửa sổ chuẩn chỉ rộng 20 từ
+  // nên dễ nhảy từ vượt trần xuống dưới sàn): lấy lại câu vừa bỏ, thử bỏ dần
+  // VẾ PHỤ sau dấu phẩy cuối cho tới khi tổng lọt cửa sổ, chốt bằng dấu chấm.
+  if (total < TOTAL_MIN && kept.length < sentences.length) {
+    const clauses = sentences[kept.length].split(/,\s*/);
+    for (let n = clauses.length - 1; n >= 1; n--) {
+      const partial = clauses.slice(0, n).join(", ").replace(/[,.;:…\s]+$/, "") + ".";
+      const candidate = `${trimmed} ${partial}`;
+      const t = tw + countWords(candidate);
+      if (t > TOTAL_MAX) continue;
+      return t >= TOTAL_MIN ? candidate : content;
+    }
+  }
+  return content;
 }
 
 interface LlmResult {
@@ -365,6 +381,45 @@ async function rewriteWithClaude(
     await logLlmUsage(supabase, { functionName: "crawl-news", model: ANTHROPIC_MODEL, usage: data.usage });
   }
   return parseLlmJson((data?.content?.[0]?.text ?? "").trim());
+}
+
+// Lưới cuối chống nhãn "Cần sửa số từ": khi cả cắt câu lẫn retry đều không đưa
+// tổng về 100-120 từ, gọi 1 cú NÉN siêu rẻ (input chỉ ~150 từ, không cần cache)
+// yêu cầu rút content về đích từ tính sẵn. Trả plain text hoặc null nếu lỗi.
+async function compressWithClaude(
+  title: string,
+  content: string,
+  apiKey: string,
+  supabase: SupabaseClient,
+): Promise<string | null> {
+  const tw = countWords(title);
+  const lo = TOTAL_MIN - tw + 2, hi = TOTAL_MAX - tw - 2; // đệm 2 từ mỗi đầu
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 500,
+      temperature: 0.2,
+      system:
+        "Bạn là biên tập viên. Rút ngắn bản tin được đưa xuống đúng khoảng số từ yêu cầu: giữ dữ kiện cốt lõi (chủ thể, diễn biến, thời gian, số liệu chính), bỏ chi tiết phụ (trích dẫn phụ, số liệu thứ cấp, bối cảnh xa). Giữ nguyên văn phong tin tức, viết liền 1 đoạn, không sai chính tả. Trả về DUY NHẤT nội dung đã rút gọn — không giải thích, không markdown, không tiêu đề.",
+      messages: [{
+        role: "user",
+        content: `Rút bản tin sau xuống còn ${lo}-${hi} từ (đếm từ = tách theo khoảng trắng):\n\n${content}`,
+      }],
+    }),
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (data?.usage) {
+    await logLlmUsage(supabase, { functionName: "crawl-news", model: ANTHROPIC_MODEL, usage: data.usage });
+  }
+  const out = (data?.content?.[0]?.text ?? "").trim();
+  return out || null;
 }
 
 Deno.serve(async (req) => {
@@ -629,7 +684,7 @@ async function handle(req: Request): Promise<Response> {
   const stats = {
     sources: 0, articlesFound: 0, llmCalls: 0, inserted: 0,
     skippedDup: 0, skippedOld: 0, rejectedNonNews: 0, needsEdit: 0,
-    aiDupChecked: 0, aiDupRejected: 0,
+    aiDupChecked: 0, aiDupRejected: 0, compressCalls: 0,
     errors: [] as string[],
   };
   let llmCalls = 0;
@@ -739,6 +794,18 @@ async function handle(req: Request): Promise<Response> {
               }
             }
             tw = countWords(r.title); total = tw + countWords(r.content);
+            // Lưới cuối: title đạt nhưng tổng vẫn VƯỢT trần (cắt câu không lọt
+            // cửa sổ hẹp 20 từ) → 1 cú nén siêu rẻ thay vì dán nhãn needs_edit.
+            if (total > TOTAL_MAX && tw >= TITLE_MIN && tw <= TITLE_MAX && llmCalls < maxLlmCalls) {
+              llmCalls++; stats.llmCalls++; stats.compressCalls++;
+              const squeezed = await compressWithClaude(r.title, r.content, anthropicKey, supabase);
+              if (squeezed) {
+                const cand = trimToFit(r.title, flattenToOneParagraph(squeezed));
+                const candTotal = tw + countWords(cand);
+                if (candTotal >= TOTAL_MIN && candTotal <= TOTAL_MAX) r.content = cand;
+              }
+              total = tw + countWords(r.content);
+            }
             if (tw < TITLE_MIN || tw > TITLE_MAX || total < TOTAL_MIN || total > TOTAL_MAX) {
               needsEdit = true; // vẫn đưa vào hàng đợi, nhân viên sửa lúc duyệt
             }
