@@ -25,11 +25,14 @@ const corsHeaders = {
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
-const SOURCE_CONCURRENCY = 3;
+const SOURCE_CONCURRENCY = 2; // 3 → 2: mỗi parse deno_dom giữ cả DOM trong RAM, 3 luồng song song từng làm vượt trần 256MB
 const SOURCES_PER_RUN = 15;
 const TIME_BUDGET_MS = 120000;
 const FETCH_TIMEOUT_MS = 30000;
 const MAX_CONTENT_CHARS = 6000; // 140 từ output không cần hơn 6k chars input
+// Trần kích thước HTML đưa vào DOMParser (WASM): trang báo VN nặng 1-3MB,
+// DOM phình ~10x → "Memory limit exceeded". Nội dung bài luôn nằm trong 1.5MB đầu.
+const MAX_HTML_CHARS = 1_500_000;
 const DEFAULT_MAX_LLM_CALLS = 35; // van chống vọt chi phí mỗi run
 const MAX_ARTICLE_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 
@@ -637,7 +640,7 @@ async function handle(req: Request): Promise<Response> {
     try {
       const listRes = await fetchWithTimeout(src.list_url);
       if (!listRes.ok) throw new Error(`list HTTP ${listRes.status}`);
-      const listBody = await listRes.text();
+      const listBody = (await listRes.text()).slice(0, MAX_HTML_CHARS);
 
       let candidates: { url: string; title?: string; pubDate?: string | null }[] = [];
       if (src.feed_type === "rss") {
@@ -692,7 +695,7 @@ async function handle(req: Request): Promise<Response> {
 
           const artRes = await fetchWithTimeout(canonical);
           if (!artRes.ok) { stats.errors.push(`${src.name}: article HTTP ${artRes.status}`); continue; }
-          const artHtml = await artRes.text();
+          const artHtml = (await artRes.text()).slice(0, MAX_HTML_CHARS);
           const { title: htmlTitle, content } = extractArticleContent(artHtml, src.article_content_selector);
           if (!content || content.length < 200) {
             stats.errors.push(`${src.name}: nội dung quá ngắn (${content.length}) — ${canonical.slice(0, 80)}`);
