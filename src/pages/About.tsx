@@ -58,7 +58,7 @@ const About = () => {
           <Card className="p-8 shadow-lg border-2">
             <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
               <span className="text-3xl">📞</span>
-              Thông Tin Liên Hệ
+              Thông tin liên hệ:
             </h2>
             
             <div className="space-y-6">
