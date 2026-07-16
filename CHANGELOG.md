@@ -1,3 +1,10 @@
+# [1.98.0](https://github.com/lth91/luot247-vision/compare/v1.97.1...v1.98.0) (2026-07-16)
+
+
+### Features
+
+* **crawl:** nâng nhịp quét tin 1 giờ → 30 phút (phút :05 và :35) ([#148](https://github.com/lth91/luot247-vision/issues/148)) ([798018f](https://github.com/lth91/luot247-vision/commit/798018f671a1d8a81abfb5a1175e0a88c9b11701))
+
 ## [1.97.1](https://github.com/lth91/luot247-vision/compare/v1.97.0...v1.97.1) (2026-07-16)
 
 
