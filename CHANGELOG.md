@@ -1,3 +1,10 @@
+# [1.102.0](https://github.com/lth91/luot247-vision/compare/v1.101.0...v1.102.0) (2026-07-17)
+
+
+### Features
+
+* **ui:** nội dung tin đổi từ xám sang màu chữ chính, tăng tương phản dễ đọc ([#153](https://github.com/lth91/luot247-vision/issues/153)) ([22e704d](https://github.com/lth91/luot247-vision/commit/22e704d3c6496f9ff7f82f05128cf0ae5ff66fd8))
+
 # [1.101.0](https://github.com/lth91/luot247-vision/compare/v1.100.0...v1.101.0) (2026-07-17)
 
 
