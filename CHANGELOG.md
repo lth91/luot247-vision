@@ -1,3 +1,10 @@
+# [1.104.0](https://github.com/lth91/luot247-vision/compare/v1.103.2...v1.104.0) (2026-07-17)
+
+
+### Features
+
+* **crawl:** kiểm 2 lượt — giám khảo P1 sau khi viết + chặn trùng lúc bấm duyệt ([#158](https://github.com/lth91/luot247-vision/issues/158)) ([8108123](https://github.com/lth91/luot247-vision/commit/81081233cb83d1d9828f4ad4503fe65cf04abe23))
+
 ## [1.103.2](https://github.com/lth91/luot247-vision/compare/v1.103.1...v1.103.2) (2026-07-17)
 
 
