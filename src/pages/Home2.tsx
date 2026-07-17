@@ -397,7 +397,7 @@ const Home2 = () => {
                   {currentNews.title}
                 </h1>
                 {currentNews.description && (
-                  <div className="text-gray-600 text-sm sm:text-base md:text-lg lg:text-xl leading-relaxed">
+                  <div className="text-foreground text-sm sm:text-base md:text-lg lg:text-xl leading-relaxed">
                     {/* Split theo xuống dòng (Alt+Enter trong sheet) thành các
                         đoạn riêng — giống NewsItem ở trang chủ. Trước đây 1
                         thẻ <p> gộp các dòng thành 1 khối, mất cách đoạn. */}
