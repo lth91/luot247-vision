@@ -38,6 +38,8 @@ interface PendingNews {
     published_at_source?: string;
     similar_title?: string;
     similar_sim?: number;
+    new_development?: { note?: string; similar_title?: string };
+    needs_check?: string;
   } | null;
 }
 
@@ -192,11 +194,22 @@ const ReviewQueue = () => {
     }
   };
 
+  // Lọc lượt 2 (kiểm 2 lượt, sếp 17/07): RPC trả ok=false khi bản tin trùng
+  // với tin VỪA ĐĂNG trong lúc nằm chờ — hệ thống đã tự loại, chỉ cần báo.
+  const handlePass2Block = (id: string, data: { reason?: string; similar_title?: string; similar_sim?: number }) => {
+    removeRow(id);
+    toast.warning(
+      `Tin này trùng ${data.similar_sim ? Math.round(Number(data.similar_sim) * 100) + "% " : ""}với tin đã đăng trong lúc chờ: «${data.similar_title ?? ""}» — hệ thống đã tự loại.`,
+      { duration: 8000 },
+    );
+  };
+
   const approve = async (item: PendingNews) => {
     setBusyId(item.id);
-    const { error } = await (supabase as any).rpc("approve_crawled_news", { _news_id: item.id });
+    const { data, error } = await (supabase as any).rpc("approve_crawled_news", { _news_id: item.id });
     setBusyId(null);
     if (error) return handleRpcError(item.id, error.message);
+    if (data && data.ok === false) return handlePass2Block(item.id, data);
     removeRow(item.id);
     toast.success("Đã duyệt — tin lên trang ngay.");
   };
@@ -216,7 +229,7 @@ const ReviewQueue = () => {
       return;
     }
     setBusyId(editItem.id);
-    const { error } = await (supabase as any).rpc("approve_crawled_news", {
+    const { data, error } = await (supabase as any).rpc("approve_crawled_news", {
       _news_id: editItem.id,
       _title: editTitle.trim(),
       _content: editContent.trim(),
@@ -224,6 +237,11 @@ const ReviewQueue = () => {
     });
     setBusyId(null);
     if (error) return handleRpcError(editItem.id, error.message);
+    if (data && data.ok === false) {
+      handlePass2Block(editItem.id, data);
+      setEditItem(null);
+      return;
+    }
     removeRow(editItem.id);
     setEditItem(null);
     toast.success("Đã duyệt với bản sửa — tin lên trang ngay.");
@@ -379,6 +397,16 @@ const ReviewQueue = () => {
                       {typeof item.ai_classification?.similar_sim === "number" && item.ai_classification?.similar_title && (
                         <Badge variant="outline" className="max-w-full whitespace-normal text-left border-amber-500 text-amber-600 dark:text-amber-400">
                           ⚠️ Giống {Math.round(item.ai_classification.similar_sim * 100)}%: {item.ai_classification.similar_title}
+                        </Badge>
+                      )}
+                      {item.ai_classification?.new_development && (
+                        <Badge variant="outline" className="max-w-full whitespace-normal text-left border-sky-500 text-sky-600 dark:text-sky-400">
+                          🆕 DIỄN BIẾN MỚI{item.ai_classification.new_development.note ? `: ${item.ai_classification.new_development.note}` : ""}
+                        </Badge>
+                      )}
+                      {item.ai_classification?.needs_check && (
+                        <Badge variant="outline" className="max-w-full whitespace-normal text-left border-orange-500 text-orange-600 dark:text-orange-400">
+                          🔍 CẦN KIỂM TRA: {item.ai_classification.needs_check}
                         </Badge>
                       )}
                       {flags.is_sensational && <Badge variant="destructive">Giật gân?</Badge>}
