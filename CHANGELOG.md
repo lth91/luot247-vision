@@ -1,3 +1,10 @@
+## [1.103.2](https://github.com/lth91/luot247-vision/compare/v1.103.1...v1.103.2) (2026-07-17)
+
+
+### Bug Fixes
+
+* **dashboard:** migration acc DISTINCT dùng đúng signature 11 cột có acc_yesterday ([#157](https://github.com/lth91/luot247-vision/issues/157)) ([0f46678](https://github.com/lth91/luot247-vision/commit/0f4667849f9e102fb6ffdc351302e2ac6ab828c0))
+
 ## [1.103.1](https://github.com/lth91/luot247-vision/compare/v1.103.0...v1.103.1) (2026-07-17)
 
 
