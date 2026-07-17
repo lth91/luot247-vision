@@ -59,6 +59,7 @@ type SortKey = "full_name" | "sub_today" | "sub_month" | "acc_today" | "acc_yest
 const sortVal = (r: DashRow, key: SortKey): number | string =>
   key === "full_name" ? (r.full_name || "") :
   key === "rate" ? (r.sub_today > 0 ? r.acc_today / r.sub_today : -1) :
+  key === "sub_today" ? r.sub_today + (r.ai_today || 0) :
   key === "acc_today" ? r.acc_today + (r.ai_today || 0) :
   key === "acc_yesterday" ? (r.acc_yesterday || 0) + (r.ai_yesterday || 0) :
   key === "acc_month" ? r.acc_month + (r.ai_month || 0) :
@@ -246,7 +247,9 @@ const Leaderboard = () => {
                         </TableCell>
                         <TableCell className="text-muted-foreground text-xs whitespace-nowrap max-w-[220px] truncate" title={r.email}>{r.email}</TableCell>
                         <TableCell className="text-right px-2">{fmtDuyet(r.acc_today, r.ai_today)}</TableCell>
-                        <TableCell className="text-right px-2">{r.sub_today}</TableCell>
+                        {/* "Up hôm nay" cùng định dạng "126 (20)" như các cột Duyệt (sếp 16/07):
+                            tổng tin đưa lên trang = tự gửi + tin AI đã duyệt, ngoặc = phần AI. */}
+                        <TableCell className="text-right px-2">{fmtDuyet(r.sub_today, r.ai_today)}</TableCell>
                         <TableCell className="text-right px-2">{fmtDuyet(r.acc_yesterday ?? 0, r.ai_yesterday)}</TableCell>
                         <TableCell className="text-right px-2 font-semibold">{fmtDuyet(r.acc_month, r.ai_month)}</TableCell>
                         <TableCell className="text-right px-2 text-muted-foreground">{r.acc_prev_month}</TableCell>
@@ -259,7 +262,7 @@ const Leaderboard = () => {
                       <TableCell>TỔNG CỘNG</TableCell>
                       <TableCell />
                       <TableCell className="text-right px-2">{fmtDuyet(sum.acc_today, sum.ai_today)}</TableCell>
-                      <TableCell className="text-right px-2">{sum.sub_today}</TableCell>
+                      <TableCell className="text-right px-2">{fmtDuyet(sum.sub_today, sum.ai_today)}</TableCell>
                       <TableCell className="text-right px-2">{fmtDuyet(sum.acc_yesterday, sum.ai_yesterday)}</TableCell>
                       <TableCell className="text-right px-2">{fmtDuyet(sum.acc_month, sum.ai_month)}</TableCell>
                       <TableCell className="text-right px-2">{sum.acc_prev_month}</TableCell>
