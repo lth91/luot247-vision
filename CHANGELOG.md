@@ -1,3 +1,10 @@
+# [1.101.0](https://github.com/lth91/luot247-vision/compare/v1.100.0...v1.101.0) (2026-07-17)
+
+
+### Features
+
+* **crawl:** prompt biên tập bản sếp chốt 16/07 ([#152](https://github.com/lth91/luot247-vision/issues/152)) ([661b9d1](https://github.com/lth91/luot247-vision/commit/661b9d1ce7267a099d0a818865557cccc892acb2))
+
 # [1.100.0](https://github.com/lth91/luot247-vision/compare/v1.99.0...v1.100.0) (2026-07-16)
 
 
