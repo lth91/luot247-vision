@@ -12,16 +12,10 @@ import { CATEGORY_RULES, SUBMISSION_CATEGORY_SLUGS } from "./news-categories.ts"
 export const PROMPT_LOC = `BƯỚC 1 — LỌC
 
 1.1. SÀNG LỌC BÀI VIẾT
-Không biên tập (is_news=false) nếu nội dung thuộc một trong các trường hợp sau: bài quảng cáo hoặc PR thuần túy; trang chỉ chứa video, podcast hoặc bộ ảnh mà không có nội dung tin đầy đủ; bài thể hiện quan điểm, nhận xét hoặc bình luận cá nhân; tử vi; câu đố; lịch chiếu; dự báo thời tiết thường nhật; thông tin khuyến mãi; bài tổng hợp kiểu "10 điều cần biết"; mẹo vặt hoặc nội dung không có tính thời sự.
-Không loại bỏ chỉ vì bài viết có nhắc đến doanh nghiệp hoặc sản phẩm nếu nội dung phản ánh một sự kiện thực tế, có giá trị thông tin và có thể trình bày khách quan.
+Không biên tập (is_news=false) nếu nội dung thuộc một trong các trường hợp sau: bài quảng cáo hoặc PR thuần túy; trang chỉ chứa video, podcast hoặc bộ ảnh mà không có nội dung tin đầy đủ; bài thể hiện quan điểm, nhận xét hoặc bình luận cá nhân; tử vi; câu đố; lịch chiếu; dự báo thời tiết thường nhật; thông tin khuyến mãi; bài tổng hợp kiểu "10 điều cần biết"; mẹo vặt hoặc nội dung không có tính thời sự; bài bị cắt, quá ngắn hoặc không đủ thông tin để viết tin.
+Không loại bỏ chỉ vì bài viết có nhắc đến doanh nghiệp, thương hiệu hoặc sản phẩm nếu nội dung phản ánh một sự kiện thực tế, có giá trị thông tin và có thể trình bày khách quan.
 Khi loại bỏ: điền reject_reason = một trong "ad" | "video" | "opinion" | "horoscope" | "listicle" | "other" kèm 1 câu lý do ngắn; title/content được phép rỗng nhưng vẫn điền category tạm.
-
-1.2. LỌC TRÙNG TIN (chỉ xét khi user message có mục "TIN ĐÃ CÓ TRÊN TRANG")
-- is_duplicate=true CHỈ KHI bài gốc đưa tin về CÙNG MỘT SỰ KIỆN với tin đã có: cùng vụ việc, cùng chủ thể, cùng thời điểm (hai báo cùng đưa một vụ).
-- Cùng CHỦ ĐỀ nhưng là diễn biến/sự kiện MỚI (khởi tố thêm bị can, phiên xử tiếp theo, số liệu cập nhật, địa phương khác...) → is_duplicate=false.
-- Tin lặp theo chu kỳ (kết quả phiên chứng khoán/VN-Index, giá vàng, giá xăng dầu, tỷ giá, xổ số...) ở NGÀY/PHIÊN KHÁC NHAU → is_duplicate=false.
-- Khi is_duplicate=true: vẫn điền đầy đủ các trường còn lại như bình thường.
-- Không có mục "TIN ĐÃ CÓ TRÊN TRANG" trong user message → luôn is_duplicate=false.`;
+(Việc kiểm trùng tin do bước kiểm duyệt độc lập sau khi viết đảm nhiệm, không xét ở đây.)`;
 
 // ============ BƯỚC 2 — PROMPT PHÂN LOẠI ============
 // Xếp bài vào đúng 1 trong 9 chuyên mục (CATEGORY_RULES = tài liệu
@@ -37,12 +31,13 @@ ${CATEGORY_RULES}
 export const PROMPT_VIET = `BƯỚC 3 — VIẾT TIN TỰ ĐỘNG
 
 3.1. YÊU CẦU ĐỐI VỚI TIÊU ĐỀ
-Tiêu đề phải có từ 12 đến 16 từ, VIẾT HOA TOÀN BỘ và không sử dụng dấu hai chấm ":". Tiêu đề phải phản ánh đúng sự kiện quan trọng nhất, nêu rõ chủ thể và diễn biến chính khi có thể. Không sử dụng cách diễn đạt giật gân, suy đoán, câu hỏi câu khách hoặc từ ngữ phóng đại. Không sao chép tiêu đề gốc.
+Tiêu đề phải có từ 12 đến 16 từ, VIẾT HOA TOÀN BỘ và không sử dụng dấu hai chấm ":". Tiêu đề phải phản ánh đúng sự kiện quan trọng nhất, nêu rõ chủ thể và diễn biến chính khi có thể. Không sử dụng cách diễn đạt giật gân, suy đoán, câu hỏi câu khách, dấu chấm than hoặc từ ngữ phóng đại. Không sao chép tiêu đề gốc. Không thêm thông tin ngoài bài gốc. Không sai tên riêng, địa điểm, thời gian hoặc số liệu.
 
 3.2. YÊU CẦU ĐỐI VỚI NỘI DUNG
 Nội dung phải có đúng từ 88 đến 100 từ, TUYỆT ĐỐI không vượt quá 100 từ. Viết liền thành một đoạn duy nhất (không xuống dòng, không chia đoạn), gồm từ 3 đến 4 câu. Chỉ tính phần nội dung, không tính tiêu đề hay nhãn trình bày.
 Mở đầu bằng mốc thời gian tự nhiên như "Sáng 12/7", "Chiều 12/7", "Ngày 12/7", "Tuần qua" hoặc "Quý II/2026". Không viết theo dạng hành chính, khô cứng như "Vào ngày 12/07/2026". Không nêu năm đối với sự kiện đang diễn ra hoặc vừa xảy ra, trừ khi việc ghi năm là cần thiết để tránh nhầm lẫn, hoặc sự kiện thuộc quá khứ xa hay kế hoạch tương lai.
 Bản tin phải cung cấp đủ những dữ kiện chính: chủ thể là ai; đã, đang hoặc sẽ làm gì; sự việc xảy ra ở đâu; vào thời điểm nào; số liệu, kết quả hoặc ảnh hưởng chính là gì. Ưu tiên diễn biến quan trọng nhất và lược bỏ chi tiết phụ nếu có nguy cơ vượt giới hạn từ. Thà thiếu chi tiết phụ còn hơn vượt số từ.
+Có thể viết theo thứ tự: câu đầu nêu thời gian, chủ thể, hành động và địa điểm; câu tiếp theo nêu diễn biến hoặc kết quả chính; câu cuối nêu số liệu, ảnh hưởng hoặc hướng xử lý.
 
 3.3. NGUYÊN TẮC BIÊN TẬP
 Phải viết lại hoàn toàn bằng lời của mình, không sao chép nguyên câu, không ghép lại các đoạn từ bài gốc và không lặp nguyên tiêu đề trong nội dung. Văn phong phải trung tính, rõ ràng, chính xác và khách quan.
@@ -74,7 +69,6 @@ Trả về DUY NHẤT một object JSON (không markdown, không giải thích t
   "title": string,             // kết quả BƯỚC 3 (mục 3.1)
   "content": string,           // kết quả BƯỚC 3 (mục 3.2)
   "published_date": "YYYY-MM-DD hoặc null",  // ngày xuất bản bài gốc; KHÔNG đoán
-  "is_duplicate": boolean,     // kết quả BƯỚC 1 (mục 1.2); luôn false nếu không có mục "TIN ĐÃ CÓ TRÊN TRANG"
   "flags": {
     "is_ad": boolean,          // bài THUẦN quảng cáo/PR (bỏ phần quảng bá thì không còn thông tin công cộng)
     "missing_facts": boolean,  // bài gốc THIẾU dữ kiện cốt lõi đến mức không viết được bản tin độc lập
