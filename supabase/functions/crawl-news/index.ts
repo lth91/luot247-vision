@@ -17,6 +17,7 @@ import { logLlmUsage } from "../_shared/llm-usage.ts";
 import { countWords } from "../_shared/word-count.ts";
 import { isValidCategory } from "../_shared/news-categories.ts";
 import { CRAWL_SYSTEM_PROMPT } from "../_shared/crawl-summary-prompt.ts";
+import { VERIFY_SYSTEM_PROMPT } from "../_shared/crawl-verify-prompt.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,16 +34,17 @@ const MAX_CONTENT_CHARS = 6000; // 140 từ output không cần hơn 6k chars in
 // Trần kích thước HTML đưa vào DOMParser (WASM): trang báo VN nặng 1-3MB,
 // DOM phình ~10x → "Memory limit exceeded". Nội dung bài luôn nằm trong 1.5MB đầu.
 const MAX_HTML_CHARS = 1_500_000;
-const DEFAULT_MAX_LLM_CALLS = 35; // van chống vọt chi phí mỗi run
+const DEFAULT_MAX_LLM_CALLS = 60; // van chống vọt chi phí mỗi run (mỗi bài giờ ~2 cú: viết + giám khảo P1)
 const MAX_ARTICLE_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 
 // Chuẩn độ dài TIN TỰ ĐỘNG (sếp 16/07): tổng title+content 100-120 từ.
 // (Tin nhân viên gõ tay ở submit-news vẫn giữ chuẩn riêng 120-140.)
 const TITLE_MIN = 12, TITLE_MAX = 18, TOTAL_MIN = 100, TOTAL_MAX = 120;
 
-// Ngưỡng trùng tin: sim >= SIM_BLOCK → bỏ ngay không tốn LLM (như cũ);
-// SIM_GRAY..SIM_BLOCK là "vùng xám" — đính kèm tin nghi trùng vào cú gọi
-// viết lại để AI phán is_duplicate (cùng SỰ KIỆN hay chỉ cùng chủ đề).
+// Ngưỡng trùng tin (luật P1 sếp 17/07): điểm tương đồng CHỈ để chọn tin cần
+// đối chiếu, KHÔNG tự động loại dù cao — mọi ca >= SIM_GRAY đưa giám khảo P1
+// phán "cùng sự kiện hay không". SIM_BLOCK chỉ còn dùng ở fallback khi
+// migration RPC chưa chạy.
 const SIM_GRAY = 0.45, SIM_BLOCK = 0.70;
 
 // URL noise filter rẻ tiền (pre-LLM): trang không phải bài viết text.
@@ -294,7 +296,6 @@ interface LlmResult {
   title: string;
   content: string;
   published_date: string | null;
-  is_duplicate: boolean;
   flags: { is_ad?: boolean; missing_facts?: boolean; is_sensational?: boolean; legal_risk?: boolean };
 }
 
@@ -313,25 +314,32 @@ function parseLlmJson(raw: string): LlmResult | null {
     title: String(parsed.title ?? "").trim(),
     content: String(parsed.content ?? "").trim(),
     published_date: typeof pd === "string" && /^\d{4}-\d{2}-\d{2}$/.test(pd) ? pd : null,
-    is_duplicate: parsed.is_duplicate === true,
     flags: (parsed.flags && typeof parsed.flags === "object" ? parsed.flags : {}) as LlmResult["flags"],
   };
 }
 
-interface SimilarHit { id: string; title: string; sim: number }
+interface SimilarHit { id: string; title: string; sim: number; created_at?: string }
 
-// Tìm tin GIỐNG NHẤT kèm điểm similarity (RPC find_similar_news_scored,
-// quét từ ngưỡng SIM_GRAY). Nếu migration chưa chạy (RPC chưa tồn tại) →
-// fallback hành vi cũ: chỉ chặn cứng >= SIM_BLOCK, không có vùng xám.
-async function findSimilarScored(
+// Tìm tin ĐÃ XUẤT BẢN giống nhất kèm điểm similarity (luật P1: chỉ đối chiếu
+// với tin đã đăng, tin trong hàng đợi không tính — 2 bản trùng được phép cùng
+// chờ, lượt lọc 2 lúc bấm Duyệt sẽ chặn). Fallback bậc thang khi migration
+// chưa chạy: RPC cũ quét mọi tin → RPC cổ chỉ trả id ở ngưỡng SIM_BLOCK.
+async function findSimilarPublished(
   supabase: SupabaseClient,
   title: string,
 ): Promise<SimilarHit | null> {
-  const { data, error } = await supabase.rpc("find_similar_news_scored", {
+  const { data, error } = await supabase.rpc("find_similar_published_scored", {
     _title: title, _threshold: SIM_GRAY,
   });
   if (!error) {
     const row = (Array.isArray(data) ? data[0] : data) as SimilarHit | undefined;
+    return row ? { id: row.id, title: row.title, sim: Number(row.sim), created_at: row.created_at } : null;
+  }
+  const { data: d2, error: e2 } = await supabase.rpc("find_similar_news_scored", {
+    _title: title, _threshold: SIM_GRAY,
+  });
+  if (!e2) {
+    const row = (Array.isArray(d2) ? d2[0] : d2) as SimilarHit | undefined;
     return row ? { id: row.id, title: row.title, sim: Number(row.sim) } : null;
   }
   const { data: simId } = await supabase.rpc("find_similar_news_title", {
@@ -340,8 +348,67 @@ async function findSimilarScored(
   return simId ? { id: simId as string, title: "", sim: SIM_BLOCK } : null;
 }
 
-// Gọi Haiku viết lại + phân loại. extraFeedback dùng cho retry khi lệch số từ;
-// dupBlock là mục "TIN ĐÃ CÓ TRÊN TRANG" khi có tin nghi trùng vùng xám.
+// Hồ sơ tin bị loại (sếp yêu cầu lưu lý do cho quản lý tra). Best-effort —
+// bảng chưa tạo (migration chưa chạy) thì bỏ qua, không chặn pipeline.
+async function logReject(supabase: SupabaseClient, row: Record<string, unknown>): Promise<void> {
+  try { await supabase.from("crawl_reject_log").insert(row); } catch { /* ignore */ }
+}
+
+interface VerifyResult { verdict: "dat" | "loai" | "trung" | "dien_bien_moi" | "can_kiem_tra"; reason: string; new_info: string }
+
+// GIÁM KHẢO P1 (lượt kiểm 1): đối chiếu bản tin đã viết với bài gốc + phán
+// trùng với tin đã đăng. Cú gọi AI thứ 2 cho mỗi bài (sếp duyệt chi 17/07).
+async function verifyWithClaude(
+  origTitle: string,
+  origContent: string,
+  newsTitle: string,
+  newsContent: string,
+  suspect: SimilarHit | null,
+  apiKey: string,
+  supabase: SupabaseClient,
+): Promise<VerifyResult | null> {
+  const dupBlock = suspect && suspect.title
+    ? `\n\nTIN ĐÃ ĐĂNG NGHI TRÙNG (điểm tương đồng ${Math.round(suspect.sim * 100)}%${suspect.created_at ? `, đăng lúc ${suspect.created_at.slice(0, 16).replace("T", " ")}` : ""}):\n«${suspect.title}»`
+    : "";
+  const userMsg = `BÀI BÁO GỐC\nTiêu đề: ${origTitle}\nNội dung:\n${origContent.slice(0, 4000)}\n\nBẢN TIN ĐÃ VIẾT\nTiêu đề: ${newsTitle}\nNội dung: ${newsContent}${dupBlock}`;
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 300,
+      temperature: 0,
+      system: [{ type: "text", text: VERIFY_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: userMsg }],
+    }),
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (data?.usage) {
+    await logLlmUsage(supabase, { functionName: "crawl-news", model: ANTHROPIC_MODEL, usage: data.usage });
+  }
+  const raw = (data?.content?.[0]?.text ?? "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
+  try {
+    const p = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? raw) as Record<string, unknown>;
+    const v = String(p.verdict ?? "");
+    if (!["dat", "loai", "trung", "dien_bien_moi", "can_kiem_tra"].includes(v)) return null;
+    return {
+      verdict: v as VerifyResult["verdict"],
+      reason: String(p.reason ?? "").slice(0, 300),
+      new_info: String(p.new_info ?? "").slice(0, 200),
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Gọi Haiku viết lại + phân loại (P3 thuần viết — kiểm trùng do giám khảo P1
+// đảm nhiệm sau khi viết). extraFeedback dùng cho retry khi lệch số từ.
 async function rewriteWithClaude(
   origTitle: string,
   content: string,
@@ -349,12 +416,11 @@ async function rewriteWithClaude(
   apiKey: string,
   supabase: SupabaseClient,
   extraFeedback = "",
-  dupBlock = "",
 ): Promise<LlmResult | null> {
   const hint = dateHint
     ? `\n\nNgày xuất bản đã xác định từ metadata: ${dateHint}. Dùng đúng mốc này.`
     : "";
-  const userMsg = `Tiêu đề gốc: ${origTitle}\n\nNội dung bài gốc:\n${content}${hint}${dupBlock}${extraFeedback}`;
+  const userMsg = `Tiêu đề gốc: ${origTitle}\n\nNội dung bài gốc:\n${content}${hint}${extraFeedback}`;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -684,7 +750,8 @@ async function handle(req: Request): Promise<Response> {
   const stats = {
     sources: 0, articlesFound: 0, llmCalls: 0, inserted: 0,
     skippedDup: 0, skippedOld: 0, rejectedNonNews: 0, needsEdit: 0,
-    aiDupChecked: 0, aiDupRejected: 0, compressCalls: 0,
+    compressCalls: 0, verifyCalls: 0,
+    p1Rejected: 0, p1Dup: 0, p1NewDev: 0, p1NeedsCheck: 0,
     errors: [] as string[],
   };
   let llmCalls = 0;
@@ -738,14 +805,12 @@ async function handle(req: Request): Promise<Response> {
             stats.skippedOld++; continue;
           }
 
-          // Dedup lớp 2: trigram với tiêu đề GỐC (tin nhân viên vừa gửi / báo khác
-          // cùng sự kiện đã crawl). >= SIM_BLOCK bỏ ngay; vùng xám giữ lại làm
-          // "nghi phạm" đưa cho AI phán xử trong cú gọi viết lại.
+          // So trùng với tin ĐÃ ĐĂNG theo tiêu đề GỐC (luật P1: điểm tương đồng
+          // chỉ để chọn tin cần đối chiếu — KHÔNG tự động loại dù cao; giám khảo
+          // P1 sau khi viết mới là người phán).
           let suspect: SimilarHit | null = null;
           if (c.title) {
-            const hit = await findSimilarScored(supabase, c.title);
-            if (hit && hit.sim >= SIM_BLOCK) { stats.skippedDup++; continue; }
-            if (hit) suspect = hit;
+            suspect = await findSimilarPublished(supabase, c.title);
           }
 
           const artRes = await fetchWithTimeout(canonical);
@@ -766,17 +831,18 @@ async function handle(req: Request): Promise<Response> {
             stats.skippedOld++; continue;
           }
 
-          // LLM viết lại + phân loại (1 call; retry 1 lần nếu lệch số từ).
-          // Nếu có tin nghi trùng vùng xám → đính kèm để AI phán is_duplicate.
-          const dupBlock = suspect
-            ? `\n\nTIN ĐÃ CÓ TRÊN TRANG (nghi trùng, giống ${Math.round(suspect.sim * 100)}%): «${suspect.title}»`
-            : "";
-          if (suspect) stats.aiDupChecked++;
+          // P3 VIẾT: LLM viết lại + phân loại (retry 1 lần nếu lệch số từ).
           llmCalls++; stats.llmCalls++;
-          let r = await rewriteWithClaude(origTitle, content, publishedAt.slice(0, 10), anthropicKey, supabase, "", dupBlock);
+          let r = await rewriteWithClaude(origTitle, content, publishedAt.slice(0, 10), anthropicKey, supabase);
           if (!r) { stats.errors.push(`${src.name}: LLM trả về không parse được`); continue; }
-          if (!r.is_news) { stats.rejectedNonNews++; continue; }
-          if (suspect && r.is_duplicate) { stats.aiDupRejected++; continue; }
+          if (!r.is_news) {
+            stats.rejectedNonNews++;
+            await logReject(supabase, {
+              stage: "viet", verdict: "loai", source_name: src.name, url: canonical,
+              original_title: origTitle, reason: r.reject_reason || "không phải tin",
+            });
+            continue;
+          }
 
           // Vượt trần → cắt câu cuối (rẻ, không tốn LLM). Vẫn lệch → retry 1 lần
           // với feedback, cắt tiếp; cuối cùng mới đánh needs_edit.
@@ -787,7 +853,7 @@ async function handle(req: Request): Promise<Response> {
             if (llmCalls < maxLlmCalls) {
               llmCalls++; stats.llmCalls++;
               const fb = `\n\nLƯU Ý RETRY: bản trước có tiêu đề ${tw} từ, tổng ${total} từ — KHÔNG đạt chuẩn (tiêu đề ${TITLE_MIN}-${TITLE_MAX}, tổng ${TOTAL_MIN}-${TOTAL_MAX}). Viết lại NGẮN HƠN HẲN và đếm kỹ số từ.`;
-              const r2 = await rewriteWithClaude(origTitle, content, publishedAt.slice(0, 10), anthropicKey, supabase, fb, dupBlock);
+              const r2 = await rewriteWithClaude(origTitle, content, publishedAt.slice(0, 10), anthropicKey, supabase, fb);
               if (r2 && r2.is_news && r2.title && r2.content) {
                 r2.content = trimToFit(r2.title, r2.content);
                 r = r2;
@@ -817,11 +883,34 @@ async function handle(req: Request): Promise<Response> {
           r.title = formatTitle(r.title);
           r.content = flattenToOneParagraph(r.content);
 
-          // Dedup lớp 3: trigram với tiêu đề MỚI (viết lại có thể trùng tin đã có).
-          // Vùng xám ở lớp này không gọi lại LLM — chỉ gắn badge cho người duyệt.
-          const hit3 = await findSimilarScored(supabase, r.title);
-          if (hit3 && hit3.sim >= SIM_BLOCK) { stats.skippedDup++; continue; }
+          // So trùng lần 2 với tiêu đề MỚI (bản viết lại có thể giống tin đã
+          // đăng theo cách khác) — lấy nghi phạm giống nhất trong 2 lần so.
+          const hit3 = await findSimilarPublished(supabase, r.title);
           if (hit3 && (!suspect || hit3.sim > suspect.sim)) suspect = hit3;
+
+          // ===== GIÁM KHẢO P1 (lượt kiểm 1): đối chiếu bản tin với bài gốc +
+          // phán trùng. Không phản hồi/hết trần LLM → cho vào hàng đợi kèm nhãn
+          // "cần kiểm tra" (fail-open — người duyệt vẫn là chốt chặn cuối).
+          let verify: VerifyResult | null = null;
+          if (llmCalls < maxLlmCalls) {
+            llmCalls++; stats.llmCalls++; stats.verifyCalls++;
+            verify = await verifyWithClaude(origTitle, content, r.title, r.content, suspect, anthropicKey, supabase);
+          }
+          if (verify && (verify.verdict === "loai" || verify.verdict === "trung")) {
+            if (verify.verdict === "trung") stats.p1Dup++; else stats.p1Rejected++;
+            await logReject(supabase, {
+              stage: "kiem", verdict: verify.verdict, source_name: src.name, url: canonical,
+              original_title: origTitle, rewritten_title: r.title, reason: verify.reason,
+              ...(suspect && suspect.title
+                ? { similar_news_id: suspect.id, similar_title: suspect.title, similar_sim: Math.round(suspect.sim * 100) / 100 }
+                : {}),
+            });
+            continue;
+          }
+          const newDev = verify?.verdict === "dien_bien_moi";
+          const needsCheck = !verify || verify.verdict === "can_kiem_tra";
+          if (newDev) stats.p1NewDev++;
+          if (needsCheck) stats.p1NeedsCheck++;
 
           const category = isValidCategory(r.category) ? r.category : src.default_category;
           const { error: insErr } = await supabase.from("news").insert({
@@ -847,10 +936,13 @@ async function handle(req: Request): Promise<Response> {
               title_words: tw,
               total_words: total,
               // Badge "⚠️ Giống X%" trên trang duyệt — lưới phụ cho người duyệt
-              // khi AI đã cho qua tin vùng xám.
+              // khi giám khảo P1 đã cho qua tin nghi trùng.
               ...(suspect && suspect.title
                 ? { similar_title: suspect.title, similar_sim: Math.round(suspect.sim * 100) / 100 }
                 : {}),
+              // Nhãn theo phán quyết P1: 🆕 diễn biến mới / 🔍 cần kiểm tra.
+              ...(newDev ? { new_development: { note: verify?.new_info ?? "", similar_title: suspect?.title ?? "" } } : {}),
+              ...(needsCheck ? { needs_check: verify?.reason || "Giám khảo P1 không phản hồi — cần người kiểm kỹ" } : {}),
             },
           });
           if (insErr) {
