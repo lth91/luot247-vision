@@ -1,3 +1,10 @@
+# [1.103.0](https://github.com/lth91/luot247-vision/compare/v1.102.0...v1.103.0) (2026-07-17)
+
+
+### Features
+
+* **leaderboard:** cột "Up hôm nay" hiển thị dạng "126 (20)" gộp tin AI đã duyệt ([#155](https://github.com/lth91/luot247-vision/issues/155)) ([ce3a01a](https://github.com/lth91/luot247-vision/commit/ce3a01a35717544b6b61405d92d1a39ebc818488))
+
 # [1.102.0](https://github.com/lth91/luot247-vision/compare/v1.101.0...v1.102.0) (2026-07-17)
 
 
