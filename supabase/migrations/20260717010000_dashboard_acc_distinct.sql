@@ -2,8 +2,10 @@
 -- cột "Up" đếm TIN THẬT (DISTINCT tiêu đề, từ 20260709010000) nhưng cột
 -- "Duyệt" vẫn đếm LƯỢT accepted — khi 1 tiêu đề được chấp nhận 2 lần trong
 -- ngày (tin cũ bị xóa rồi gửi lại, tiêu đề ngắn <20 ký tự lọt lưới trùng,
--- 2 tin trùng tên) thì Duyệt > Up. Đồng bộ: "Duyệt" cũng đếm DISTINCT
+-- 2 tin trùng tên) thì Duyệt > Up. Đồng bộ: 4 cột acc_* cũng đếm DISTINCT
 -- tiêu đề → duyệt lại cùng 1 tin chỉ tính 1, tỷ lệ tối đa 100%.
+-- Signature giữ nguyên bản 20260709020000 (có acc_yesterday) — cùng return
+-- type nên CREATE OR REPLACE chạy được, không cần DROP.
 -- Lưu ý vận hành: tổng "Duyệt" của vài người sẽ GIẢM nhẹ so với trước
 -- (hết đếm đôi) — đã báo trước nhân viên.
 
@@ -14,6 +16,7 @@ RETURNS TABLE(
   sub_today int,
   sub_month int,
   acc_today int,
+  acc_yesterday int,
   acc_month int,
   acc_prev_month int,
   yellow_cards int,
@@ -28,6 +31,7 @@ AS $$
 DECLARE
   v_vn_now timestamp;
   v_today0 timestamptz;
+  v_yest0  timestamptz;
   v_month0 timestamptz;
   v_prev0  timestamptz;
 BEGIN
@@ -37,6 +41,7 @@ BEGIN
 
   v_vn_now := (now() AT TIME ZONE 'Asia/Ho_Chi_Minh');
   v_today0 := (DATE(v_vn_now) + TIME '00:00:00') AT TIME ZONE 'Asia/Ho_Chi_Minh';
+  v_yest0  := ((DATE(v_vn_now) - 1) + TIME '00:00:00') AT TIME ZONE 'Asia/Ho_Chi_Minh';
   v_month0 := (DATE_TRUNC('month', v_vn_now)::date + TIME '00:00:00') AT TIME ZONE 'Asia/Ho_Chi_Minh';
   v_prev0  := ((DATE_TRUNC('month', v_vn_now) - INTERVAL '1 month')::date + TIME '00:00:00') AT TIME ZONE 'Asia/Ho_Chi_Minh';
 
@@ -44,9 +49,12 @@ BEGIN
   SELECT
     w.full_name,
     w.email,
+    -- sub_*: đếm TIN thật (DISTINCT tiêu đề) — giữ nguyên logic 20260709010000
     COUNT(DISTINCT COALESCE(lower(l.title), l.id::text)) FILTER (WHERE l.created_at >= v_today0 AND l.status <> 'error')::int,
     COUNT(DISTINCT COALESCE(lower(l.title), l.id::text)) FILTER (WHERE l.created_at >= v_month0 AND l.status <> 'error')::int,
+    -- acc_*: đổi từ COUNT(l.id) sang DISTINCT tiêu đề, cùng kiểu đếm với sub_*
     COUNT(DISTINCT COALESCE(lower(l.title), l.id::text)) FILTER (WHERE l.created_at >= v_today0 AND l.status = 'accepted')::int,
+    COUNT(DISTINCT COALESCE(lower(l.title), l.id::text)) FILTER (WHERE l.created_at >= v_yest0 AND l.created_at < v_today0 AND l.status = 'accepted')::int,
     COUNT(DISTINCT COALESCE(lower(l.title), l.id::text)) FILTER (WHERE l.created_at >= v_month0 AND l.status = 'accepted')::int,
     COUNT(DISTINCT COALESCE(lower(l.title), l.id::text)) FILTER (WHERE l.created_at >= v_prev0 AND l.created_at < v_month0 AND l.status = 'accepted')::int,
     COALESCE(c.yellow, 0)::int,
@@ -62,7 +70,7 @@ BEGIN
     WHERE nc.author_id = p.id AND nc.status = 'approved'
   ) c ON true
   GROUP BY w.full_name, w.email, c.yellow, c.red, p.submission_banned
-  ORDER BY 6 DESC, w.full_name;
+  ORDER BY 7 DESC, w.full_name;
 END;
 $$;
 
