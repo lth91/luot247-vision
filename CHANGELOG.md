@@ -1,3 +1,10 @@
+## [1.103.1](https://github.com/lth91/luot247-vision/compare/v1.103.0...v1.103.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* **dashboard:** cột Duyệt đếm DISTINCT tiêu đề như cột Up, hết tỷ lệ vượt 100% ([#156](https://github.com/lth91/luot247-vision/issues/156)) ([0f2a313](https://github.com/lth91/luot247-vision/commit/0f2a31342714aca8cf4b89eddb20a637cadf6508))
+
 # [1.103.0](https://github.com/lth91/luot247-vision/compare/v1.102.0...v1.103.0) (2026-07-17)
 
 
