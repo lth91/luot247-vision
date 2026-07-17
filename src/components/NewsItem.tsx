@@ -164,7 +164,7 @@ export const NewsItem = ({
                 .map((para, idx) => (
                   <p
                     key={idx}
-                    className="text-sm text-muted-foreground leading-relaxed mb-2 last:mb-0"
+                    className="text-sm text-foreground leading-relaxed mb-2 last:mb-0"
                   >
                     {para}
                   </p>
