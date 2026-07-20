@@ -1,3 +1,10 @@
+## [1.105.3](https://github.com/lth91/luot247-vision/compare/v1.105.2...v1.105.3) (2026-07-20)
+
+
+### Performance Improvements
+
+* **crawl:** chống tái xử lý bài đã bị AI loại — lưu url_hash vào hồ sơ loại ([#164](https://github.com/lth91/luot247-vision/issues/164)) ([c346229](https://github.com/lth91/luot247-vision/commit/c3462291cb7e527b6746ee6b392ec36cfd174287))
+
 ## [1.105.2](https://github.com/lth91/luot247-vision/compare/v1.105.1...v1.105.2) (2026-07-20)
 
 
