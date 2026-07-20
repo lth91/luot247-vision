@@ -1,3 +1,10 @@
+# [1.106.0](https://github.com/lth91/luot247-vision/compare/v1.105.3...v1.106.0) (2026-07-20)
+
+
+### Features
+
+* **review:** dialog đối chiếu song song tin đang duyệt vs tin đã đăng nghi trùng ([#165](https://github.com/lth91/luot247-vision/issues/165)) ([0caf5ef](https://github.com/lth91/luot247-vision/commit/0caf5ef6850e111c8d97aad411d8b78639a742c9))
+
 ## [1.105.3](https://github.com/lth91/luot247-vision/compare/v1.105.2...v1.105.3) (2026-07-20)
 
 
