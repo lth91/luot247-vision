@@ -1,3 +1,10 @@
+## [1.105.1](https://github.com/lth91/luot247-vision/compare/v1.105.0...v1.105.1) (2026-07-20)
+
+
+### Bug Fixes
+
+* **header:** menu cuộn được + giãn cách gọn lại, admin thấy nút Đăng xuất ([#162](https://github.com/lth91/luot247-vision/issues/162)) ([b43919b](https://github.com/lth91/luot247-vision/commit/b43919bb34cca6914d706ad16a0f07040bde5984))
+
 # [1.105.0](https://github.com/lth91/luot247-vision/compare/v1.104.0...v1.105.0) (2026-07-17)
 
 
