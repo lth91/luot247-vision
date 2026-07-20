@@ -36,11 +36,22 @@ interface PendingNews {
     category_confidence?: number;
     flags?: { is_ad?: boolean; missing_facts?: boolean; is_sensational?: boolean; legal_risk?: boolean };
     published_at_source?: string;
+    similar_news_id?: string;
     similar_title?: string;
     similar_sim?: number;
     new_development?: { note?: string; similar_title?: string };
     needs_check?: string;
   } | null;
+}
+
+// Tin đã đăng bị nghi trùng — kéo ra để đối chiếu song song.
+interface SimilarNews {
+  id: string;
+  title: string;
+  description: string | null;
+  url: string | null;
+  created_at: string;
+  ai_classification: { source_name?: string; published_at_source?: string } | null;
 }
 
 interface HistoryRow {
@@ -104,6 +115,27 @@ const ReviewQueue = () => {
   const [rejectItem, setRejectItem] = useState<PendingNews | null>(null);
   const [rejectReason, setRejectReason] = useState(REJECT_REASONS[0]);
   const [rejectNote, setRejectNote] = useState("");
+
+  // Dialog Đối chiếu tin trùng (yêu cầu quản lý 18/07): xem song song tin đang
+  // duyệt vs tin đã đăng nghi trùng để quyết chính xác hơn.
+  const [compareItem, setCompareItem] = useState<PendingNews | null>(null);
+  const [compareSim, setCompareSim] = useState<SimilarNews | null>(null);
+  const [compareLoading, setCompareLoading] = useState(false);
+
+  const openCompare = async (item: PendingNews) => {
+    const simId = item.ai_classification?.similar_news_id;
+    setCompareItem(item);
+    setCompareSim(null);
+    if (!simId) return; // tin cũ chưa lưu id → vẫn mở dialog, chỉ hiện tiêu đề
+    setCompareLoading(true);
+    const { data } = await supabase
+      .from("news")
+      .select("id, title, description, url, created_at, ai_classification")
+      .eq("id", simId)
+      .maybeSingle();
+    setCompareSim((data as SimilarNews) ?? null);
+    setCompareLoading(false);
+  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
@@ -395,9 +427,15 @@ const ReviewQueue = () => {
                       </Badge>
                       {item.ai_classification?.needs_edit && <Badge variant="destructive">✏️ Cần sửa số từ</Badge>}
                       {typeof item.ai_classification?.similar_sim === "number" && item.ai_classification?.similar_title && (
-                        <Badge variant="outline" className="max-w-full whitespace-normal text-left border-amber-500 text-amber-600 dark:text-amber-400">
-                          ⚠️ Giống {Math.round(item.ai_classification.similar_sim * 100)}%: {item.ai_classification.similar_title}
-                        </Badge>
+                        <button
+                          type="button"
+                          onClick={() => openCompare(item)}
+                          title="Bấm để đối chiếu song song 2 tin"
+                          className="inline-flex max-w-full items-center gap-1 rounded-md border border-amber-500 px-2 py-0.5 text-left text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/40"
+                        >
+                          <span className="whitespace-normal">⚠️ Giống {Math.round(item.ai_classification.similar_sim * 100)}%: {item.ai_classification.similar_title}</span>
+                          <span className="shrink-0 underline">Đối chiếu ↔</span>
+                        </button>
                       )}
                       {item.ai_classification?.new_development && (
                         <Badge variant="outline" className="max-w-full whitespace-normal text-left border-sky-500 text-sky-600 dark:text-sky-400">
@@ -506,6 +544,84 @@ const ReviewQueue = () => {
               <Button variant="destructive" onClick={submitReject} disabled={busyId === rejectItem?.id}>
                 🗑 Xác nhận loại
               </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog ĐỐI CHIẾU: tin đang duyệt (trái) vs tin đã đăng nghi trùng
+            (phải) — yêu cầu quản lý 18/07 để người duyệt quyết chính xác. */}
+        <Dialog open={!!compareItem} onOpenChange={(o) => !o && setCompareItem(null)}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>
+                Đối chiếu tin trùng
+                {typeof compareItem?.ai_classification?.similar_sim === "number" &&
+                  ` — độ giống ${Math.round(compareItem.ai_classification.similar_sim * 100)}%`}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/* Trái: tin đang chờ duyệt */}
+              <div className="rounded-lg border border-primary/40 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Badge>Đang duyệt</Badge>
+                  <span className="text-xs text-muted-foreground">{compareItem?.ai_classification?.source_name ?? "?"}</span>
+                </div>
+                <p className="font-semibold text-sm leading-snug">{compareItem?.title}</p>
+                <p className="text-xs text-muted-foreground whitespace-pre-line">{compareItem?.description}</p>
+                <div className="flex items-center justify-between pt-1 text-[11px] text-muted-foreground">
+                  <span>{compareItem?.ai_classification?.published_at_source?.slice(0, 16).replace("T", " ") ?? ""}</span>
+                  {compareItem?.url && (
+                    <a href={compareItem.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">Bài gốc ↗</a>
+                  )}
+                </div>
+              </div>
+              {/* Phải: tin đã đăng nghi trùng */}
+              <div className="rounded-lg border border-amber-500/50 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Badge variant="outline" className="border-amber-500 text-amber-600 dark:text-amber-400">Đã đăng</Badge>
+                  <span className="text-xs text-muted-foreground">{compareSim?.ai_classification?.source_name ?? ""}</span>
+                </div>
+                {compareLoading ? (
+                  <p className="text-xs text-muted-foreground py-6 text-center">Đang tải tin đã đăng...</p>
+                ) : compareSim ? (
+                  <>
+                    <p className="font-semibold text-sm leading-snug">{compareSim.title}</p>
+                    <p className="text-xs text-muted-foreground whitespace-pre-line">{compareSim.description}</p>
+                    <div className="flex items-center justify-between pt-1 text-[11px] text-muted-foreground">
+                      <span>{(compareSim.ai_classification?.published_at_source ?? compareSim.created_at)?.slice(0, 16).replace("T", " ")}</span>
+                      {compareSim.url && (
+                        <a href={compareSim.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">Bài gốc ↗</a>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-1 py-2">
+                    <p className="text-sm font-medium">{compareItem?.ai_classification?.similar_title}</p>
+                    <p className="text-xs text-muted-foreground">Tin đã đăng không còn truy được (đã bị gỡ, hoặc tin cũ chưa lưu liên kết). So theo tiêu đề bên trên.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <DialogFooter className="gap-2 sm:justify-between">
+              <Button variant="outline" onClick={() => setCompareItem(null)}>Đóng</Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="destructive"
+                  disabled={busyId === compareItem?.id}
+                  onClick={() => {
+                    const it = compareItem; setCompareItem(null);
+                    if (it) { setRejectItem(it); setRejectReason("Trùng tin đã có"); setRejectNote(""); }
+                  }}
+                >
+                  🗑 Trùng — Loại tin này
+                </Button>
+                <Button
+                  disabled={busyId === compareItem?.id || !wordInfo(compareItem?.title ?? "", compareItem?.description ?? "").ok}
+                  onClick={() => { const it = compareItem; setCompareItem(null); if (it) approve(it); }}
+                >
+                  ✅ Khác nhau — Duyệt
+                </Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>
