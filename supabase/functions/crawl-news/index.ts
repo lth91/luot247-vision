@@ -790,7 +790,7 @@ async function handle(req: Request): Promise<Response> {
 
   const stats = {
     sources: 0, articlesFound: 0, llmCalls: 0, inserted: 0,
-    skippedDup: 0, skippedOld: 0, rejectedNonNews: 0, needsEdit: 0,
+    skippedDup: 0, skippedOld: 0, skippedRejected: 0, rejectedNonNews: 0, needsEdit: 0,
     compressCalls: 0, verifyCalls: 0, preDupCalls: 0, preDupBlocked: 0,
     p1Rejected: 0, p1Dup: 0, p1NewDev: 0, p1NeedsCheck: 0,
     errors: [] as string[],
@@ -839,6 +839,13 @@ async function handle(req: Request): Promise<Response> {
         const { data: exists } = await supabase.from("news").select("id").eq("url_hash", hash).maybeSingle();
         if (exists) { stats.skippedDup++; continue; }
 
+        // Dedup lớp 1b (Bước 0.1): bài đã bị AI loại lượt trước — khỏi fetch/LLM
+        // lại lần nữa. Cột url_hash chưa có (migration chưa chạy) → error bị bỏ
+        // qua, chạy tiếp như cũ (fail-open).
+        const { data: rejSeen } = await supabase.from("crawl_reject_log")
+          .select("id").eq("url_hash", hash).limit(1).maybeSingle();
+        if (rejSeen) { stats.skippedRejected++; continue; }
+
         try {
           // Bài quá cũ theo RSS pubDate → bỏ trước khi fetch.
           const rssDate = parseRssDate(c.pubDate ?? null);
@@ -881,7 +888,7 @@ async function handle(req: Request): Promise<Response> {
             if (pre && pre.verdict === "trung") {
               stats.preDupBlocked++;
               await logReject(supabase, {
-                stage: "kiem_som", verdict: "trung", source_name: src.name, url: canonical,
+                stage: "kiem_som", verdict: "trung", source_name: src.name, url: canonical, url_hash: hash,
                 original_title: origTitle, reason: pre.reason,
                 similar_news_id: suspect.id, similar_title: suspect.title,
                 similar_sim: Math.round(suspect.sim * 100) / 100,
@@ -897,7 +904,7 @@ async function handle(req: Request): Promise<Response> {
           if (!r.is_news) {
             stats.rejectedNonNews++;
             await logReject(supabase, {
-              stage: "viet", verdict: "loai", source_name: src.name, url: canonical,
+              stage: "viet", verdict: "loai", source_name: src.name, url: canonical, url_hash: hash,
               original_title: origTitle, reason: r.reject_reason || "không phải tin",
             });
             continue;
@@ -958,7 +965,7 @@ async function handle(req: Request): Promise<Response> {
           if (verify && (verify.verdict === "loai" || verify.verdict === "trung")) {
             if (verify.verdict === "trung") stats.p1Dup++; else stats.p1Rejected++;
             await logReject(supabase, {
-              stage: "kiem", verdict: verify.verdict, source_name: src.name, url: canonical,
+              stage: "kiem", verdict: verify.verdict, source_name: src.name, url: canonical, url_hash: hash,
               original_title: origTitle, rewritten_title: r.title, reason: verify.reason,
               ...(suspect && suspect.title
                 ? { similar_news_id: suspect.id, similar_title: suspect.title, similar_sim: Math.round(suspect.sim * 100) / 100 }
