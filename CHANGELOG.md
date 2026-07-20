@@ -1,3 +1,10 @@
+## [1.105.2](https://github.com/lth91/luot247-vision/compare/v1.105.1...v1.105.2) (2026-07-20)
+
+
+### Performance Improvements
+
+* **crawl:** kiểm trùng sớm trên bài gốc cho ca nghi trùng ≥70%, tiết kiệm cú viết ([#163](https://github.com/lth91/luot247-vision/issues/163)) ([cb3dae9](https://github.com/lth91/luot247-vision/commit/cb3dae9b26b0915c3a697767761ad338a0fadcf5))
+
 ## [1.105.1](https://github.com/lth91/luot247-vision/compare/v1.105.0...v1.105.1) (2026-07-20)
 
 
