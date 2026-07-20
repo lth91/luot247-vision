@@ -1,3 +1,10 @@
+# [1.107.0](https://github.com/lth91/luot247-vision/compare/v1.106.0...v1.107.0) (2026-07-20)
+
+
+### Features
+
+* menu "Thống kê" + email phụ gọn theo danh sách sếp ([#166](https://github.com/lth91/luot247-vision/issues/166)) ([e1dfd3e](https://github.com/lth91/luot247-vision/commit/e1dfd3e7a2acb046100ea483b885d1d24f8cff47))
+
 # [1.106.0](https://github.com/lth91/luot247-vision/compare/v1.105.3...v1.106.0) (2026-07-20)
 
 
