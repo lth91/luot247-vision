@@ -218,7 +218,7 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
                           navigate("/bang-xep-hang");
                         }}
                       >
-                        📊 Bảng xếp hạng
+                        📊 Thống kê
                       </Button>
                     </>
                   )}
