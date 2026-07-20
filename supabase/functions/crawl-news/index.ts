@@ -17,7 +17,7 @@ import { logLlmUsage } from "../_shared/llm-usage.ts";
 import { countWords } from "../_shared/word-count.ts";
 import { isValidCategory } from "../_shared/news-categories.ts";
 import { CRAWL_SYSTEM_PROMPT } from "../_shared/crawl-summary-prompt.ts";
-import { VERIFY_SYSTEM_PROMPT } from "../_shared/crawl-verify-prompt.ts";
+import { PRE_DUP_SYSTEM_PROMPT, VERIFY_SYSTEM_PROMPT } from "../_shared/crawl-verify-prompt.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,9 +42,9 @@ const MAX_ARTICLE_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 const TITLE_MIN = 12, TITLE_MAX = 18, TOTAL_MIN = 100, TOTAL_MAX = 120;
 
 // Ngưỡng trùng tin (luật P1 sếp 17/07): điểm tương đồng CHỈ để chọn tin cần
-// đối chiếu, KHÔNG tự động loại dù cao — mọi ca >= SIM_GRAY đưa giám khảo P1
-// phán "cùng sự kiện hay không". SIM_BLOCK chỉ còn dùng ở fallback khi
-// migration RPC chưa chạy.
+// đối chiếu, KHÔNG tự động loại dù cao — mọi ca đều do AI phán "cùng sự kiện".
+// >= SIM_BLOCK: nghi nặng → KIỂM TRÙNG SỚM trên bài gốc trước khi tốn cú viết
+// (tiết kiệm 18/07); SIM_GRAY..SIM_BLOCK: viết xong giám khảo P1 phán.
 const SIM_GRAY = 0.45, SIM_BLOCK = 0.70;
 
 // URL noise filter rẻ tiền (pre-LLM): trang không phải bài viết text.
@@ -352,6 +352,47 @@ async function findSimilarPublished(
 // bảng chưa tạo (migration chưa chạy) thì bỏ qua, không chặn pipeline.
 async function logReject(supabase: SupabaseClient, row: Record<string, unknown>): Promise<void> {
   try { await supabase.from("crawl_reject_log").insert(row); } catch { /* ignore */ }
+}
+
+// KIỂM TRÙNG SỚM: ca nghi trùng nặng (>= SIM_BLOCK) hỏi AI trên BÀI GỐC trước
+// khi tốn cú viết. Trả null khi lỗi/parse fail → cứ viết như thường (fail-open).
+async function preVerifyDup(
+  origTitle: string,
+  origContent: string,
+  suspect: SimilarHit,
+  apiKey: string,
+  supabase: SupabaseClient,
+): Promise<{ verdict: "trung" | "khac" | "dien_bien_moi"; reason: string } | null> {
+  const userMsg = `BÀI BÁO GỐC\nTiêu đề: ${origTitle}\nNội dung:\n${origContent.slice(0, 3000)}\n\nTIN ĐÃ ĐĂNG TRÊN TRANG (điểm tương đồng ${Math.round(suspect.sim * 100)}%${suspect.created_at ? `, đăng lúc ${suspect.created_at.slice(0, 16).replace("T", " ")}` : ""}):\n«${suspect.title}»`;
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 150,
+      temperature: 0,
+      system: [{ type: "text", text: PRE_DUP_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: userMsg }],
+    }),
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (data?.usage) {
+    await logLlmUsage(supabase, { functionName: "crawl-news", model: ANTHROPIC_MODEL, usage: data.usage });
+  }
+  const raw = (data?.content?.[0]?.text ?? "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
+  try {
+    const p = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? raw) as Record<string, unknown>;
+    const v = String(p.verdict ?? "");
+    if (!["trung", "khac", "dien_bien_moi"].includes(v)) return null;
+    return { verdict: v as "trung" | "khac" | "dien_bien_moi", reason: String(p.reason ?? "").slice(0, 200) };
+  } catch {
+    return null;
+  }
 }
 
 interface VerifyResult { verdict: "dat" | "loai" | "trung" | "dien_bien_moi" | "can_kiem_tra"; reason: string; new_info: string }
@@ -750,7 +791,7 @@ async function handle(req: Request): Promise<Response> {
   const stats = {
     sources: 0, articlesFound: 0, llmCalls: 0, inserted: 0,
     skippedDup: 0, skippedOld: 0, rejectedNonNews: 0, needsEdit: 0,
-    compressCalls: 0, verifyCalls: 0,
+    compressCalls: 0, verifyCalls: 0, preDupCalls: 0, preDupBlocked: 0,
     p1Rejected: 0, p1Dup: 0, p1NewDev: 0, p1NeedsCheck: 0,
     errors: [] as string[],
   };
@@ -829,6 +870,24 @@ async function handle(req: Request): Promise<Response> {
           if (!publishedAt) { stats.skippedOld++; continue; }
           if (Date.now() - new Date(publishedAt).getTime() > MAX_ARTICLE_AGE_MS) {
             stats.skippedOld++; continue;
+          }
+
+          // KIỂM TRÙNG SỚM: nghi trùng nặng (>= SIM_BLOCK) → hỏi AI "cùng sự
+          // kiện?" trên BÀI GỐC trước, trùng thì khỏi tốn cú viết đắt tiền.
+          // AI lỗi/không chắc → cứ viết như thường (fail-open, không loại oan).
+          if (suspect && suspect.title && suspect.sim >= SIM_BLOCK && llmCalls < maxLlmCalls) {
+            llmCalls++; stats.llmCalls++; stats.preDupCalls++;
+            const pre = await preVerifyDup(origTitle, content, suspect, anthropicKey, supabase);
+            if (pre && pre.verdict === "trung") {
+              stats.preDupBlocked++;
+              await logReject(supabase, {
+                stage: "kiem_som", verdict: "trung", source_name: src.name, url: canonical,
+                original_title: origTitle, reason: pre.reason,
+                similar_news_id: suspect.id, similar_title: suspect.title,
+                similar_sim: Math.round(suspect.sim * 100) / 100,
+              });
+              continue;
+            }
           }
 
           // P3 VIẾT: LLM viết lại + phân loại (retry 1 lần nếu lệch số từ).
