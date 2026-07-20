@@ -1002,9 +1002,10 @@ async function handle(req: Request): Promise<Response> {
               title_words: tw,
               total_words: total,
               // Badge "⚠️ Giống X%" trên trang duyệt — lưới phụ cho người duyệt
-              // khi giám khảo P1 đã cho qua tin nghi trùng.
+              // khi giám khảo P1 đã cho qua tin nghi trùng. similar_news_id để
+              // trang duyệt kéo tin trùng ra đối chiếu song song.
               ...(suspect && suspect.title
-                ? { similar_title: suspect.title, similar_sim: Math.round(suspect.sim * 100) / 100 }
+                ? { similar_news_id: suspect.id, similar_title: suspect.title, similar_sim: Math.round(suspect.sim * 100) / 100 }
                 : {}),
               // Nhãn theo phán quyết P1: 🆕 diễn biến mới / 🔍 cần kiểm tra.
               ...(newDev ? { new_development: { note: verify?.new_info ?? "", similar_title: suspect?.title ?? "" } } : {}),
