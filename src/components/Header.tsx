@@ -150,8 +150,10 @@ export const Header = ({ user, userRole, showReadNews = false, onToggleReadNews 
               Menu
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-[280px]">
-            <div className="flex flex-col gap-4 mt-8">
+          {/* overflow-y-auto: menu admin dài hơn màn hình → phải cuộn được tới
+              nút Đăng xuất; gap-1 thay gap-4 cho danh sách gọn lại. */}
+          <SheetContent side="right" className="w-[280px] overflow-y-auto">
+            <div className="flex flex-col gap-1 mt-6 pb-6">
               {user ? (
                 <>
                   <div className="pb-4 border-b">
