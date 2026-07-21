@@ -1,3 +1,10 @@
+## [1.107.2](https://github.com/lth91/luot247-vision/compare/v1.107.1...v1.107.2) (2026-07-21)
+
+
+### Performance Improvements
+
+* **home:** trang chủ chịu tải nghìn tin/ngày — cắt cột thừa + content-visibility ([#168](https://github.com/lth91/luot247-vision/issues/168)) ([2cc099c](https://github.com/lth91/luot247-vision/commit/2cc099c99fab0304794652dd3a127360be3bdf41))
+
 ## [1.107.1](https://github.com/lth91/luot247-vision/compare/v1.107.0...v1.107.1) (2026-07-21)
 
 
