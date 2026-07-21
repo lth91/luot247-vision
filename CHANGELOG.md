@@ -1,3 +1,10 @@
+# [1.108.0](https://github.com/lth91/luot247-vision/compare/v1.107.2...v1.108.0) (2026-07-21)
+
+
+### Features
+
+* **views:** tổng view/ngày dao động rộng tự nhiên, hết dải đều ([#169](https://github.com/lth91/luot247-vision/issues/169)) ([9882069](https://github.com/lth91/luot247-vision/commit/9882069c5472a9940d9014ced74283c04f59fa7e))
+
 ## [1.107.2](https://github.com/lth91/luot247-vision/compare/v1.107.1...v1.107.2) (2026-07-21)
 
 
