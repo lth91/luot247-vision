@@ -108,29 +108,38 @@ serve(async (req) => {
     const dayRng = mulberry32(hashStr(vnDateStr))
     const dow = vietnamTime.getUTCDay() // 0=CN..6=T7 (theo giờ VN)
 
-    // Hướng 2: tổng/ngày theo phân phối chuông — nâng mặt bằng lên QUANH 3800
-    // (yêu cầu 03/07: cả ngày thường cũng ~3800, không chỉ cuối tuần).
-    let dailyTarget = gaussian(dayRng, 3800, 150)
-    // Hướng 3a: cuối tuần vẫn CAO hơn ngày thường một chút. Ngày thường
-    // ×0.94-1.02 (~3.450-3.950); cuối tuần ×1.02-1.07 (~3.800-4.000 sau kẹp).
+    // Yêu cầu 21/07: RANDOM HƠN giữa các ngày — bản cũ kẹp dải hẹp 3.450-3.970
+    // nên tuần nào cũng đều tăm tắp. Bản mới: mặt bằng ~3.550, biên độ rộng
+    // kiểu lognormal + "loại ngày" (vắng rõ / hơi vắng / thường / đông) →
+    // tổng ngày dao động ~2.400-4.000, nhìn gồ ghề như traffic thật.
+    // Vẫn KHÔNG VƯỢT 4000 (yêu cầu 03/07 giữ nguyên) — muốn giữ trung bình
+    // ~3.800 như cũ thì phải nâng trần này, đổi 1 dòng dayCap.
+    let variance = Math.exp(gaussian(dayRng, 0, 0.10)) // ±10% điển hình, đuôi tới ±25%
+    const dayRoll = dayRng()
+    if (dayRoll < 0.10) variance *= 0.66 + dayRng() * 0.12        // ~10%: ngày VẮNG rõ (2.400-2.900)
+    else if (dayRoll < 0.22) variance *= 0.82 + dayRng() * 0.10   // ~12%: hơi vắng (3.000-3.400)
+    else if (dayRoll > 0.90) variance *= 1.10 + dayRng() * 0.08   // ~10%: ngày đông (chạm trần)
+    let dailyTarget = 3550 * variance
+    // Cuối tuần nhỉnh hơn ngày thường một chút (giữ từ 03/07).
     const dowMult = (dow === 0 || dow === 6) ? (1.02 + dayRng() * 0.05) : (0.94 + dayRng() * 0.08)
     dailyTarget *= dowMult
-    // Ngày spike "viral" ĐÃ BỎ. Trần dao động 3940-4000 theo seed ngày (tránh
-    // ngày bị kẹp ra đúng số chẵn 4000 lặp lại — nhìn giả). KHÔNG VƯỢT 4000.
+    // Trần dao động 3940-4000 theo seed ngày (tránh kẹp ra số chẵn 4000 lặp lại).
     const dayCap = 3940 + Math.round(dayRng() * 60)
-    dailyTarget = Math.round(Math.max(3200, Math.min(dayCap, dailyTarget)))
+    dailyTarget = Math.round(Math.max(2400, Math.min(dayCap, dailyTarget)))
 
-    // Hướng 5: đường cong 24h + jitter mỗi giờ (mean≈1, ±15%) → hình dạng đổi mỗi
-    // ngày nhưng tổng vẫn chuẩn (vì normalize theo chính curve đã jitter).
-    const curve = BASE_CURVE.map((w) => w * (0.85 + dayRng() * 0.30))
+    // Đường cong 24h: jitter mỗi giờ RỘNG hơn (±25%) + DỊCH ĐỈNH ±1 giờ theo
+    // ngày (hôm đỉnh trưa sớm, hôm đỉnh muộn) → hình dáng mỗi ngày khác nhau
+    // rõ rệt; tổng vẫn chuẩn vì normalize theo chính curve đã biến hình.
+    const peakShift = Math.floor(dayRng() * 3) - 1 // -1 | 0 | +1 giờ
+    const curve = BASE_CURVE.map((_, h) => BASE_CURVE[(h - peakShift + 24) % 24] * (0.75 + dayRng() * 0.50))
     // Mỗi giờ = 2 interval 30 phút → tổng weight-interval = sum(curve) × 2.
     const totalWeightIntervals = curve.reduce((s, w) => s + w, 0) * 2
     const currentWeight = curve[currentHour] ?? 0.1
     const baseForInterval = dailyTarget * (currentWeight / totalWeightIntervals)
 
-    // Hướng 4: nhiễu mỗi interval theo Gaussian (mean 1, sd 0.15), kẹp 0.6-1.5
-    // — dùng random KHÔNG seed (biến thiên thật theo từng lần chạy).
-    const noise = Math.max(0.6, Math.min(1.5, gaussian(Math.random, 1, 0.15)))
+    // Nhiễu mỗi interval: nới sd 0.15 → 0.22, kẹp 0.5-1.7 — nửa tiếng này đông
+    // nửa tiếng kia vắng rõ hơn (random KHÔNG seed, biến thiên theo từng lần chạy).
+    const noise = Math.max(0.5, Math.min(1.7, gaussian(Math.random, 1, 0.22)))
     const viewsToAdd = Math.max(0, Math.round(baseForInterval * noise))
     
     console.log(`Will add ${viewsToAdd} views for this 30-minute interval (target: ${dailyTarget}/day, dow: ${dow})`)
