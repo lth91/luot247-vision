@@ -295,3 +295,13 @@ html {
     letter-spacing: 0.01em;
   }
 }
+
+/* Trang chủ chịu tải nghìn tin (21/07): trình duyệt bỏ qua layout/paint các
+   thẻ tin ngoài màn hình — DOM giữ nguyên nên scroll-restore, deep-link,
+   IntersectionObserver đánh dấu đã-đọc vẫn hoạt động y hệt.
+   contain-intrinsic-size ~240px = chiều cao ước lượng 1 thẻ để thanh cuộn
+   không giật; "auto" ghi nhớ kích thước thật sau lần vẽ đầu. */
+[data-news-id] {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
+}
