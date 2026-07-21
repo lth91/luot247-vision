@@ -28,13 +28,14 @@ const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 const SOURCE_CONCURRENCY = 2; // 3 → 2: mỗi parse deno_dom giữ cả DOM trong RAM, 3 luồng song song từng làm vượt trần 256MB
 const SOURCES_PER_RUN = 15;
-const TIME_BUDGET_MS = 120000;
+const TIME_BUDGET_MS = 240000; // Nấc 2 (21/07): 120s→240s, đi kèm pg_net timeout 300s (migration 20260721010000); trần wall-clock nền tảng ~400s vẫn còn đệm
 const FETCH_TIMEOUT_MS = 30000;
+const LLM_TIMEOUT_MS = 60000; // trần mỗi cú gọi Anthropic — 1 cú treo không được nuốt cả run
 const MAX_CONTENT_CHARS = 6000; // 140 từ output không cần hơn 6k chars input
 // Trần kích thước HTML đưa vào DOMParser (WASM): trang báo VN nặng 1-3MB,
 // DOM phình ~10x → "Memory limit exceeded". Nội dung bài luôn nằm trong 1.5MB đầu.
 const MAX_HTML_CHARS = 1_500_000;
-const DEFAULT_MAX_LLM_CALLS = 60; // van chống vọt chi phí mỗi run (mỗi bài giờ ~2 cú: viết + giám khảo P1)
+const DEFAULT_MAX_LLM_CALLS = 90; // van chống vọt chi phí mỗi run (240s xử lý được nhiều bài hơn, mỗi bài ~2 cú viết + giám khảo)
 const MAX_ARTICLE_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 
 // Chuẩn độ dài TIN TỰ ĐỘNG (sếp 16/07): tổng title+content 100-120 từ.
@@ -77,6 +78,27 @@ async function fetchWithTimeout(url: string, ms = FETCH_TIMEOUT_MS): Promise<Res
       signal: ctrl.signal,
       headers: { "User-Agent": UA, "Accept-Language": "vi,en;q=0.8" },
       redirect: "follow",
+    });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+// Mọi cú gọi Anthropic đi qua đây: có trần LLM_TIMEOUT_MS (fix tiên quyết
+// của Nấc 2 — trước đây fetch trần, 1 cú treo ăn cả ngân sách run).
+async function anthropicPost(apiKey: string, payload: unknown): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), LLM_TIMEOUT_MS);
+  try {
+    return await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify(payload),
     });
   } finally {
     clearTimeout(t);
@@ -364,21 +386,16 @@ async function preVerifyDup(
   supabase: SupabaseClient,
 ): Promise<{ verdict: "trung" | "khac" | "dien_bien_moi"; reason: string } | null> {
   const userMsg = `BÀI BÁO GỐC\nTiêu đề: ${origTitle}\nNội dung:\n${origContent.slice(0, 3000)}\n\nTIN ĐÃ ĐĂNG TRÊN TRANG (điểm tương đồng ${Math.round(suspect.sim * 100)}%${suspect.created_at ? `, đăng lúc ${suspect.created_at.slice(0, 16).replace("T", " ")}` : ""}):\n«${suspect.title}»`;
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
+  let res: Response;
+  try {
+    res = await anthropicPost(apiKey, {
       model: ANTHROPIC_MODEL,
       max_tokens: 150,
       temperature: 0,
       system: [{ type: "text", text: PRE_DUP_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: userMsg }],
-    }),
-  });
+    });
+  } catch { return null; } // timeout/mạng → fail-open, viết như thường
   if (!res.ok) return null;
   const data = await res.json();
   if (data?.usage) {
@@ -413,21 +430,16 @@ async function verifyWithClaude(
     : "";
   const userMsg = `BÀI BÁO GỐC\nTiêu đề: ${origTitle}\nNội dung:\n${origContent.slice(0, 4000)}\n\nBẢN TIN ĐÃ VIẾT\nTiêu đề: ${newsTitle}\nNội dung: ${newsContent}${dupBlock}`;
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
+  let res: Response;
+  try {
+    res = await anthropicPost(apiKey, {
       model: ANTHROPIC_MODEL,
       max_tokens: 300,
       temperature: 0,
       system: [{ type: "text", text: VERIFY_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: userMsg }],
-    }),
-  });
+    });
+  } catch { return null; } // timeout/mạng → caller gắn nhãn cần kiểm tra
   if (!res.ok) return null;
   const data = await res.json();
   if (data?.usage) {
@@ -463,21 +475,13 @@ async function rewriteWithClaude(
     : "";
   const userMsg = `Tiêu đề gốc: ${origTitle}\n\nNội dung bài gốc:\n${content}${hint}${extraFeedback}`;
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 900,
-      temperature: 0.3,
-      // System prompt ~6k token tĩnh → cache 5' (ngưỡng Haiku 4096 đã vượt).
-      system: [{ type: "text", text: CRAWL_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-      messages: [{ role: "user", content: userMsg }],
-    }),
+  const res = await anthropicPost(apiKey, {
+    model: ANTHROPIC_MODEL,
+    max_tokens: 900,
+    temperature: 0.3,
+    // System prompt ~6k token tĩnh → cache 5' (ngưỡng Haiku 4096 đã vượt).
+    system: [{ type: "text", text: CRAWL_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+    messages: [{ role: "user", content: userMsg }],
   });
   if (!res.ok) {
     const txt = await res.text();
@@ -501,14 +505,9 @@ async function compressWithClaude(
 ): Promise<string | null> {
   const tw = countWords(title);
   const lo = TOTAL_MIN - tw + 2, hi = TOTAL_MAX - tw - 2; // đệm 2 từ mỗi đầu
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
+  let res: Response;
+  try {
+    res = await anthropicPost(apiKey, {
       model: ANTHROPIC_MODEL,
       max_tokens: 500,
       temperature: 0.2,
@@ -518,8 +517,8 @@ async function compressWithClaude(
         role: "user",
         content: `Rút bản tin sau xuống còn ${lo}-${hi} từ (đếm từ = tách theo khoảng trắng):\n\n${content}`,
       }],
-    }),
-  });
+    });
+  } catch { return null; }
   if (!res.ok) return null;
   const data = await res.json();
   if (data?.usage) {
@@ -778,15 +777,28 @@ async function handle(req: Request): Promise<Response> {
   // ===== MODE: crawl =====
   if (!anthropicKey) return json({ error: "ANTHROPIC_API_KEY chưa được set" }, 500);
 
-  let query = supabase.from("crawl_sources").select("*").eq("is_active", true)
-    .like("list_url", "http%")
-    .order("last_crawled_at", { ascending: true, nullsFirst: true })
-    .limit(SOURCES_PER_RUN);
+  // Claim nguồn ATOMIC (Nấc 1, fix chống 2 run lấy trùng nguồn khi pg_net dồn
+  // toa): RPC vừa chọn N nguồn cũ nhất vừa đóng dấu last_crawled_at trong 1
+  // transaction (FOR UPDATE SKIP LOCKED). Migration chưa chạy → fallback
+  // SELECT như cũ.
+  let sources: Source[] | null = null;
   if (forcedSourceId) {
-    query = supabase.from("crawl_sources").select("*").eq("id", forcedSourceId);
+    const { data, error } = await supabase.from("crawl_sources").select("*").eq("id", forcedSourceId);
+    if (error) return json({ error: error.message }, 500);
+    sources = data as Source[];
+  } else {
+    const { data, error } = await supabase.rpc("claim_crawl_sources", { _limit: SOURCES_PER_RUN });
+    if (!error) {
+      sources = data as Source[];
+    } else {
+      const { data: d2, error: e2 } = await supabase.from("crawl_sources").select("*").eq("is_active", true)
+        .like("list_url", "http%")
+        .order("last_crawled_at", { ascending: true, nullsFirst: true })
+        .limit(SOURCES_PER_RUN);
+      if (e2) return json({ error: e2.message }, 500);
+      sources = d2 as Source[];
+    }
   }
-  const { data: sources, error: sErr } = await query;
-  if (sErr) return json({ error: sErr.message }, 500);
 
   const stats = {
     sources: 0, articlesFound: 0, llmCalls: 0, inserted: 0,
