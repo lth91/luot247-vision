@@ -675,9 +675,12 @@ const Index = () => {
     // hạn (60k+ tin/tháng). Tin cũ hơn vẫn xem được qua deep-link /tin/:id
     // (fallback tải lẻ bên dưới).
     const sinceIso = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString();
+    // Chỉ SELECT đúng các cột trang chủ dùng — select("*") kéo theo cả
+    // ai_classification jsonb (~1KB/tin × 4000 tin = vài MB thừa trên mobile).
+    const FEED_COLS = "id, title, description, url, category, created_at, updated_at, submitted_by, view_count";
     const { data: dataRaw, error } = await supabase
       .from("news")
-      .select("*")
+      .select(FEED_COLS)
       .eq("is_approved", true)  // Only show approved news
       .gte("updated_at", sinceIso)
       .order("updated_at", { ascending: false })  // Sort by approval time
@@ -689,7 +692,9 @@ const Index = () => {
     const deepId = window.location.pathname.match(/^\/tin\/([a-f0-9-]+)$/)?.[1];
     if (!error && deepId && data && !data.some((n) => n.id === deepId)) {
       const { data: single } = await supabase
-        .from("news").select("*").eq("id", deepId).eq("is_approved", true).maybeSingle();
+        .from("news")
+        .select("id, title, description, url, category, created_at, updated_at, submitted_by, view_count")
+        .eq("id", deepId).eq("is_approved", true).maybeSingle();
       if (single) data = [...data, single];
     }
 
