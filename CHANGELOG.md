@@ -1,3 +1,10 @@
+## [1.107.1](https://github.com/lth91/luot247-vision/compare/v1.107.0...v1.107.1) (2026-07-21)
+
+
+### Performance Improvements
+
+* **crawl:** Nấc 1+2 — cron 15 phút + ngân sách lượt 240s + 3 fix tiên quyết ([#167](https://github.com/lth91/luot247-vision/issues/167)) ([f53fb51](https://github.com/lth91/luot247-vision/commit/f53fb514cc5be51d5b6d10133f9aac9261fcbe3d))
+
 # [1.107.0](https://github.com/lth91/luot247-vision/compare/v1.106.0...v1.107.0) (2026-07-20)
 
 
