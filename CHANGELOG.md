@@ -1,3 +1,10 @@
+## [1.109.1](https://github.com/lth91/luot247-vision/compare/v1.109.0...v1.109.1) (2026-07-22)
+
+
+### Performance Improvements
+
+* **submit:** rút gọn JSON verdict — giảm ~50-70% output token của submit-news + bulk ([#173](https://github.com/lth91/luot247-vision/issues/173)) ([39f8e40](https://github.com/lth91/luot247-vision/commit/39f8e40c68d4ef7da7e9624b202deaf197b94936))
+
 # [1.109.0](https://github.com/lth91/luot247-vision/compare/v1.108.1...v1.109.0) (2026-07-22)
 
 
