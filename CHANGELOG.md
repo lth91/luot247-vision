@@ -1,3 +1,10 @@
+## [1.108.1](https://github.com/lth91/luot247-vision/compare/v1.108.0...v1.108.1) (2026-07-22)
+
+
+### Bug Fixes
+
+* **crawl:** hết loại oan "bịa ngày" — đưa ngày metadata cho giám khảo P1 + chặn câu cụt ([#170](https://github.com/lth91/luot247-vision/issues/170)) ([ba7e449](https://github.com/lth91/luot247-vision/commit/ba7e4495557d8e57b22260fd95aec55ced46ca79))
+
 # [1.108.0](https://github.com/lth91/luot247-vision/compare/v1.107.2...v1.108.0) (2026-07-21)
 
 
