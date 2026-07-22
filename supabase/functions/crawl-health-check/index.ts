@@ -1,8 +1,13 @@
 // Giám sát pipeline AI crawl (cron 6h). Im lặng khi khỏe — chỉ bắn Telegram khi:
-//   1. Crawler im ắng: không có tin AI mới >2h trong khung 6h-23h VN.
+//   1. Crawler im ắng: không có tin AI mới >1h trong khung 6h-23h VN
+//      (siết 2h→1h ngày 22/07 theo nhịp quét 15 phút).
 //   2. Backlog: hàng đợi pending vượt ngưỡng (nhân viên duyệt không kịp).
 //   3. Chi phí: llm_usage_log của crawl-news hôm nay (giờ VN) vượt trần.
 // Kèm dòng info nguồn đang bị auto-disable nếu có cảnh báo.
+//
+// MODE daily_digest (cron 8h sáng VN, 22/07): LUÔN gửi bản tin sáng —
+// chi phí AI hôm qua + phễu tin hôm qua + tồn hàng đợi. Yêu cầu anh Long:
+// nhìn thấy tiền mỗi sáng, khỏi chạy SQL.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 import { sendTelegram } from "../_shared/telegram.ts";
@@ -12,7 +17,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const QUIET_HOURS_MS = 2 * 3600 * 1000;
+const QUIET_HOURS_MS = 1 * 3600 * 1000; // nhịp quét 15' → im 1h là bất thường
 const BACKLOG_ALERT = 1500;
 const COST_ALERT_USD = 20;
 
@@ -25,6 +30,57 @@ Deno.serve(async (req) => {
   );
   const tgToken = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
   const tgChatId = Deno.env.get("TELEGRAM_CHAT_ID") ?? "";
+
+  let body: Record<string, unknown> = {};
+  try { body = await req.json(); } catch { /* cron 6h gọi không body */ }
+
+  // ===== MODE: daily_digest — bản tin sáng, LUÔN gửi =====
+  if (body?.mode === "daily_digest") {
+    const vnNow0 = new Date(Date.now() + 7 * 3600 * 1000);
+    const todayStartUtc = new Date(Date.UTC(vnNow0.getUTCFullYear(), vnNow0.getUTCMonth(), vnNow0.getUTCDate()) - 7 * 3600 * 1000);
+    const yStartUtc = new Date(todayStartUtc.getTime() - 24 * 3600 * 1000);
+    const dayVN = new Date(yStartUtc.getTime() + 7 * 3600 * 1000);
+    const label = `${String(dayVN.getUTCDate()).padStart(2, "0")}/${String(dayVN.getUTCMonth() + 1).padStart(2, "0")}`;
+
+    const { count: queued } = await supabase.from("news")
+      .select("*", { count: "exact", head: true })
+      .is("submitted_by", null)
+      .gte("created_at", yStartUtc.toISOString()).lt("created_at", todayStartUtc.toISOString());
+    const { count: approved } = await supabase.from("review_log")
+      .select("*", { count: "exact", head: true })
+      .neq("action", "reject")
+      .gte("created_at", yStartUtc.toISOString()).lt("created_at", todayStartUtc.toISOString());
+    const { count: rejectedByStaff } = await supabase.from("review_log")
+      .select("*", { count: "exact", head: true })
+      .eq("action", "reject")
+      .gte("created_at", yStartUtc.toISOString()).lt("created_at", todayStartUtc.toISOString());
+    const { count: aiBlocked } = await supabase.from("crawl_reject_log")
+      .select("*", { count: "exact", head: true })
+      .neq("stage", "duyet")
+      .gte("created_at", yStartUtc.toISOString()).lt("created_at", todayStartUtc.toISOString());
+    const { data: costRowsY } = await supabase.from("llm_usage_log")
+      .select("cost_usd")
+      .eq("function_name", "crawl-news")
+      .gte("created_at", yStartUtc.toISOString()).lt("created_at", todayStartUtc.toISOString());
+    const costY = (costRowsY ?? []).reduce((a: number, r: { cost_usd: number }) => a + Number(r.cost_usd || 0), 0);
+    const { count: pendingNow } = await supabase.from("news")
+      .select("*", { count: "exact", head: true })
+      .eq("review_status", "pending");
+
+    const digest = [
+      `☀️ *Bản tin sáng — tin tự động luot247* (hôm qua ${label})`,
+      ``,
+      `💰 Chi phí AI: *$${costY.toFixed(2)}* (~${Math.round(costY * 25.5).toLocaleString("vi-VN")}k đ)`,
+      `📥 Vào hàng đợi: *${queued ?? 0}* tin`,
+      `✅ Nhân viên duyệt đăng: *${approved ?? 0}* — 🗑 loại: *${rejectedByStaff ?? 0}*`,
+      `🤖 AI tự chặn (rác/trùng/kém): *${aiBlocked ?? 0}* bài`,
+      `📌 Tồn hàng đợi lúc này: *${pendingNow ?? 0}* tin`,
+    ].join("\n");
+    if (tgToken && tgChatId) await sendTelegram(tgToken, tgChatId, digest);
+    return new Response(JSON.stringify({ ok: true, digest: true, costY: costY.toFixed(2), queued, approved, rejectedByStaff, aiBlocked, pendingNow }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   const sections: string[] = [];
 
