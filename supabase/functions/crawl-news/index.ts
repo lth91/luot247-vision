@@ -301,6 +301,10 @@ function trimToFit(title: string, content: string): string {
     const clauses = sentences[kept.length].split(/,\s*/);
     for (let n = clauses.length - 1; n >= 1; n--) {
       const partial = clauses.slice(0, n).join(", ").replace(/[,.;:…\s]+$/, "") + ".";
+      // Chống câu cụt kiểu "Trước đó, từ ngày 18-20/7." (giám khảo bắt 22/07):
+      // vế giữ lại phải đủ >= 8 từ mới thành câu; ngắn hơn → bỏ hẳn phương án
+      // cắt vế, để nhánh nén/needs_edit xử lý.
+      if (countWords(partial) < 8) break;
       const candidate = `${trimmed} ${partial}`;
       const t = tw + countWords(candidate);
       if (t > TOTAL_MAX) continue;
@@ -422,13 +426,18 @@ async function verifyWithClaude(
   newsTitle: string,
   newsContent: string,
   suspect: SimilarHit | null,
+  pubDate: string | null,
   apiKey: string,
   supabase: SupabaseClient,
 ): Promise<VerifyResult | null> {
   const dupBlock = suspect && suspect.title
     ? `\n\nTIN ĐÃ ĐĂNG NGHI TRÙNG (điểm tương đồng ${Math.round(suspect.sim * 100)}%${suspect.created_at ? `, đăng lúc ${suspect.created_at.slice(0, 16).replace("T", " ")}` : ""}):\n«${suspect.title}»`
     : "";
-  const userMsg = `BÀI BÁO GỐC\nTiêu đề: ${origTitle}\nNội dung:\n${origContent.slice(0, 4000)}\n\nBẢN TIN ĐÃ VIẾT\nTiêu đề: ${newsTitle}\nNội dung: ${newsContent}${dupBlock}`;
+  // Ngày metadata phải đưa cho giám khảo — không thì nó phán oan "bịa ngày"
+  // với tin mở đầu bằng ngày xuất bản (fix 22/07: ~nửa số ca loại chất lượng
+  // là loại oan kiểu này).
+  const dateBlock = pubDate ? `\nNGÀY XUẤT BẢN (theo metadata bài gốc): ${pubDate}` : "";
+  const userMsg = `BÀI BÁO GỐC\nTiêu đề: ${origTitle}${dateBlock}\nNội dung:\n${origContent.slice(0, 4000)}\n\nBẢN TIN ĐÃ VIẾT\nTiêu đề: ${newsTitle}\nNội dung: ${newsContent}${dupBlock}`;
 
   let res: Response;
   try {
@@ -972,7 +981,7 @@ async function handle(req: Request): Promise<Response> {
           let verify: VerifyResult | null = null;
           if (llmCalls < maxLlmCalls) {
             llmCalls++; stats.llmCalls++; stats.verifyCalls++;
-            verify = await verifyWithClaude(origTitle, content, r.title, r.content, suspect, anthropicKey, supabase);
+            verify = await verifyWithClaude(origTitle, content, r.title, r.content, suspect, publishedAt.slice(0, 10), anthropicKey, supabase);
           }
           if (verify && (verify.verdict === "loai" || verify.verdict === "trung")) {
             if (verify.verdict === "trung") stats.p1Dup++; else stats.p1Rejected++;
