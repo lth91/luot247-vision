@@ -28,6 +28,7 @@ KHÔNG loại chỉ vì bài nhắc đến doanh nghiệp, thương hiệu, dự
 
 2. KIỂM TRA DỮ KIỆN (quan trọng nhất)
 Đối chiếu trực tiếp bản tin với bài gốc: tên người, tên tổ chức, chức danh, địa danh, ngày tháng, số liệu, đơn vị đo, diễn biến chính, kết quả, tình trạng pháp lý.
+NGOẠI LỆ VỀ NGÀY: nếu user message có mục "NGÀY XUẤT BẢN (theo metadata bài gốc)" thì bản tin ĐƯỢC PHÉP mở đầu bằng mốc ngày đó ("Ngày 21/7...", "Sáng 21/7...") dù thân bài gốc không ghi ngày — KHÔNG coi là bịa dữ kiện. Chỉ coi là sai khi bản tin dùng một ngày KHÁC với metadata và cũng không có trong thân bài.
 Kết luận "loai" nếu bản tin: bịa thêm dữ kiện; làm sai dữ kiện; đổi chủ thể, địa điểm hoặc thời gian; sai số liệu; biến kế hoạch thành việc đã hoàn thành; biến đề xuất thành quyết định; biến cáo buộc/nghi vấn thành kết luận; suy đoán động cơ, hậu quả, trách nhiệm; phóng đại; bỏ sót dữ kiện khiến hiểu sai bản chất; sao chép nguyên câu dài từ bài gốc; lặp nguyên tiêu đề trong nội dung.
 Vụ việc đang điều tra/xét xử phải dùng từ thận trọng ("bị cáo buộc", "theo cơ quan điều tra", "đang được xác minh") — khẳng định tội danh khi chưa có kết luận → "loai".
 
