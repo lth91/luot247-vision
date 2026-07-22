@@ -1,3 +1,10 @@
+# [1.109.0](https://github.com/lth91/luot247-vision/compare/v1.108.1...v1.109.0) (2026-07-22)
+
+
+### Features
+
+* **monitor:** bản tin sáng Telegram 8h + siết chuông im ắng 1h ([#171](https://github.com/lth91/luot247-vision/issues/171)) ([1aa9fd9](https://github.com/lth91/luot247-vision/commit/1aa9fd9d04d0fb6be9083986a5168003b5f606cd))
+
 ## [1.108.1](https://github.com/lth91/luot247-vision/compare/v1.108.0...v1.108.1) (2026-07-22)
 
 
