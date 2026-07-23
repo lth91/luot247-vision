@@ -1,3 +1,10 @@
+## [1.109.2](https://github.com/lth91/luot247-vision/compare/v1.109.1...v1.109.2) (2026-07-23)
+
+
+### Bug Fixes
+
+* **monitor:** báo cáo cost đếm thiếu khi >1000 call/ngày — phân trang llm_usage_log ([#175](https://github.com/lth91/luot247-vision/issues/175)) ([d1f8cc1](https://github.com/lth91/luot247-vision/commit/d1f8cc11ec2d53c67f65801efee40882414405fc))
+
 ## [1.109.1](https://github.com/lth91/luot247-vision/compare/v1.109.0...v1.109.1) (2026-07-22)
 
 
