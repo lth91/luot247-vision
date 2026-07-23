@@ -122,6 +122,15 @@ const ReviewQueue = () => {
   const [compareSim, setCompareSim] = useState<SimilarNews | null>(null);
   const [compareLoading, setCompareLoading] = useState(false);
 
+  // Dialog XÁC NHẬN LƯỢT 2 (23/07, ca oan chị Thuỷ): RPC báo tiêu đề giống ≥70%
+  // tin đã đăng — hệ thống KHÔNG tự loại nữa, người duyệt nhìn 2 bài và quyết.
+  const [pass2Item, setPass2Item] = useState<PendingNews | null>(null);
+  const [pass2Info, setPass2Info] = useState<{ similar_news_id?: string; similar_title?: string; similar_sim?: number } | null>(null);
+  const [pass2Sim, setPass2Sim] = useState<SimilarNews | null>(null);
+  const [pass2Loading, setPass2Loading] = useState(false);
+  // Giữ bản sửa đang duyệt dở (nếu đi từ dialog Sửa) để gọi lại RPC kèm _force.
+  const [pass2Edit, setPass2Edit] = useState<{ _title?: string; _content?: string; _category?: string | null } | null>(null);
+
   const openCompare = async (item: PendingNews) => {
     const simId = item.ai_classification?.similar_news_id;
     setCompareItem(item);
@@ -226,14 +235,73 @@ const ReviewQueue = () => {
     }
   };
 
-  // Lọc lượt 2 (kiểm 2 lượt, sếp 17/07): RPC trả ok=false khi bản tin trùng
-  // với tin VỪA ĐĂNG trong lúc nằm chờ — hệ thống đã tự loại, chỉ cần báo.
-  const handlePass2Block = (id: string, data: { reason?: string; similar_title?: string; similar_sim?: number }) => {
-    removeRow(id);
-    toast.warning(
-      `Tin này trùng ${data.similar_sim ? Math.round(Number(data.similar_sim) * 100) + "% " : ""}với tin đã đăng trong lúc chờ: «${data.similar_title ?? ""}» — hệ thống đã tự loại.`,
-      { duration: 8000 },
-    );
+  // Lọc lượt 2 (kiểm 2 lượt, sếp 17/07 — đổi 23/07): RPC trả needs_confirm khi
+  // tiêu đề giống ≥70% tin đã đăng. KHÔNG tự loại nữa — mở dialog đối chiếu
+  // cho người duyệt quyết (ca oan: «tại Nhật Bản» bị chém vì giống «tại Hàn Quốc»).
+  const handlePass2Block = async (
+    item: PendingNews,
+    data: { needs_confirm?: boolean; similar_news_id?: string; similar_title?: string; similar_sim?: number },
+    editArgs?: { _title?: string; _content?: string; _category?: string | null },
+  ) => {
+    if (!data.needs_confirm) {
+      // RPC bản cũ (đã tự loại trong DB) — giữ hành vi cũ cho giai đoạn chuyển tiếp.
+      removeRow(item.id);
+      toast.warning(
+        `Tin này trùng ${data.similar_sim ? Math.round(Number(data.similar_sim) * 100) + "% " : ""}với tin đã đăng trong lúc chờ: «${data.similar_title ?? ""}» — hệ thống đã tự loại.`,
+        { duration: 8000 },
+      );
+      return;
+    }
+    setPass2Item(item);
+    setPass2Info(data);
+    setPass2Edit(editArgs ?? null);
+    setPass2Sim(null);
+    if (data.similar_news_id) {
+      setPass2Loading(true);
+      const { data: sim } = await supabase
+        .from("news")
+        .select("id, title, description, url, created_at, ai_classification")
+        .eq("id", data.similar_news_id)
+        .maybeSingle();
+      setPass2Sim((sim as SimilarNews) ?? null);
+      setPass2Loading(false);
+    }
+  };
+
+  const closePass2 = () => {
+    setPass2Item(null); setPass2Info(null); setPass2Sim(null); setPass2Edit(null);
+  };
+
+  // «Khác — Vẫn đăng»: gọi lại RPC với _force_not_dup (kèm bản sửa nếu có).
+  const pass2ForceApprove = async () => {
+    if (!pass2Item) return;
+    setBusyId(pass2Item.id);
+    const { data, error } = await (supabase as any).rpc("approve_crawled_news", {
+      _news_id: pass2Item.id,
+      ...(pass2Edit ?? {}),
+      _force_not_dup: true,
+    });
+    setBusyId(null);
+    if (error) { closePass2(); return handleRpcError(pass2Item.id, error.message); }
+    if (data && data.ok === false) { closePass2(); return; } // không xảy ra với _force, phòng hờ
+    removeRow(pass2Item.id);
+    closePass2();
+    toast.success("Đã duyệt — ghi nhận xác nhận không trùng.");
+  };
+
+  // «Trùng — Loại»: loại với lý do ghi rõ tin đã đăng nào.
+  const pass2Reject = async () => {
+    if (!pass2Item) return;
+    setBusyId(pass2Item.id);
+    const { error } = await (supabase as any).rpc("reject_crawled_news", {
+      _news_id: pass2Item.id,
+      _reason: `Trùng tin đã có: «${(pass2Info?.similar_title ?? "").slice(0, 120)}»`,
+    });
+    setBusyId(null);
+    if (error) { closePass2(); return handleRpcError(pass2Item.id, error.message); }
+    removeRow(pass2Item.id);
+    closePass2();
+    toast.success("Đã loại — trùng tin đã đăng.");
   };
 
   const approve = async (item: PendingNews) => {
@@ -241,7 +309,7 @@ const ReviewQueue = () => {
     const { data, error } = await (supabase as any).rpc("approve_crawled_news", { _news_id: item.id });
     setBusyId(null);
     if (error) return handleRpcError(item.id, error.message);
-    if (data && data.ok === false) return handlePass2Block(item.id, data);
+    if (data && data.ok === false) return handlePass2Block(item, data);
     removeRow(item.id);
     toast.success("Đã duyệt — tin lên trang ngay.");
   };
@@ -270,7 +338,11 @@ const ReviewQueue = () => {
     setBusyId(null);
     if (error) return handleRpcError(editItem.id, error.message);
     if (data && data.ok === false) {
-      handlePass2Block(editItem.id, data);
+      handlePass2Block(editItem, data, {
+        _title: editTitle.trim(),
+        _content: editContent.trim(),
+        _category: editCategory !== editItem.category ? editCategory : null,
+      });
       setEditItem(null);
       return;
     }
@@ -620,6 +692,74 @@ const ReviewQueue = () => {
                   onClick={() => { const it = compareItem; setCompareItem(null); if (it) approve(it); }}
                 >
                   ✅ Khác nhau — Duyệt
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog XÁC NHẬN LƯỢT 2 (23/07): bấm Duyệt nhưng tiêu đề giống ≥70%
+            tin đã đăng — người duyệt nhìn 2 bài cạnh nhau và tự quyết. */}
+        <Dialog open={!!pass2Item} onOpenChange={(o) => !o && closePass2()}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>
+                ⚠️ Giống {typeof pass2Info?.similar_sim === "number" ? `${Math.round(Number(pass2Info.similar_sim) * 100)}% ` : ""}
+                tin đã đăng — anh/chị quyết định
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-xs text-muted-foreground -mt-2">
+              Độ giống chỉ đo bề mặt chữ của tiêu đề (tham khảo). Hai sự kiện khác nhau vẫn có thể giống chữ — đọc kỹ nội dung trước khi quyết.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-lg border border-primary/40 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Badge>Tin sắp đăng</Badge>
+                  <span className="text-xs text-muted-foreground">{pass2Item?.ai_classification?.source_name ?? "?"}</span>
+                </div>
+                <p className="font-semibold text-sm leading-snug">{pass2Edit?._title ?? pass2Item?.title}</p>
+                <p className="text-xs text-muted-foreground whitespace-pre-line">{pass2Edit?._content ?? pass2Item?.description}</p>
+                <div className="flex items-center justify-between pt-1 text-[11px] text-muted-foreground">
+                  <span>{pass2Item?.ai_classification?.published_at_source?.slice(0, 16).replace("T", " ") ?? ""}</span>
+                  {pass2Item?.url && (
+                    <a href={pass2Item.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">Bài gốc ↗</a>
+                  )}
+                </div>
+              </div>
+              <div className="rounded-lg border border-amber-500/50 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Badge variant="outline" className="border-amber-500 text-amber-600 dark:text-amber-400">Đã đăng</Badge>
+                  <span className="text-xs text-muted-foreground">{pass2Sim?.ai_classification?.source_name ?? ""}</span>
+                </div>
+                {pass2Loading ? (
+                  <p className="text-xs text-muted-foreground py-6 text-center">Đang tải tin đã đăng...</p>
+                ) : pass2Sim ? (
+                  <>
+                    <p className="font-semibold text-sm leading-snug">{pass2Sim.title}</p>
+                    <p className="text-xs text-muted-foreground whitespace-pre-line">{pass2Sim.description}</p>
+                    <div className="flex items-center justify-between pt-1 text-[11px] text-muted-foreground">
+                      <span>{(pass2Sim.ai_classification?.published_at_source ?? pass2Sim.created_at)?.slice(0, 16).replace("T", " ")}</span>
+                      {pass2Sim.url && (
+                        <a href={pass2Sim.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">Bài gốc ↗</a>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-1 py-2">
+                    <p className="text-sm font-medium">{pass2Info?.similar_title}</p>
+                    <p className="text-xs text-muted-foreground">Không tải được nội dung tin đã đăng — so theo tiêu đề bên trên.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <DialogFooter className="gap-2 sm:justify-between">
+              <Button variant="outline" onClick={closePass2}>Để sau</Button>
+              <div className="flex gap-2">
+                <Button variant="destructive" disabled={busyId === pass2Item?.id} onClick={pass2Reject}>
+                  🗑 Trùng — Loại tin này
+                </Button>
+                <Button disabled={busyId === pass2Item?.id} onClick={pass2ForceApprove}>
+                  ✅ Khác — Vẫn đăng
                 </Button>
               </div>
             </DialogFooter>
