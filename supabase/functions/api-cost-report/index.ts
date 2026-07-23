@@ -55,14 +55,23 @@ async function aggregate(
   startIso: string,
   endIso: string,
 ): Promise<{ rows: AggRow[]; totalCost: number; totalCalls: number; totalIn: number; totalOut: number }> {
-  // Bulk fetch + JS aggregate (đơn giản, đủ cho khối lượng dự kiến < vài nghìn rows/ngày).
-  const { data, error } = await sb
-    .from("llm_usage_log")
-    .select("function_name, cost_usd, input_tokens, output_tokens")
-    .gte("created_at", startIso)
-    .lt("created_at", endIso);
-
-  if (error) throw new Error(`aggregate query: ${error.message}`);
+  // Fetch PHÂN TRANG + JS aggregate. Bug 23/07: PostgREST cắt 1000 dòng/lần —
+  // ngày crawl gọi ~1.300-1.500 cú nên báo cáo daily đếm THIẾU (vd 22/07 báo
+  // $5.35 trong khi 17h đã $5.91). Phải .range() gom đủ trang.
+  const PAGE = 1000;
+  const data: { function_name: string; cost_usd: number; input_tokens: number; output_tokens: number }[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data: page, error } = await sb
+      .from("llm_usage_log")
+      .select("function_name, cost_usd, input_tokens, output_tokens")
+      .gte("created_at", startIso)
+      .lt("created_at", endIso)
+      .order("created_at", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(`aggregate query: ${error.message}`);
+    data.push(...(page ?? []));
+    if (!page || page.length < PAGE) break;
+  }
 
   const map = new Map<string, AggRow>();
   let totalCost = 0;

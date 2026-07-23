@@ -21,6 +21,31 @@ const QUIET_HOURS_MS = 1 * 3600 * 1000; // nhịp quét 15' → im 1h là bất 
 const BACKLOG_ALERT = 1500;
 const COST_ALERT_USD = 20;
 
+// Cộng cost_usd của crawl-news trong [fromIso, toIso). PHẢI phân trang: PostgREST
+// cắt 1000 dòng/lần, ngày crawl gọi ~1.300-1.500 cú → select thẳng đếm THIẾU
+// (bug 23/07: bản tin sáng báo $5.35 trong khi 17h hôm đó đã $5.91).
+async function sumCrawlCost(
+  supabase: ReturnType<typeof createClient>,
+  fromIso: string,
+  toIso?: string,
+): Promise<number> {
+  const PAGE = 1000;
+  let total = 0;
+  for (let from = 0; ; from += PAGE) {
+    let q = supabase.from("llm_usage_log")
+      .select("cost_usd")
+      .eq("function_name", "crawl-news")
+      .gte("created_at", fromIso)
+      .order("created_at", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (toIso) q = q.lt("created_at", toIso);
+    const { data } = await q;
+    for (const r of data ?? []) total += Number((r as { cost_usd: number }).cost_usd || 0);
+    if (!data || data.length < PAGE) break;
+  }
+  return total;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -58,11 +83,7 @@ Deno.serve(async (req) => {
       .select("*", { count: "exact", head: true })
       .neq("stage", "duyet")
       .gte("created_at", yStartUtc.toISOString()).lt("created_at", todayStartUtc.toISOString());
-    const { data: costRowsY } = await supabase.from("llm_usage_log")
-      .select("cost_usd")
-      .eq("function_name", "crawl-news")
-      .gte("created_at", yStartUtc.toISOString()).lt("created_at", todayStartUtc.toISOString());
-    const costY = (costRowsY ?? []).reduce((a: number, r: { cost_usd: number }) => a + Number(r.cost_usd || 0), 0);
+    const costY = await sumCrawlCost(supabase, yStartUtc.toISOString(), todayStartUtc.toISOString());
     const { count: pendingNow } = await supabase.from("news")
       .select("*", { count: "exact", head: true })
       .eq("review_status", "pending");
@@ -111,12 +132,7 @@ Deno.serve(async (req) => {
   // 3) Chi phí hôm nay (giờ VN)
   const vnNow = new Date(Date.now() + 7 * 3600 * 1000);
   const vnDayStartUtc = new Date(Date.UTC(vnNow.getUTCFullYear(), vnNow.getUTCMonth(), vnNow.getUTCDate()) - 7 * 3600 * 1000);
-  const { data: costRows } = await supabase
-    .from("llm_usage_log")
-    .select("cost_usd")
-    .eq("function_name", "crawl-news")
-    .gte("created_at", vnDayStartUtc.toISOString());
-  const costToday = (costRows ?? []).reduce((a: number, r: { cost_usd: number }) => a + Number(r.cost_usd || 0), 0);
+  const costToday = await sumCrawlCost(supabase, vnDayStartUtc.toISOString());
   if (costToday > COST_ALERT_USD) {
     sections.push(`💸 Chi phí crawl-news hôm nay đã *$${costToday.toFixed(2)}* (trần cảnh báo $${COST_ALERT_USD}) — kiểm tra vòng lặp/nguồn lạ.`);
   }
