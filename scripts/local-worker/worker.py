@@ -203,7 +203,9 @@ def build_prompt(task, p):
             + fmt_suspect_block(sus, "TIN ĐÃ ĐĂNG TRÊN TRANG")
         )
         return PRE_DUP_SYSTEM, user, 0.0
-    if task == "giam_khao":
+    if task in ("giam_khao", "giam_khao_live"):
+        # giam_khao_live = việc THẬT (hybrid bật): cùng prompt, phán quyết sẽ
+        # được crawl-finalize áp vào hàng đợi duyệt.
         date_block = f"\nNGÀY XUẤT BẢN (theo metadata bài gốc): {p['pub_date']}" if p.get("pub_date") else ""
         dup_block = fmt_suspect_block(p["suspect"], "TIN ĐÃ ĐĂNG NGHI TRÙNG") if p.get("suspect") else ""
         user = (
