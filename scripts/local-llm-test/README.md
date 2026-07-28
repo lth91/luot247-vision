@@ -53,6 +53,11 @@ Script in tiến độ từng ca (✓/✗). Xong sẽ có file `ket_qua_qwen3_14
 - Bộ kiểm trùng là **vùng xám thật**: toàn ca Haiku từng cho qua rồi nhân viên
   phán lại — khó hơn nhiều so với test tự bịa, nên điểm sẽ không đẹp lung linh;
   cái cần so là **local có ≥ Haiku trên cùng bộ đề hay không**.
+- Ở bài kiểm trùng, local được xem **cả nội dung** tin đã đăng, trong khi Haiku
+  production chỉ được xem tiêu đề (tiết kiệm token cloud). Đây là lợi thế CÓ
+  CHỦ ĐÍCH — khi triển khai local thật cũng sẽ cấu hình như vậy vì token local
+  miễn phí. So sánh với baseline Haiku là so "làm được việc", không phải so
+  cùng-đề-cùng-điều-kiện.
 - Bộ phân loại lấy từ tin ĐÃ ĐĂNG (không có content của tin bị loại — hệ thống
   không lưu), nên bài này đo "khớp Haiku + không loại oan", chưa đo khả năng bắt rác.
 - MacBook M4 Pro 24GB: chạy 14B thoải mái; **không** chạy `qwen3:32b` trên máy

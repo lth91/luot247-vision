@@ -9,9 +9,12 @@
 -- ---------- CÂU 1: BỘ PHÂN LOẠI (150 tin nhân viên đã đăng 7 ngày) ----------
 -- Đáp án = category Haiku đã chọn (tin đăng rồi nên coi như "sạch": local
 -- model mà gắn cờ vi phạm là điểm trừ false-positive).
+-- Lưu ý nhãn: một số ít dòng category có thể là fallback (LLM trả slug lạ →
+-- rơi về mục user khai / xa-hoi-van-hoa) chứ không phải lựa chọn của Haiku.
 SELECT n.id,
        n.title,
        n.description AS content,
+       n.url,
        n.category    AS haiku_category,
        COALESCE(n.ai_classification->>'is_ai_generated', 'false') AS haiku_aig,
        COALESCE(n.ai_classification->>'ai_confidence', '0')       AS haiku_ac
@@ -25,6 +28,10 @@ SELECT n.id,
 -- Đây là VÙNG XÁM: toàn ca Haiku đã cho qua (khac/dien_bien_moi), sau đó
 -- NHÂN VIÊN quyết — staff_verdict là chuẩn vàng. Local model giỏi hơn Haiku
 -- nếu khớp nhân viên nhiều hơn tỷ lệ 'khac' trong bộ.
+-- Chỉ lấy ca Haiku THẬT SỰ đã phán (loại ca needs_check/skip verify), và chỉ
+-- lấy reject có lý do "Trùng tin đã có" — vì đó là ca nhân viên đối chiếu với
+-- ĐÚNG bài suspect này. (Không lấy ca 'Lọc lượt 2' cũ: bài trùng của pass-2
+-- do trigram tìm, có thể KHÁC bài suspect ở đây → nhãn bẩn.)
 WITH xet AS (
   SELECT DISTINCT ON (n.id)
          n.id, n.title, n.description,
@@ -37,6 +44,7 @@ WITH xet AS (
     JOIN review_log r ON r.news_id = n.id
    WHERE n.submitted_by IS NULL
      AND n.ai_classification->>'similar_news_id' IS NOT NULL
+     AND COALESCE(n.ai_classification->>'needs_check', '') = ''
    ORDER BY n.id, r.created_at DESC
 )
 SELECT x.id,
@@ -44,13 +52,13 @@ SELECT x.id,
        x.description AS tin_moi_content,
        s.title       AS tin_cu_title,
        s.description AS tin_cu_content,
+       s.created_at  AS tin_cu_dang_luc,
        round(x.sim_sim::numeric, 2) AS sim_he_thong,
        CASE WHEN x.haiku_dbm THEN 'dien_bien_moi' ELSE 'khac' END AS haiku_verdict,
        CASE WHEN x.action = 'reject' THEN 'trung' ELSE 'khac' END AS staff_verdict
   FROM xet x
   JOIN news s ON s.id = x.sim_id
  WHERE x.action <> 'reject'                        -- nhân viên duyệt đăng = khac
-    OR x.reason LIKE 'Trùng tin đã có%'            -- loại VÌ TRÙNG = trung
-    OR x.reason LIKE 'Lọc lượt 2%'                 -- pass-2 cũ chặn = trung
+    OR x.reason LIKE 'Trùng tin đã có%'            -- loại VÌ TRÙNG bài suspect = trung
  ORDER BY random()
  LIMIT 200;
