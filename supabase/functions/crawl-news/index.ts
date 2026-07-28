@@ -814,11 +814,20 @@ async function handle(req: Request): Promise<Response> {
     sources: 0, articlesFound: 0, llmCalls: 0, inserted: 0,
     skippedDup: 0, skippedOld: 0, skippedRejected: 0, rejectedNonNews: 0, needsEdit: 0,
     compressCalls: 0, verifyCalls: 0, preDupCalls: 0, preDupBlocked: 0,
-    p1Rejected: 0, p1Dup: 0, p1NewDev: 0, p1NeedsCheck: 0,
+    p1Rejected: 0, p1Dup: 0, p1NewDev: 0, p1NeedsCheck: 0, deferredJudge: 0,
     errors: [] as string[],
   };
   let llmCalls = 0;
   const startTime = Date.now();
+
+  // HYBRID ĐỢT 1 (28/07): công tắc giám khảo local. BẬT → P1 giao worker Mac
+  // chấm async (crawl-finalize áp phán quyết ở nhịp sau); TẮT/lỗi → Haiku như cũ.
+  let hybridJudge = false;
+  try {
+    const { data: cfg } = await supabase.from("hybrid_config")
+      .select("enabled").eq("key", "crawl_giam_khao").maybeSingle();
+    hybridJudge = cfg?.enabled === true;
+  } catch { /* bảng chưa tạo → giữ Haiku */ }
 
   const processSource = async (src: Source) => {
     stats.sources++;
@@ -867,6 +876,12 @@ async function handle(req: Request): Promise<Response> {
         const { data: rejSeen } = await supabase.from("crawl_reject_log")
           .select("id").eq("url_hash", hash).limit(1).maybeSingle();
         if (rejSeen) { stats.skippedRejected++; continue; }
+
+        // Hybrid: bài đang nằm chờ/đã qua giám khảo local → không xử lại
+        // (job 'giam_khao_live' giữ chỗ url_hash cho tới khi cron purge dọn).
+        const { data: liveSeen } = await supabase.from("llm_shadow_queue")
+          .select("id").eq("task", "giam_khao_live").eq("url_hash", hash).limit(1).maybeSingle();
+        if (liveSeen) { stats.skippedRejected++; continue; }
 
         try {
           // Bài quá cũ theo RSS pubDate → bỏ trước khi fetch.
@@ -983,6 +998,45 @@ async function handle(req: Request): Promise<Response> {
           // đăng theo cách khác) — lấy nghi phạm giống nhất trong 2 lần so.
           const hit3 = await findSimilarPublished(supabase, r.title);
           if (hit3 && (!suspect || hit3.sim > suspect.sim)) suspect = hit3;
+
+          // ===== HYBRID BẬT: giao giám khảo cho worker local (async) =====
+          // Xếp job kèm đủ nguyên liệu; crawl-finalize áp phán quyết ở nhịp
+          // sau (tin chậm thêm ~5-15'). Insert lỗi → rơi xuống Haiku như cũ.
+          if (hybridJudge) {
+            const hCat = isValidCategory(r.category) ? r.category : src.default_category;
+            const { error: qErr } = await supabase.from("llm_shadow_queue").insert({
+              task: "giam_khao_live",
+              url_hash: hash,
+              haiku_verdict: {},
+              payload: {
+                orig_title: origTitle, orig_content: content.slice(0, 4000),
+                news_title: r.title, news_content: r.content,
+                pub_date: publishedAt.slice(0, 10),
+                suspect: suspect && suspect.title
+                  ? { id: suspect.id, title: suspect.title, sim: Math.round(suspect.sim * 100) / 100, created_at: suspect.created_at ?? null }
+                  : null,
+              },
+              extra: {
+                news_row: {
+                  title: r.title, description: r.content, url: canonical, url_hash: hash,
+                  category: hCat, is_approved: false, review_status: "pending", submitted_by: null,
+                },
+                aic: {
+                  source: "ai_crawler", source_id: src.id, source_name: src.name, source_tier: src.tier,
+                  model: ANTHROPIC_MODEL, judged_by: "local",
+                  category_confidence: r.category_confidence, flags: r.flags, needs_edit: needsEdit,
+                  original_title: origTitle, published_at_source: publishedAt,
+                  title_words: tw, total_words: total,
+                  ...(suspect && suspect.title
+                    ? { similar_news_id: suspect.id, similar_title: suspect.title, similar_sim: Math.round(suspect.sim * 100) / 100 }
+                    : {}),
+                },
+                reject_ctx: { source_name: src.name, url: canonical, original_title: origTitle },
+              },
+            });
+            if (!qErr) { stats.deferredJudge++; continue; }
+            console.warn("hybrid enqueue fail — fallback Haiku:", qErr.message);
+          }
 
           // ===== GIÁM KHẢO P1 (lượt kiểm 1): đối chiếu bản tin với bài gốc +
           // phán trùng. Không phản hồi/hết trần LLM → cho vào hàng đợi kèm nhãn

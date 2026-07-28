@@ -137,6 +137,29 @@ Deno.serve(async (req) => {
     sections.push(`💸 Chi phí crawl-news hôm nay đã *$${costToday.toFixed(2)}* (trần cảnh báo $${COST_ALERT_USD}) — kiểm tra vòng lặp/nguồn lạ.`);
   }
 
+  // 4) Hybrid: worker local mất nhịp tim / backlog dồn (chỉ khi công tắc BẬT).
+  // Mac vắng thì crawl-finalize đã tự fallback Haiku — chuông này để anh Long
+  // biết đang tốn tiền cloud thay vì tưởng local vẫn gánh.
+  try {
+    const { data: cfg } = await supabase.from("hybrid_config")
+      .select("enabled").eq("key", "crawl_giam_khao").maybeSingle();
+    if (cfg?.enabled === true) {
+      const { data: hb } = await supabase.from("local_worker_status")
+        .select("last_seen").order("last_seen", { ascending: false }).limit(1);
+      const lastSeen = hb?.[0]?.last_seen ? new Date(hb[0].last_seen).getTime() : 0;
+      if (Date.now() - lastSeen > 30 * 60 * 1000) {
+        const m = lastSeen ? Math.round((Date.now() - lastSeen) / 60000) : -1;
+        sections.push(`🖥 Worker local mất nhịp tim ${m >= 0 ? `*${m} phút*` : "(chưa từng thấy)"} — giám khảo đang chạy fallback Haiku (tốn tiền cloud). Kiểm tra MacBook: sạc/sleep/worker.`);
+      }
+      const { count: liveBacklog } = await supabase.from("llm_shadow_queue")
+        .select("*", { count: "exact", head: true })
+        .eq("task", "giam_khao_live").in("status", ["pending", "processing"]);
+      if ((liveBacklog ?? 0) > 120) {
+        sections.push(`🐌 Hàng chờ giám khảo local đang *${liveBacklog}* job — worker chấm không kịp, tin vào hàng đợi chậm.`);
+      }
+    }
+  } catch { /* bảng hybrid chưa tạo → bỏ qua */ }
+
   if (sections.length > 0) {
     const { data: deadSources } = await supabase
       .from("crawl_sources")
