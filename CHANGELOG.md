@@ -1,3 +1,10 @@
+## [1.109.4](https://github.com/lth91/luot247-vision/compare/v1.109.3...v1.109.4) (2026-07-28)
+
+
+### Bug Fixes
+
+* **tools:** vá bộ test bước 0 theo kiểm tra chéo — nhãn sạch, bám production ([#178](https://github.com/lth91/luot247-vision/issues/178)) ([1925023](https://github.com/lth91/luot247-vision/commit/19250233e936623532509ba07518e68072ebd664))
+
 ## [1.109.3](https://github.com/lth91/luot247-vision/compare/v1.109.2...v1.109.3) (2026-07-23)
 
 
