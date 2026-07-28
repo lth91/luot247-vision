@@ -1,3 +1,10 @@
+# [1.111.0](https://github.com/lth91/luot247-vision/compare/v1.110.0...v1.111.0) (2026-07-28)
+
+
+### Features
+
+* **local-llm:** hybrid đợt 1 sau công tắc — giám khảo local async + finalize + fallback Haiku ([#180](https://github.com/lth91/luot247-vision/issues/180)) ([a0f7c5b](https://github.com/lth91/luot247-vision/commit/a0f7c5b7d207a2a6745a7737370cf00cc161b47b))
+
 # [1.110.0](https://github.com/lth91/luot247-vision/compare/v1.109.4...v1.110.0) (2026-07-28)
 
 
