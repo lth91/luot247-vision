@@ -1,3 +1,10 @@
+# [1.110.0](https://github.com/lth91/luot247-vision/compare/v1.109.4...v1.110.0) (2026-07-28)
+
+
+### Features
+
+* **local-llm:** bước 1 chế độ bóng — local chấm song song Haiku ([#179](https://github.com/lth91/luot247-vision/issues/179)) ([5a6a838](https://github.com/lth91/luot247-vision/commit/5a6a8386d63937927a401aa9c644e9da079b9480))
+
 ## [1.109.4](https://github.com/lth91/luot247-vision/compare/v1.109.3...v1.109.4) (2026-07-28)
 
 
