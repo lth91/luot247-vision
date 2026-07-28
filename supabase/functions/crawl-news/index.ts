@@ -18,6 +18,7 @@ import { countWords } from "../_shared/word-count.ts";
 import { isValidCategory } from "../_shared/news-categories.ts";
 import { CRAWL_SYSTEM_PROMPT } from "../_shared/crawl-summary-prompt.ts";
 import { PRE_DUP_SYSTEM_PROMPT, VERIFY_SYSTEM_PROMPT } from "../_shared/crawl-verify-prompt.ts";
+import { logShadow } from "../_shared/shadow.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -906,6 +907,14 @@ async function handle(req: Request): Promise<Response> {
           if (suspect && suspect.title && suspect.sim >= SIM_BLOCK && llmCalls < maxLlmCalls) {
             llmCalls++; stats.llmCalls++; stats.preDupCalls++;
             const pre = await preVerifyDup(origTitle, content, suspect, anthropicKey, supabase);
+            // Chế độ bóng (28/07): ghi input + phán quyết Haiku cho worker local.
+            if (pre) {
+              await logShadow(supabase, "kiem_som", {
+                orig_title: origTitle,
+                orig_content: content.slice(0, 3000),
+                suspect: { title: suspect.title, sim: Math.round(suspect.sim * 100) / 100, created_at: suspect.created_at ?? null },
+              }, pre as unknown as Record<string, unknown>);
+            }
             if (pre && pre.verdict === "trung") {
               stats.preDupBlocked++;
               await logReject(supabase, {
@@ -982,6 +991,19 @@ async function handle(req: Request): Promise<Response> {
           if (llmCalls < maxLlmCalls) {
             llmCalls++; stats.llmCalls++; stats.verifyCalls++;
             verify = await verifyWithClaude(origTitle, content, r.title, r.content, suspect, publishedAt.slice(0, 10), anthropicKey, supabase);
+            // Chế độ bóng (28/07): ghi input + phán quyết Haiku cho worker local.
+            if (verify) {
+              await logShadow(supabase, "giam_khao", {
+                orig_title: origTitle,
+                orig_content: content.slice(0, 4000),
+                news_title: r.title,
+                news_content: r.content,
+                pub_date: publishedAt.slice(0, 10),
+                suspect: suspect && suspect.title
+                  ? { title: suspect.title, sim: Math.round(suspect.sim * 100) / 100, created_at: suspect.created_at ?? null }
+                  : null,
+              }, verify as unknown as Record<string, unknown>);
+            }
           }
           if (verify && (verify.verdict === "loai" || verify.verdict === "trung")) {
             if (verify.verdict === "trung") stats.p1Dup++; else stats.p1Rejected++;

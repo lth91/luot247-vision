@@ -9,6 +9,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.76.0";
 import { logLlmUsage } from "../_shared/llm-usage.ts";
 import { countWords, splitIntoTwoParagraphs } from "../_shared/word-count.ts";
 import { CATEGORY_RULES, isValidCategory, SUBMISSION_CATEGORY_SLUGS } from "../_shared/news-categories.ts";
+import { logShadowMany } from "../_shared/shadow.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -285,6 +286,29 @@ Deno.serve(async (req) => {
       for (const { start, slice, vs } of await Promise.all(jobs)) {
         for (let k2 = 0; k2 < slice.length; k2++) verdicts[start + k2] = vs[k2] ?? {};
       }
+    }
+
+    // Chế độ bóng local LLM (28/07): lấy mẫu ~20% (bulk ~3.000 tin/ngày,
+    // MacBook không gánh nổi 100% — 20% đủ cho thống kê so khớp).
+    {
+      const SHADOW_SAMPLE = 0.2;
+      const shadowRows: Array<{ task: "phan_loai"; payload: Record<string, unknown>; haiku_verdict: Record<string, unknown> }> = [];
+      for (let i = 0; i < fresh.length; i++) {
+        const v = verdicts[i];
+        if (!v || v.category === undefined || Math.random() >= SHADOW_SAMPLE) continue;
+        const vi: Record<string, string> = {};
+        if (v.is_plausible === false) vi.plaus = "x";
+        if (v.is_ad) vi.ad = v.ad_reason || "x";
+        if (v.missing_facts) vi.facts = v.facts_reason || "x";
+        if (v.is_sensational) vi.sens = v.sensational_reason || "x";
+        if (v.legal_risk) vi.legal = v.legal_reason || "x";
+        shadowRows.push({
+          task: "phan_loai",
+          payload: { title: fresh[i].title, content: fresh[i].content, url: null },
+          haiku_verdict: { aig: v.is_ai_generated === true, ac: v.ai_confidence ?? 0, cat: v.category, cc: v.category_confidence ?? 0, vi },
+        });
+      }
+      await logShadowMany(supabase, shadowRows);
     }
 
     // 6) Áp ngưỡng + insert. QUAN TRỌNG: tin ĐÃ ĐƯỢC CHẤM thì đăng bằng hết,
