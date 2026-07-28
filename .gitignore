@@ -30,3 +30,4 @@ dist-ssr
 
 # Supabase CLI machine-local state (project ref, CLI/service versions)
 supabase/.temp/
+__pycache__/
