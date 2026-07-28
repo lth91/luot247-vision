@@ -1,3 +1,24 @@
+## [1.109.3](https://github.com/lth91/luot247-vision/compare/v1.109.2...v1.109.3) (2026-07-23)
+
+
+### Bug Fixes
+
+* **review:** lượt 2 không tự loại theo % — hỏi người duyệt qua dialog đối chiếu ([#176](https://github.com/lth91/luot247-vision/issues/176)) ([065e80e](https://github.com/lth91/luot247-vision/commit/065e80e434ed3d81aed03ba2df1818d6b405a53e))
+
+## [1.109.2](https://github.com/lth91/luot247-vision/compare/v1.109.1...v1.109.2) (2026-07-23)
+
+
+### Bug Fixes
+
+* **monitor:** báo cáo cost đếm thiếu khi >1000 call/ngày — phân trang llm_usage_log ([#175](https://github.com/lth91/luot247-vision/issues/175)) ([d1f8cc1](https://github.com/lth91/luot247-vision/commit/d1f8cc11ec2d53c67f65801efee40882414405fc))
+
+## [1.109.1](https://github.com/lth91/luot247-vision/compare/v1.109.0...v1.109.1) (2026-07-22)
+
+
+### Performance Improvements
+
+* **submit:** rút gọn JSON verdict — giảm ~50-70% output token của submit-news + bulk ([#173](https://github.com/lth91/luot247-vision/issues/173)) ([39f8e40](https://github.com/lth91/luot247-vision/commit/39f8e40c68d4ef7da7e9624b202deaf197b94936))
+
 # [1.109.0](https://github.com/lth91/luot247-vision/compare/v1.108.1...v1.109.0) (2026-07-22)
 
 
