@@ -141,15 +141,17 @@ Deno.serve(async (req) => {
   }
 
   // ===== 2) Job quá hạn (Mac vắng mặt) → Haiku chấm thay =====
+  // Gồm cả status 'error' (worker chấm hỏng/parse fail) — không thì job lỗi
+  // mồ côi vĩnh viễn và BÀI TIN BỊ MẤT (url_hash còn giữ chỗ chống re-crawl).
   const staleCutoff = new Date(Date.now() - STALE_MS).toISOString();
   const { data: staleJobs } = await supabase.from("llm_shadow_queue")
-    .select("*").eq("task", "giam_khao_live").in("status", ["pending", "processing"])
+    .select("*").eq("task", "giam_khao_live").in("status", ["pending", "processing", "error"])
     .lt("created_at", staleCutoff)
     .order("created_at", { ascending: true }).limit(STALE_BATCH);
   for (const job of staleJobs ?? []) {
     const { data: claimed } = await supabase.from("llm_shadow_queue")
       .update({ status: "finalized", model: "haiku-fallback", worker: "crawl-finalize" })
-      .eq("id", job.id).in("status", ["pending", "processing"]).select("id");
+      .eq("id", job.id).in("status", ["pending", "processing", "error"]).select("id");
     if (!claimed || claimed.length === 0) continue;
     let verdict: Verdict | null = anthropicKey ? await haikuVerify(job, anthropicKey, supabase) : null;
     if (!verdict) verdict = { verdict: "can_kiem_tra", reason: "Local vắng mặt, Haiku fallback không phản hồi" };
