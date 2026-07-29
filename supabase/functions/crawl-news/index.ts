@@ -377,6 +377,19 @@ async function findSimilarPublished(
 
 // Hồ sơ tin bị loại (sếp yêu cầu lưu lý do cho quản lý tra). Best-effort —
 // bảng chưa tạo (migration chưa chạy) thì bỏ qua, không chặn pipeline.
+// Lưới bắt DÍNH CHỮ (29/07): âm tiết tiếng Việt dài nhất 7 chữ cái — token
+// ≥8 chữ cái CÓ dấu tiếng Việt gần như chắc chắn là 2 từ dính nhau
+// (PHÊDUYỆT, BẮTTHỨ, ẤNĐỊNH+X...). Local yếu khoản chính tả → chặn bằng code
+// miễn phí: gắn needs_edit để nhân viên buộc phải sửa trước khi duyệt.
+const VN_DIACRITICS_RE = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i;
+function hasStuckWord(text: string): boolean {
+  for (const tok of text.split(/\s+/)) {
+    const letters = tok.replace(/[^\p{L}]/gu, "");
+    if (letters.length >= 8 && VN_DIACRITICS_RE.test(letters)) return true;
+  }
+  return false;
+}
+
 async function logReject(supabase: SupabaseClient, row: Record<string, unknown>): Promise<void> {
   try { await supabase.from("crawl_reject_log").insert(row); } catch { /* ignore */ }
 }
@@ -814,7 +827,7 @@ async function handle(req: Request): Promise<Response> {
     sources: 0, articlesFound: 0, llmCalls: 0, inserted: 0,
     skippedDup: 0, skippedOld: 0, skippedRejected: 0, rejectedNonNews: 0, needsEdit: 0,
     compressCalls: 0, verifyCalls: 0, preDupCalls: 0, preDupBlocked: 0,
-    p1Rejected: 0, p1Dup: 0, p1NewDev: 0, p1NeedsCheck: 0, deferredJudge: 0,
+    p1Rejected: 0, p1Dup: 0, p1NewDev: 0, p1NeedsCheck: 0, deferredJudge: 0, stuckWords: 0,
     errors: [] as string[],
   };
   let llmCalls = 0;
@@ -993,6 +1006,9 @@ async function handle(req: Request): Promise<Response> {
           // trim/retry).
           r.title = formatTitle(r.title);
           r.content = flattenToOneParagraph(r.content);
+
+          // Dính chữ (PHÊDUYỆT...) → buộc nhân viên sửa trước khi duyệt.
+          if (hasStuckWord(`${r.title} ${r.content}`)) { needsEdit = true; stats.stuckWords++; }
 
           // So trùng lần 2 với tiêu đề MỚI (bản viết lại có thể giống tin đã
           // đăng theo cách khác) — lấy nghi phạm giống nhất trong 2 lần so.

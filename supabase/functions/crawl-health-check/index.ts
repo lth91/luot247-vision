@@ -88,6 +88,20 @@ Deno.serve(async (req) => {
       .select("*", { count: "exact", head: true })
       .eq("review_status", "pending");
 
+    // Hybrid: local gánh bao nhiêu cú giám khảo hôm qua (chưa bật/0 → ẩn dòng)
+    let localLine = "";
+    try {
+      const baseQ = () => supabase.from("llm_shadow_queue")
+        .select("*", { count: "exact", head: true })
+        .eq("task", "giam_khao_live")
+        .gte("created_at", yStartUtc.toISOString()).lt("created_at", todayStartUtc.toISOString());
+      const { count: localJudged } = await baseQ().in("status", ["done", "finalized"]).neq("model", "haiku-fallback");
+      const { count: fallback } = await baseQ().eq("model", "haiku-fallback");
+      if ((localJudged ?? 0) + (fallback ?? 0) > 0) {
+        localLine = `🖥 Giám khảo local: *${localJudged ?? 0}* cú (Haiku chấm thay: ${fallback ?? 0}) — tiết kiệm ~$${((localJudged ?? 0) * 0.0055).toFixed(2)}`;
+      }
+    } catch { /* bảng chưa tạo */ }
+
     const digest = [
       `☀️ *Bản tin sáng — tin tự động luot247* (hôm qua ${label})`,
       ``,
@@ -95,6 +109,7 @@ Deno.serve(async (req) => {
       `📥 Vào hàng đợi: *${queued ?? 0}* tin`,
       `✅ Nhân viên duyệt đăng: *${approved ?? 0}* — 🗑 loại: *${rejectedByStaff ?? 0}*`,
       `🤖 AI tự chặn (rác/trùng/kém): *${aiBlocked ?? 0}* bài`,
+      ...(localLine ? [localLine] : []),
       `📌 Tồn hàng đợi lúc này: *${pendingNow ?? 0}* tin`,
     ].join("\n");
     if (tgToken && tgChatId) await sendTelegram(tgToken, tgChatId, digest);
