@@ -1,3 +1,10 @@
+## [1.112.1](https://github.com/lth91/luot247-vision/compare/v1.112.0...v1.112.1) (2026-07-29)
+
+
+### Bug Fixes
+
+* **local-llm:** finalize nhặt cả job lỗi đi Haiku fallback — chống mất tin ([#183](https://github.com/lth91/luot247-vision/issues/183)) ([5e7243f](https://github.com/lth91/luot247-vision/commit/5e7243f3287b6c76a7619f03b80bebf77908bb85))
+
 # [1.112.0](https://github.com/lth91/luot247-vision/compare/v1.111.0...v1.112.0) (2026-07-29)
 
 
