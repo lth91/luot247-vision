@@ -1,3 +1,10 @@
+# [1.112.0](https://github.com/lth91/luot247-vision/compare/v1.111.0...v1.112.0) (2026-07-29)
+
+
+### Features
+
+* **crawl:** vá luật phân loại mơ hồ + lưới dính chữ + dòng hybrid bản tin sáng ([#182](https://github.com/lth91/luot247-vision/issues/182)) ([13afaae](https://github.com/lth91/luot247-vision/commit/13afaae1d72f702d9101c787e2a2d4e44c23ad29))
+
 # [1.111.0](https://github.com/lth91/luot247-vision/compare/v1.110.0...v1.111.0) (2026-07-28)
 
 
