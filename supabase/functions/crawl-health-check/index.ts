@@ -21,6 +21,32 @@ const QUIET_HOURS_MS = 1 * 3600 * 1000; // nhịp quét 15' → im 1h là bất 
 const BACKLOG_ALERT = 1500;
 const COST_ALERT_USD = 20;
 
+// Cộng cost TẤT CẢ function theo từng function trong [fromIso, toIso) — dùng
+// cho bản tin sáng gộp (30/07: gộp tin 8h05 vào đây, anh Long muốn 1 tin duy nhất).
+async function sumCostsByFn(
+  supabase: ReturnType<typeof createClient>,
+  fromIso: string,
+  toIso: string,
+): Promise<{ total: number; byFn: Record<string, number> }> {
+  const PAGE = 1000;
+  const byFn: Record<string, number> = {};
+  let total = 0;
+  for (let from = 0; ; from += PAGE) {
+    const { data } = await supabase.from("llm_usage_log")
+      .select("function_name, cost_usd")
+      .gte("created_at", fromIso).lt("created_at", toIso)
+      .order("created_at", { ascending: true })
+      .range(from, from + PAGE - 1);
+    for (const r of (data ?? []) as { function_name: string; cost_usd: number }[]) {
+      const c = Number(r.cost_usd || 0);
+      total += c;
+      byFn[r.function_name] = (byFn[r.function_name] ?? 0) + c;
+    }
+    if (!data || data.length < PAGE) break;
+  }
+  return { total, byFn };
+}
+
 // Cộng cost_usd của crawl-news trong [fromIso, toIso). PHẢI phân trang: PostgREST
 // cắt 1000 dòng/lần, ngày crawl gọi ~1.300-1.500 cú → select thẳng đếm THIẾU
 // (bug 23/07: bản tin sáng báo $5.35 trong khi 17h hôm đó đã $5.91).
@@ -83,7 +109,11 @@ Deno.serve(async (req) => {
       .select("*", { count: "exact", head: true })
       .neq("stage", "duyet")
       .gte("created_at", yStartUtc.toISOString()).lt("created_at", todayStartUtc.toISOString());
-    const costY = await sumCrawlCost(supabase, yStartUtc.toISOString(), todayStartUtc.toISOString());
+    // Tiền: TỔNG tất cả function (gộp báo cáo 8h05 cũ vào đây) + so TB 7 ngày.
+    const { total: costAllY, byFn } = await sumCostsByFn(supabase, yStartUtc.toISOString(), todayStartUtc.toISOString());
+    const week = await sumCostsByFn(supabase, new Date(yStartUtc.getTime() - 6 * 86400000).toISOString(), todayStartUtc.toISOString());
+    const avg7 = week.total / 7;
+    const pct7 = avg7 > 0 ? Math.round(((costAllY - avg7) / avg7) * 100) : 0;
     const { count: pendingNow } = await supabase.from("news")
       .select("*", { count: "exact", head: true })
       .eq("review_status", "pending");
@@ -105,7 +135,8 @@ Deno.serve(async (req) => {
     const digest = [
       `☀️ *Bản tin sáng — tin tự động luot247* (hôm qua ${label})`,
       ``,
-      `💰 Chi phí AI: *$${costY.toFixed(2)}* (~${Math.round(costY * 25.5).toLocaleString("vi-VN")}k đ)`,
+      `💰 Chi phí AI (tất cả): *$${costAllY.toFixed(2)}* (~${Math.round(costAllY * 25.5).toLocaleString("vi-VN")}k đ) — ${pct7 <= 0 ? "📉" : "📈"} ${pct7 > 0 ? "+" : ""}${pct7}% so TB 7 ngày`,
+      `      crawl $${(byFn["crawl-news"] ?? 0).toFixed(2)} · bulk $${(byFn["submit-news-bulk"] ?? 0).toFixed(2)} · gửi lẻ $${(byFn["submit-news"] ?? 0).toFixed(2)}`,
       `📥 Vào hàng đợi: *${queued ?? 0}* tin`,
       `✅ Nhân viên duyệt đăng: *${approved ?? 0}* — 🗑 loại: *${rejectedByStaff ?? 0}*`,
       `🤖 AI tự chặn (rác/trùng/kém): *${aiBlocked ?? 0}* bài`,
@@ -113,7 +144,7 @@ Deno.serve(async (req) => {
       `📌 Tồn hàng đợi lúc này: *${pendingNow ?? 0}* tin`,
     ].join("\n");
     if (tgToken && tgChatId) await sendTelegram(tgToken, tgChatId, digest);
-    return new Response(JSON.stringify({ ok: true, digest: true, costY: costY.toFixed(2), queued, approved, rejectedByStaff, aiBlocked, pendingNow }), {
+    return new Response(JSON.stringify({ ok: true, digest: true, costAllY: costAllY.toFixed(2), queued, approved, rejectedByStaff, aiBlocked, pendingNow }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
