@@ -1,3 +1,10 @@
+# [1.113.0](https://github.com/lth91/luot247-vision/compare/v1.112.1...v1.113.0) (2026-07-30)
+
+
+### Features
+
+* **monitor:** gộp báo cáo cost 8h05 vào Bản tin sáng 8h00 ([#184](https://github.com/lth91/luot247-vision/issues/184)) ([cd3dff9](https://github.com/lth91/luot247-vision/commit/cd3dff9e42c9484bf8e807886a80e5a1df1e98bb))
+
 ## [1.112.1](https://github.com/lth91/luot247-vision/compare/v1.112.0...v1.112.1) (2026-07-29)
 
 
