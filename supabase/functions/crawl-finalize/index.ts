@@ -163,8 +163,10 @@ async function applyBatchVerdict(
     const v = byIdx.get(it.i);
     const vi = (v?.vi && typeof v.vi === "object" ? v.vi : {}) as Record<string, string>;
     const viR = (k: string) => (typeof vi[k] === "string" && vi[k] ? String(vi[k]).slice(0, 100) : "");
+    // LƯU Ý: mọi dòng log phải CÙNG BỘ CỘT — PostgREST từ chối batch insert
+    // có dòng lệch key (bug 31/07: lô trộn đạt+loại bị mất log cả lô).
     if (!v || typeof v.cat !== "string") {
-      logs.push({ user_id: userId, status: "error", title: it.title.slice(0, 200), reject_reason: "AI không trả kết quả — nộp lại dòng này", penalized: false });
+      logs.push({ user_id: userId, news_id: null, status: "error", title: it.title.slice(0, 200), reject_reason: "AI không trả kết quả — nộp lại dòng này", penalized: false });
       stats.batchErrors++;
       continue;
     }
@@ -177,7 +179,7 @@ async function applyBatchVerdict(
       viR("legal") ? { st: "rejected_quality", r: `Rủi ro pháp lý: ${viR("legal")} — dùng "bị cáo buộc"/"đang điều tra" đúng tình trạng` } :
       null;
     if (reason) {
-      logs.push({ user_id: userId, status: reason.st, title: it.title.slice(0, 200), reject_reason: reason.r, penalized: false });
+      logs.push({ user_id: userId, news_id: null, status: reason.st, title: it.title.slice(0, 200), reject_reason: reason.r, penalized: false });
       stats.batchRejected++;
       continue;
     }
@@ -196,7 +198,7 @@ async function applyBatchVerdict(
       },
     }).select("id").single();
     if (insErr || !ins) { stats.batchErrors++; continue; }
-    logs.push({ user_id: userId, news_id: ins.id, status: "accepted", title: it.title.slice(0, 200) });
+    logs.push({ user_id: userId, news_id: ins.id, status: "accepted", title: it.title.slice(0, 200), reject_reason: null, penalized: false });
     stats.batchAccepted++;
   }
   if (logs.length > 0) {
