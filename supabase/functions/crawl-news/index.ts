@@ -179,33 +179,41 @@ function extractArticleContent(html: string, selectorList: string | null): { tit
     doc.querySelector("title")?.textContent ||
     doc.querySelector("h1")?.textContent ||
     "";
-  const selectors = (selectorList || "article, div.content").split(",").map((s) => s.trim()).filter(Boolean);
-  let contentEl: Element | null = null;
+  // 31/07 (bug SGGP 0 tin): KHÔNG tin khối đầu tiên khớp selector — trên nhiều
+  // báo <article> chỉ là card sapo 50-100 ký tự nên nội dung "quá ngắn" và
+  // không bao giờ rơi xuống fallback. Đổi: (1) thêm loạt selector thân bài phổ
+  // biến của báo VN, (2) chọn khối DÀI NHẤT trong các khối khớp, (3) vẫn ngắn
+  // <300 ký tự → ép chạy fallback vét <p>, lấy bản dài hơn.
+  const selectors = (selectorList ||
+    "article, div.content, .article__body, .article-body, .detail-content, .dt-news__content, [itemprop='articleBody'], .maincontent, .post-content, .news-content, .singular-content, .cms-body, .entry-content, #main-detail-body"
+  ).split(",").map((s) => s.trim()).filter(Boolean);
+  const JUNK = "script, style, iframe, nav, footer, aside, .advertisement, .related-news, .box-related, .related-articles, .sidebar, .VCSortableInPreviewMode";
+  let content = "";
   for (const sel of selectors) {
     try {
-      contentEl = doc.querySelector(sel) as Element | null;
-      if (contentEl) break;
+      const el = doc.querySelector(sel) as Element | null;
+      if (!el) continue;
+      el.querySelectorAll(JUNK).forEach((n) => (n as Element).remove());
+      const t = el.textContent || "";
+      if (t.length > content.length) content = t;
     } catch {
       // selector không hợp lệ, bỏ qua
     }
   }
-  let content = "";
-  if (contentEl) {
-    contentEl.querySelectorAll("script, style, iframe, nav, footer, aside, .advertisement, .related-news, .box-related, .related-articles, .sidebar, .VCSortableInPreviewMode").forEach((n) => (n as Element).remove());
-    content = contentEl.textContent || "";
-  } else {
+  if (content.trim().length < 300) {
     const ogDesc = doc.querySelector("meta[property='og:description']")?.getAttribute("content") || "";
     const metaDesc = doc.querySelector("meta[name='description']")?.getAttribute("content") || "";
     const desc = (ogDesc.length > metaDesc.length ? ogDesc : metaDesc).trim();
-    if (desc.length > 150) content = desc;
-    if (content.length < 300) {
-      const mainEl = doc.querySelector("main") || doc.querySelector("article") || doc.body;
-      const ps: string[] = [];
-      mainEl?.querySelectorAll("p").forEach((p) => {
-        const t = (p.textContent || "").trim();
-        if (t.length > 40) ps.push(t);
-      });
-      content = ps.join("\n");
+    const mainEl = doc.querySelector("main") || doc.body;
+    const ps: string[] = [];
+    mainEl?.querySelectorAll("p").forEach((p) => {
+      const t = (p.textContent || "").trim();
+      if (t.length > 40) ps.push(t);
+    });
+    const harvested = ps.join("\n");
+    // Ưu tiên bản dài nhất trong: khối selector / vét <p> / meta description.
+    for (const cand of [harvested, desc.length > 150 ? desc : ""]) {
+      if (cand.length > content.length) content = cand;
     }
   }
   content = stripHtml(content).slice(0, MAX_CONTENT_CHARS);
