@@ -1,3 +1,10 @@
+## [1.114.3](https://github.com/lth91/luot247-vision/compare/v1.114.2...v1.114.3) (2026-07-31)
+
+
+### Bug Fixes
+
+* **crawl:** tách nội dung chọn khối dài nhất + ép fallback — cứu cụm nguồn mới 0 tin ([#188](https://github.com/lth91/luot247-vision/issues/188)) ([728dc44](https://github.com/lth91/luot247-vision/commit/728dc4446ef9a065215bdafa0f0da4f5ee8e8731))
+
 ## [1.114.2](https://github.com/lth91/luot247-vision/compare/v1.114.1...v1.114.2) (2026-07-31)
 
 
