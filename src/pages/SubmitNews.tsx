@@ -245,7 +245,8 @@ const SubmitNews = () => {
       }
       if (data?.ok) {
         toast.success(data.message || "Đã import xong.");
-        setBulkResult({ ...data.summary, issues: data.issues || [] });
+        // deferred = chấm nền bằng máy local (hybrid 31/07): tin đạt tự đăng dần.
+        setBulkResult({ ...data.summary, issues: data.issues || [], deferred: data.deferred === true });
       } else {
         toast.error(data?.reason || "Import không thành công.");
       }
@@ -380,7 +381,13 @@ const SubmitNews = () => {
                 {bulkResult && (
                   <div className="rounded-lg border p-3 text-sm space-y-1">
                     <p className="font-semibold">Kết quả import:</p>
-                    <p>✅ Đăng thành công: <b className="text-green-600">{bulkResult.accepted}</b>/{bulkResult.total} tin (+{bulkResult.accepted * 10} điểm)</p>
+                    {bulkResult.deferred ? (
+                      <p>🕐 Đã nhận <b className="text-blue-600">{bulkResult.dang_cham_nen}</b>/{bulkResult.total} tin — máy đang chấm,
+                        tin đạt sẽ <b>tự đăng dần trong ~5–30 phút</b> (điểm cộng khi tin lên trang;
+                        tin bị loại sẽ hiện ở tab "Tin bị loại").</p>
+                    ) : (
+                      <p>✅ Đăng thành công: <b className="text-green-600">{bulkResult.accepted}</b>/{bulkResult.total} tin (+{bulkResult.accepted * 10} điểm)</p>
+                    )}
                     {bulkResult.rejected_length > 0 && <p>• Sai độ dài (sửa rồi import lại): {bulkResult.rejected_length}</p>}
                     {bulkResult.duplicate > 0 && <p>• Đã có trên hệ thống, bỏ qua: {bulkResult.duplicate}</p>}
                     {bulkResult.rejected_ai > 0 && <p>• Dấu hiệu AI: {bulkResult.rejected_ai}</p>}
