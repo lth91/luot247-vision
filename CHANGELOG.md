@@ -1,3 +1,10 @@
+# [1.114.0](https://github.com/lth91/luot247-vision/compare/v1.113.0...v1.114.0) (2026-07-31)
+
+
+### Features
+
+* **local-llm:** hybrid đợt 2 — bulk chấm local phương án B, công tắc 3 nấc ([#185](https://github.com/lth91/luot247-vision/issues/185)) ([5d2ae4a](https://github.com/lth91/luot247-vision/commit/5d2ae4a3d890dbe50706959cd49e0e7c58e0a64c))
+
 # [1.113.0](https://github.com/lth91/luot247-vision/compare/v1.112.1...v1.113.0) (2026-07-30)
 
 
