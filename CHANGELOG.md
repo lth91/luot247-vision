@@ -1,3 +1,24 @@
+# [1.113.0](https://github.com/lth91/luot247-vision/compare/v1.112.1...v1.113.0) (2026-07-30)
+
+
+### Features
+
+* **monitor:** gộp báo cáo cost 8h05 vào Bản tin sáng 8h00 ([#184](https://github.com/lth91/luot247-vision/issues/184)) ([cd3dff9](https://github.com/lth91/luot247-vision/commit/cd3dff9e42c9484bf8e807886a80e5a1df1e98bb))
+
+## [1.112.1](https://github.com/lth91/luot247-vision/compare/v1.112.0...v1.112.1) (2026-07-29)
+
+
+### Bug Fixes
+
+* **local-llm:** finalize nhặt cả job lỗi đi Haiku fallback — chống mất tin ([#183](https://github.com/lth91/luot247-vision/issues/183)) ([5e7243f](https://github.com/lth91/luot247-vision/commit/5e7243f3287b6c76a7619f03b80bebf77908bb85))
+
+# [1.112.0](https://github.com/lth91/luot247-vision/compare/v1.111.0...v1.112.0) (2026-07-29)
+
+
+### Features
+
+* **crawl:** vá luật phân loại mơ hồ + lưới dính chữ + dòng hybrid bản tin sáng ([#182](https://github.com/lth91/luot247-vision/issues/182)) ([13afaae](https://github.com/lth91/luot247-vision/commit/13afaae1d72f702d9101c787e2a2d4e44c23ad29))
+
 # [1.111.0](https://github.com/lth91/luot247-vision/compare/v1.110.0...v1.111.0) (2026-07-28)
 
 
