@@ -1,3 +1,10 @@
+## [1.114.1](https://github.com/lth91/luot247-vision/compare/v1.114.0...v1.114.1) (2026-07-31)
+
+
+### Bug Fixes
+
+* **submit:** hiển thị đúng "đang chấm nền" khi bulk đi đường local ([#186](https://github.com/lth91/luot247-vision/issues/186)) ([f1a0dc7](https://github.com/lth91/luot247-vision/commit/f1a0dc722e8610108e57df66d44942ae42be7b41))
+
 # [1.114.0](https://github.com/lth91/luot247-vision/compare/v1.113.0...v1.114.0) (2026-07-31)
 
 
