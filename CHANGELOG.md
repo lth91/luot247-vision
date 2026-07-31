@@ -1,3 +1,10 @@
+## [1.114.2](https://github.com/lth91/luot247-vision/compare/v1.114.1...v1.114.2) (2026-07-31)
+
+
+### Bug Fixes
+
+* **local-llm:** lô trộn đạt+loại bị mất submission_log — đồng bộ bộ cột insert ([#187](https://github.com/lth91/luot247-vision/issues/187)) ([74bcb2b](https://github.com/lth91/luot247-vision/commit/74bcb2b60d7794d5a621fedec7fcd98d54907d52))
+
 ## [1.114.1](https://github.com/lth91/luot247-vision/compare/v1.114.0...v1.114.1) (2026-07-31)
 
 
