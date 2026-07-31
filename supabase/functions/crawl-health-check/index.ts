@@ -118,17 +118,25 @@ Deno.serve(async (req) => {
       .select("*", { count: "exact", head: true })
       .eq("review_status", "pending");
 
-    // Hybrid: local gánh bao nhiêu cú giám khảo hôm qua (chưa bật/0 → ẩn dòng)
+    // Hybrid: local gánh bao nhiêu việc thật hôm qua (chưa bật/0 → ẩn dòng).
+    // Gồm giám khảo (đợt 1) + lô phân loại bulk (đợt 2, 31/07).
     let localLine = "";
     try {
-      const baseQ = () => supabase.from("llm_shadow_queue")
+      const baseQ = (task: string) => supabase.from("llm_shadow_queue")
         .select("*", { count: "exact", head: true })
-        .eq("task", "giam_khao_live")
+        .eq("task", task)
         .gte("created_at", yStartUtc.toISOString()).lt("created_at", todayStartUtc.toISOString());
-      const { count: localJudged } = await baseQ().in("status", ["done", "finalized"]).neq("model", "haiku-fallback");
-      const { count: fallback } = await baseQ().eq("model", "haiku-fallback");
-      if ((localJudged ?? 0) + (fallback ?? 0) > 0) {
-        localLine = `🖥 Giám khảo local: *${localJudged ?? 0}* cú (Haiku chấm thay: ${fallback ?? 0}) — tiết kiệm ~$${((localJudged ?? 0) * 0.0055).toFixed(2)}`;
+      const { count: judgeLocal } = await baseQ("giam_khao_live").in("status", ["done", "finalized"]).neq("model", "haiku-fallback");
+      const { count: judgeFb } = await baseQ("giam_khao_live").eq("model", "haiku-fallback");
+      const { count: batchLocal } = await baseQ("phan_loai_lo").in("status", ["done", "finalized"]).neq("model", "haiku-fallback");
+      const { count: batchFb } = await baseQ("phan_loai_lo").eq("model", "haiku-fallback");
+      const totalFb = (judgeFb ?? 0) + (batchFb ?? 0);
+      // Đơn giá Haiku tránh được: giám khảo ~$0.0055/cú, lô bulk ~$0.0067/lô.
+      const saved = (judgeLocal ?? 0) * 0.0055 + (batchLocal ?? 0) * 0.0067;
+      if ((judgeLocal ?? 0) + (batchLocal ?? 0) + totalFb > 0) {
+        localLine = `🖥 Local chấm: *${judgeLocal ?? 0}* cú giám khảo`
+          + ((batchLocal ?? 0) + (batchFb ?? 0) > 0 ? ` + *${batchLocal ?? 0}* lô bulk` : "")
+          + ` (Haiku thay: ${totalFb}) — tiết kiệm ~$${saved.toFixed(2)}`;
       }
     } catch { /* bảng chưa tạo */ }
 
