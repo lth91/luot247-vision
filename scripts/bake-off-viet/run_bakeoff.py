@@ -256,10 +256,11 @@ def goi_api(prov_key, user_msg):
         if eff:
             body["reasoning_effort"] = eff
     else:
-        # DeepSeek V4 có chế độ suy nghĩ — token suy nghĩ TÍNH VÀO max_tokens,
-        # để 900 như Haiku sẽ cụt mất JSON → nới trần (chỉ trả tiền phần dùng thật).
+        # DeepSeek V4 mặc định BẬT chế độ suy nghĩ → JSON hay bị cụt/lạc chỗ.
+        # Tắt hẳn theo docs chính hãng (guides/thinking_mode): thinking.disabled.
         body["temperature"] = 0.3   # khớp production rewriteWithClaude
-        body["max_tokens"] = 4000
+        body["max_tokens"] = 2000
+        body["thinking"] = {"type": "disabled"}
 
     data = json.dumps(body).encode("utf-8")
     for lan in range(3):
@@ -275,7 +276,12 @@ def goi_api(prov_key, user_msg):
             usage = out.get("usage", {})
             msg = (out.get("choices") or [{}])[0].get("message", {})
             txt = msg.get("content") or msg.get("reasoning_content") or ""
-            return (parse_json_llm(txt), usage.get("prompt_tokens", 0),
+            parsed = parse_json_llm(txt)
+            if parsed is None:
+                # Lưu nguyên văn phản hồi để bắt bệnh thay vì đoán mò.
+                with open(os.path.join(BASE, "debug_parse_fail.txt"), "a", encoding="utf-8") as df:
+                    df.write("\n===== %s =====\n%s\n" % (p["ten"], json.dumps(out, ensure_ascii=False)[:3000]))
+            return (parsed, usage.get("prompt_tokens", 0),
                     usage.get("completion_tokens", 0), secs, None)
         except urllib.error.HTTPError as e:
             err = "HTTP %s: %s" % (e.code, e.read().decode("utf-8", "replace")[:200])
