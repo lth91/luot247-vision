@@ -215,6 +215,8 @@ def mot_doan(s):
 
 def parse_json_llm(text):
     text = (text or "").strip()
+    # Model có suy nghĩ (DeepSeek...) đôi khi kèm khối <think> — bỏ trước khi parse.
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
     text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text)
     try:
         return json.loads(text)
@@ -254,8 +256,10 @@ def goi_api(prov_key, user_msg):
         if eff:
             body["reasoning_effort"] = eff
     else:
+        # DeepSeek V4 có chế độ suy nghĩ — token suy nghĩ TÍNH VÀO max_tokens,
+        # để 900 như Haiku sẽ cụt mất JSON → nới trần (chỉ trả tiền phần dùng thật).
         body["temperature"] = 0.3   # khớp production rewriteWithClaude
-        body["max_tokens"] = 900
+        body["max_tokens"] = 4000
 
     data = json.dumps(body).encode("utf-8")
     for lan in range(3):
@@ -269,7 +273,8 @@ def goi_api(prov_key, user_msg):
                 out = json.loads(r.read().decode("utf-8"))
             secs = time.time() - t0
             usage = out.get("usage", {})
-            txt = (out.get("choices") or [{}])[0].get("message", {}).get("content", "")
+            msg = (out.get("choices") or [{}])[0].get("message", {})
+            txt = msg.get("content") or msg.get("reasoning_content") or ""
             return (parse_json_llm(txt), usage.get("prompt_tokens", 0),
                     usage.get("completion_tokens", 0), secs, None)
         except urllib.error.HTTPError as e:
@@ -362,6 +367,8 @@ def main():
     if os.path.exists(kq_path):
         with open(kq_path, encoding="utf-8") as f:
             kq = json.load(f)
+        # Cú lỗi lần trước (sai key, JSON cụt...) → bỏ khỏi cache để chấm lại.
+        kq["calls"] = {k: v for k, v in kq.get("calls", {}).items() if v.get("ok")}
 
     def save():
         with open(kq_path, "w", encoding="utf-8") as f:
