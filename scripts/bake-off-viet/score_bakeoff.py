@@ -37,11 +37,19 @@ def main():
         cu_viet_ngay = int(args[i + 1])
         del args[i:i + 2]
     if not args:
-        sys.exit("Cần ít nhất 1 phiếu chấm đã điền: python3 score_bakeoff.py phieu.csv ...")
+        print("(Không có phiếu người chấm — báo cáo chỉ gồm số liệu máy. "
+              "Thêm phiếu sau: python3 score_bakeoff.py phieu.csv ...)\n")
 
     with open(os.path.join(BASE, "ket_qua_tho.json"), encoding="utf-8") as f:
         kq = json.load(f)
     dap_an = kq["dap_an"]
+
+    # Kết quả máy đối chiếu dữ kiện (cham_bang_may.py) — có thì thêm cột.
+    may_cham = {}
+    mc_path = os.path.join(BASE, "may_cham.json")
+    if os.path.exists(mc_path):
+        with open(mc_path, encoding="utf-8") as f:
+            may_cham = json.load(f)
 
     # ===== Gom điểm người chấm =====
     diem = {}        # model -> [điểm...]
@@ -104,8 +112,8 @@ def main():
     out = []
     out.append("# Báo cáo bake-off cú viết P3\n")
     out.append("Người chấm: %d phiếu. Ô bỏ trống/không hợp lệ: %d.\n" % (len(args), bo_trong))
-    out.append("| Model | Bản được chấm | Điểm TB | Thắng bài | Sai dữ kiện | Đạt chuẩn từ (máy) | $/bài | $/ngày (%d cú) |" % cu_viet_ngay)
-    out.append("|---|---|---|---|---|---|---|---|")
+    out.append("| Model | Bản được chấm | Điểm TB | Thắng bài | Sai dữ kiện (người) | Sai DK (máy) | Đạt chuẩn từ (máy) | $/bài | $/ngày (%d cú) |" % cu_viet_ngay)
+    out.append("|---|---|---|---|---|---|---|---|---|")
 
     models = [m for m in ("haiku", "deepseek", "gpt5mini", "gemini") if m in diem or m in may]
     for m in models:
@@ -122,9 +130,13 @@ def main():
             dat_tu_txt = "%d/%d" % (mm.get("dat_tu", 0), mm.get("viet", 0)) if mm.get("viet") else "0"
             gi, go = GIA[m]
             cost_bai = (mm.get("in", 0) / 1e6 * gi + mm.get("out", 0) / 1e6 * go) / max(1, mm.get("n", 1))
-        out.append("| %s | %d | %.2f | %.1f | %d (%.0f%%) | %s | $%.5f | $%.2f |" % (
+        mc_rows = [v for k, v in may_cham.items() if k.endswith(":" + m)]
+        mc_txt = ("%d/%d (%.0f%%)" % (sum(1 for v in mc_rows if v.get("sai")), len(mc_rows),
+                                      100.0 * sum(1 for v in mc_rows if v.get("sai")) / len(mc_rows))
+                  if mc_rows else "—")
+        out.append("| %s | %d | %.2f | %.1f | %d (%.0f%%) | %s | %s | $%.5f | $%.2f |" % (
             TEN_MODEL.get(m, m), n_ban, tb, th, sdk,
-            100.0 * sdk / n_ban if n_ban else 0, dat_tu_txt,
+            100.0 * sdk / n_ban if n_ban else 0, mc_txt, dat_tu_txt,
             cost_bai, cost_bai * cu_viet_ngay))
 
     out.append("\n## Số liệu máy (không cần người chấm)\n")
