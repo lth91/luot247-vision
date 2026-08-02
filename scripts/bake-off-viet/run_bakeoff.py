@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-BAKE-OFF CÚ VIẾT P3 — DeepSeek V4-Flash + GPT-5 Mini đấu mù với Haiku 4.5.
+BAKE-OFF CÚ VIẾT P3 — DeepSeek V4-Flash + GPT-5 Mini + Gemini 3.1 Flash-Lite
+đấu mù với Haiku 4.5.
 
 Chạy trên MacBook (chỉ cần Python chuẩn, không cài thêm gì):
   1. Chạy export_bakeoff.sql trong SQL Editor → lưu kết quả thành bo_de.json
@@ -184,6 +185,15 @@ PROVIDERS = {
         "gia_in": float(ENV.get("GIA_OPENAI_IN", "0.25")),
         "gia_out": float(ENV.get("GIA_OPENAI_OUT", "2.00")),
     },
+    "gemini": {
+        "ten": "Gemini 3.1 Flash-Lite",
+        # Endpoint tương thích OpenAI của Google — key lấy tại aistudio.google.com
+        "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "key": ENV.get("GEMINI_API_KEY", ""),
+        "model": ENV.get("GEMINI_MODEL", "gemini-3.1-flash-lite"),
+        "gia_in": float(ENV.get("GIA_GEMINI_IN", "0.25")),
+        "gia_out": float(ENV.get("GIA_GEMINI_OUT", "1.50")),
+    },
 }
 
 SO_BAI = int(ENV.get("SO_BAI", "50"))
@@ -235,6 +245,14 @@ def goi_api(prov_key, user_msg):
         # chừa chỗ cho token suy nghĩ) + reasoning_effort.
         body["max_completion_tokens"] = 4000
         body["reasoning_effort"] = ENV.get("OPENAI_REASONING_EFFORT", "low")
+    elif prov_key == "gemini":
+        # Tắt token suy nghĩ (tính tiền output) — nếu API báo 400 vì không nhận
+        # tham số này, đặt GEMINI_REASONING_EFFORT= (rỗng) trong .env để bỏ.
+        body["temperature"] = 0.3
+        body["max_tokens"] = 2000
+        eff = ENV.get("GEMINI_REASONING_EFFORT", "none")
+        if eff:
+            body["reasoning_effort"] = eff
     else:
         body["temperature"] = 0.3   # khớp production rewriteWithClaude
         body["max_tokens"] = 900
@@ -377,7 +395,7 @@ def main():
             if r.get("ok") and r.get("is_news"):
                 vers.append((prov_key, r["title"], r["content"]))
         random.Random(1000 + bai_so).shuffle(vers)
-        nhan = "ABC"
+        nhan = "ABCD"
         dap_an[str(bai_so)] = {}
         for idx, (model, tieu_de, noi_dung) in enumerate(vers):
             ban = nhan[idx]

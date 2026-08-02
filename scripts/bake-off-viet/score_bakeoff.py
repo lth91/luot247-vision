@@ -25,6 +25,7 @@ TEN_MODEL = {
     "haiku": "Haiku 4.5 (đương kim)",
     "deepseek": "DeepSeek V4-Flash",
     "gpt5mini": "GPT-5 Mini",
+    "gemini": "Gemini 3.1 Flash-Lite",
 }
 
 
@@ -97,7 +98,7 @@ def main():
             if r.get("dat_chuan_tu"):
                 m["dat_tu"] += 1
 
-    GIA = {"deepseek": (0.14, 0.28), "gpt5mini": (0.25, 2.00)}
+    GIA = {"deepseek": (0.14, 0.28), "gpt5mini": (0.25, 2.00), "gemini": (0.25, 1.50)}
     HAIKU_PER_BAI = 0.008
 
     out = []
@@ -106,7 +107,7 @@ def main():
     out.append("| Model | Bản được chấm | Điểm TB | Thắng bài | Sai dữ kiện | Đạt chuẩn từ (máy) | $/bài | $/ngày (%d cú) |" % cu_viet_ngay)
     out.append("|---|---|---|---|---|---|---|---|")
 
-    models = [m for m in ("haiku", "deepseek", "gpt5mini") if m in diem or m in may]
+    models = [m for m in ("haiku", "deepseek", "gpt5mini", "gemini") if m in diem or m in may]
     for m in models:
         ds = diem.get(m, [])
         tb = sum(ds) / len(ds) if ds else 0

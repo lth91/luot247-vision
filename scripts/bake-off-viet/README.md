@@ -1,4 +1,4 @@
-# Bake-off cú viết P3 — DeepSeek V4-Flash & GPT-5 Mini đấu mù với Haiku 4.5
+# Bake-off cú viết P3 — DeepSeek V4-Flash, GPT-5 Mini & Gemini 3.1 Flash-Lite đấu mù với Haiku 4.5
 
 Mục tiêu: kiểm chứng có model API rẻ hơn Haiku 7-20 lần mà viết tin tiếng Việt
 đạt chuẩn luot247 không. Nếu đậu → phương án ④ trong hồ sơ 10/08: cú viết
@@ -30,9 +30,11 @@ nano .env   # điền DEEPSEEK_API_KEY + OPENAI_API_KEY
 
 - DeepSeek: đăng ký https://platform.deepseek.com, nạp ~$2.
 - OpenAI: https://platform.openai.com, nạp $5 (mức tối thiểu).
-- Chi phí toàn bộ test ước ~$0.3-0.5 cho cả 2 hãng.
+- Gemini: https://aistudio.google.com → Get API key (có free tier, 50 bài có
+  thể không mất đồng nào).
+- Chi phí toàn bộ test ước ~$0.4-0.6 cho cả 3 hãng.
 
-**3. Chạy** (~15-30 phút, 200 cú gọi kể cả retry; bị ngắt cứ chạy lại — tự nối):
+**3. Chạy** (~20-40 phút, ~300 cú gọi kể cả retry; bị ngắt cứ chạy lại — tự nối):
 
 ```bash
 python3 run_bakeoff.py
@@ -60,14 +62,14 @@ kỷ luật số từ, $/bài và $/ngày quy đổi) — dùng thẳng cho hồ
 
 ## Luật chấm (gửi người chấm)
 
-> Mỗi bài có 2-3 bản tin (A/B/C) viết từ cùng một bài gốc (xem `bai_goc.md`).
+> Mỗi bài có 2-4 bản tin (A/B/C/D) viết từ cùng một bài gốc (xem `bai_goc.md`).
 > Với TỪNG bản, điền:
 > - **diem**: 1-5 (5 = đăng được ngay, văn mượt, đủ dữ kiện; 3 = tạm, phải sửa
 >   nhẹ; 1 = không dùng được).
 > - **sai_du_kien**: đánh `x` nếu bản đó SAI hoặc BỊA tên/số liệu/thời gian so
 >   với bài gốc (lỗi nặng nhất).
 > - **ghi_chu**: tự do (lỗi chính tả, văn cứng, giật gân...).
-> Không chấm theo thứ tự A/B/C — thứ tự đã trộn ngẫu nhiên từng bài.
+> Không chấm theo thứ tự A/B/C/D — thứ tự đã trộn ngẫu nhiên từng bài.
 
 ## Lưu ý
 
@@ -78,7 +80,9 @@ kỷ luật số từ, $/bài và $/ngày quy đổi) — dùng thẳng cho hồ
   production thấy bài đầy đủ — thiệt nhẹ cho ứng viên với bài dài, chấp nhận được.
 - GPT-5 Mini là model có suy nghĩ (reasoning) — script đặt `reasoning_effort=low`;
   token suy nghĩ tính tiền output nên $/bài thực tế do script tự cộng từ usage,
-  không đoán.
+  không đoán. Gemini thì script TẮT suy nghĩ (`reasoning_effort=none`) — nếu
+  Google báo lỗi 400 không nhận tham số, đặt `GEMINI_REASONING_EFFORT=` (rỗng)
+  trong `.env`.
 - Kết quả chỉ là hồ sơ đề xuất. **Đổi model production phải có release note**
   được sếp duyệt (luật hiện hành).
 - Nếu tên model/giá đổi (DeepSeek hay đổi): sửa trong `.env`, không sửa code.
