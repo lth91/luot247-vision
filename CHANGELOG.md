@@ -1,3 +1,10 @@
+# [1.116.0](https://github.com/lth91/luot247-vision/compare/v1.115.0...v1.116.0) (2026-08-03)
+
+
+### Features
+
+* **crawl,bulk:** nghỉ hưu MacBook — giám khảo P1 + chấm lô bulk sang DeepSeek (2 công tắc, fallback Haiku) ([#190](https://github.com/lth91/luot247-vision/issues/190)) ([dabae6c](https://github.com/lth91/luot247-vision/commit/dabae6c1f300200ba69c2c10d12a5f16dd9329e9))
+
 # [1.115.0](https://github.com/lth91/luot247-vision/compare/v1.114.3...v1.115.0) (2026-08-03)
 
 
