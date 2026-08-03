@@ -1,3 +1,10 @@
+# [1.115.0](https://github.com/lth91/luot247-vision/compare/v1.114.3...v1.115.0) (2026-08-03)
+
+
+### Features
+
+* **crawl:** phương án ④ — cú viết P3 đi DeepSeek V4-Flash (công tắc viet_deepseek, fallback Haiku) + bộ kit bake-off ([#189](https://github.com/lth91/luot247-vision/issues/189)) ([ba3315b](https://github.com/lth91/luot247-vision/commit/ba3315bdcd8f1ba360bcfbafa2087a854af7e5d4))
+
 ## [1.114.3](https://github.com/lth91/luot247-vision/compare/v1.114.2...v1.114.3) (2026-07-31)
 
 
