@@ -525,6 +525,98 @@ async function rewriteWithClaude(
   return parseLlmJson((data?.content?.[0]?.text ?? "").trim());
 }
 
+// PHƯƠNG ÁN ④ (bake-off 02/08, 50 bài chấm mù): cú viết đi DeepSeek V4-Flash
+// khi công tắc hybrid_config 'viet_deepseek' bật — văn 4.03 vs Haiku 3.91,
+// sai dữ kiện 1/33 vs 5/33, giá 1/4.4 ($0.0018/bài). Cùng CRAWL_SYSTEM_PROMPT,
+// cùng chuẩn JSON. thinking.disabled BẮT BUỘC: V4 mặc định bật suy nghĩ làm
+// JSON cụt/chậm gấp 5. DeepSeek lỗi/timeout/parse fail → caller rơi về Haiku.
+const DEEPSEEK_MODEL = "deepseek-v4-flash";
+async function rewriteWithDeepSeek(
+  origTitle: string,
+  content: string,
+  dateHint: string | null,
+  apiKey: string,
+  supabase: SupabaseClient,
+  extraFeedback = "",
+): Promise<LlmResult | null> {
+  const hint = dateHint
+    ? `\n\nNgày xuất bản đã xác định từ metadata: ${dateHint}. Dùng đúng mốc này.`
+    : "";
+  const userMsg = `Tiêu đề gốc: ${origTitle}\n\nNội dung bài gốc:\n${content}${hint}${extraFeedback}`;
+
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), LLM_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch("https://api.deepseek.com/v1/chat/completions", {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: DEEPSEEK_MODEL,
+        temperature: 0.3,
+        max_tokens: 2000,
+        response_format: { type: "json_object" },
+        thinking: { type: "disabled" },
+        messages: [
+          { role: "system", content: CRAWL_SYSTEM_PROMPT },
+          { role: "user", content: userMsg },
+        ],
+      }),
+    });
+  } finally {
+    clearTimeout(t);
+  }
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`DeepSeek ${res.status}: ${txt.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  const u = data?.usage;
+  if (u) {
+    // Map usage kiểu OpenAI → khuôn log chung. Cache hit của DeepSeek log vào
+    // cột cache_read (giá tính 0.1x input — hơi cao hơn giá thật 0.02x, chấp
+    // nhận ước tính già còn hơn non).
+    await logLlmUsage(supabase, {
+      functionName: "crawl-news",
+      model: DEEPSEEK_MODEL,
+      usage: {
+        input_tokens: (u.prompt_cache_miss_tokens ?? u.prompt_tokens ?? 0),
+        output_tokens: u.completion_tokens ?? 0,
+        cache_read_input_tokens: u.prompt_cache_hit_tokens ?? 0,
+      },
+    });
+  }
+  return parseLlmJson((data?.choices?.[0]?.message?.content ?? "").trim());
+}
+
+// Chọn người viết theo công tắc, fail-open về Haiku — trả kèm model đã viết
+// thật sự để ghi vào ai_classification (soi chất lượng pilot theo model).
+async function rewriteArticle(
+  useDeepSeek: boolean,
+  deepseekKey: string,
+  origTitle: string,
+  content: string,
+  dateHint: string | null,
+  anthropicKey: string,
+  supabase: SupabaseClient,
+  extraFeedback = "",
+): Promise<{ r: LlmResult | null; model: string }> {
+  if (useDeepSeek && deepseekKey) {
+    try {
+      const r = await rewriteWithDeepSeek(origTitle, content, dateHint, deepseekKey, supabase, extraFeedback);
+      if (r) return { r, model: DEEPSEEK_MODEL };
+      console.warn("deepseek parse fail — fallback Haiku");
+    } catch (e) {
+      console.warn("deepseek lỗi — fallback Haiku:", (e as Error).message?.slice(0, 150));
+    }
+  }
+  return {
+    r: await rewriteWithClaude(origTitle, content, dateHint, anthropicKey, supabase, extraFeedback),
+    model: ANTHROPIC_MODEL,
+  };
+}
+
 // Lưới cuối chống nhãn "Cần sửa số từ": khi cả cắt câu lẫn retry đều không đưa
 // tổng về 100-120 từ, gọi 1 cú NÉN siêu rẻ (input chỉ ~150 từ, không cần cache)
 // yêu cầu rút content về đích từ tính sẵn. Trả plain text hoặc null nếu lỗi.
@@ -577,6 +669,7 @@ async function handle(req: Request): Promise<Response> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+  const deepseekKey = Deno.env.get("DEEPSEEK_API_KEY") ?? "";
   const supabase = createClient(supabaseUrl, serviceKey);
 
   let body: Record<string, unknown> = {};
@@ -843,11 +936,17 @@ async function handle(req: Request): Promise<Response> {
 
   // HYBRID ĐỢT 1 (28/07): công tắc giám khảo local. BẬT → P1 giao worker Mac
   // chấm async (crawl-finalize áp phán quyết ở nhịp sau); TẮT/lỗi → Haiku như cũ.
+  // PHƯƠNG ÁN ④ (03/08): công tắc viet_deepseek — cú viết đi DeepSeek V4-Flash,
+  // lỗi rơi về Haiku (cần secret DEEPSEEK_API_KEY, thiếu key → Haiku như cũ).
   let hybridJudge = false;
+  let vietDeepSeek = false;
   try {
-    const { data: cfg } = await supabase.from("hybrid_config")
-      .select("enabled").eq("key", "crawl_giam_khao").maybeSingle();
-    hybridJudge = cfg?.enabled === true;
+    const { data: cfgs } = await supabase.from("hybrid_config")
+      .select("key, enabled").in("key", ["crawl_giam_khao", "viet_deepseek"]);
+    for (const c of (cfgs ?? []) as { key: string; enabled: boolean }[]) {
+      if (c.key === "crawl_giam_khao") hybridJudge = c.enabled === true;
+      if (c.key === "viet_deepseek") vietDeepSeek = c.enabled === true;
+    }
   } catch { /* bảng chưa tạo → giữ Haiku */ }
 
   const processSource = async (src: Source) => {
@@ -965,7 +1064,9 @@ async function handle(req: Request): Promise<Response> {
 
           // P3 VIẾT: LLM viết lại + phân loại (retry 1 lần nếu lệch số từ).
           llmCalls++; stats.llmCalls++;
-          let r = await rewriteWithClaude(origTitle, content, publishedAt.slice(0, 10), anthropicKey, supabase);
+          const w1 = await rewriteArticle(vietDeepSeek, deepseekKey, origTitle, content, publishedAt.slice(0, 10), anthropicKey, supabase);
+          let r = w1.r;
+          let vietModel = w1.model;
           if (!r) { stats.errors.push(`${src.name}: LLM trả về không parse được`); continue; }
           if (!r.is_news) {
             stats.rejectedNonNews++;
@@ -985,10 +1086,12 @@ async function handle(req: Request): Promise<Response> {
             if (llmCalls < maxLlmCalls) {
               llmCalls++; stats.llmCalls++;
               const fb = `\n\nLƯU Ý RETRY: bản trước có tiêu đề ${tw} từ, tổng ${total} từ — KHÔNG đạt chuẩn (tiêu đề ${TITLE_MIN}-${TITLE_MAX}, tổng ${TOTAL_MIN}-${TOTAL_MAX}). Viết lại NGẮN HƠN HẲN và đếm kỹ số từ.`;
-              const r2 = await rewriteWithClaude(origTitle, content, publishedAt.slice(0, 10), anthropicKey, supabase, fb);
+              const w2 = await rewriteArticle(vietDeepSeek, deepseekKey, origTitle, content, publishedAt.slice(0, 10), anthropicKey, supabase, fb);
+              const r2 = w2.r;
               if (r2 && r2.is_news && r2.title && r2.content) {
                 r2.content = trimToFit(r2.title, r2.content);
                 r = r2;
+                vietModel = w2.model;
               }
             }
             tw = countWords(r.title); total = tw + countWords(r.content);
@@ -1047,7 +1150,7 @@ async function handle(req: Request): Promise<Response> {
                 },
                 aic: {
                   source: "ai_crawler", source_id: src.id, source_name: src.name, source_tier: src.tier,
-                  model: ANTHROPIC_MODEL, judged_by: "local",
+                  model: vietModel, judged_by: "local",
                   category_confidence: r.category_confidence, flags: r.flags, needs_edit: needsEdit,
                   original_title: origTitle, published_at_source: publishedAt,
                   title_words: tw, total_words: total,
@@ -1114,7 +1217,7 @@ async function handle(req: Request): Promise<Response> {
               source_id: src.id,
               source_name: src.name,
               source_tier: src.tier,
-              model: ANTHROPIC_MODEL,
+              model: vietModel,
               category_confidence: r.category_confidence,
               flags: r.flags,
               needs_edit: needsEdit,
