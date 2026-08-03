@@ -1379,6 +1379,16 @@ async function handle(req: Request): Promise<Response> {
 
   const runMs = Date.now() - startTime;
   console.log(JSON.stringify({ run_ms: runMs, ...stats, errors_count: stats.errors.length, first_errors: stats.errors.slice(0, 5) }));
+  // Biên bản tự ghi (03/08): gateway cắt HTTP response ở 150s nên không ai
+  // đọc được stats qua response nữa — chốt sổ vào bảng, soi bằng SQL.
+  try {
+    await supabase.from("crawl_run_log").insert({
+      run_ms: runMs,
+      stats: { ...stats, errors: stats.errors.slice(0, 40) },
+    });
+  } catch (e) {
+    console.warn("crawl_run_log insert fail:", (e as Error)?.message);
+  }
   return json({ ok: true, run_ms: runMs, ...stats });
 }
 
