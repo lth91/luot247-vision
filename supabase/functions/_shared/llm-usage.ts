@@ -11,6 +11,9 @@ const PRICING: Record<string, { input: number; output: number }> = {
   "claude-sonnet-4-5": { input: 3.0, output: 15.0 },
   "claude-opus-4-7": { input: 15.0, output: 75.0 },
   "claude-opus-4-6": { input: 15.0, output: 75.0 },
+  // Phương án ④ (08/2026): cú viết P3. Cache hit thật của DeepSeek là 0.02x
+  // input nhưng khuôn tính chung dùng 0.1x — ước tính già, chấp nhận.
+  "deepseek-v4-flash": { input: 0.14, output: 0.28 },
 };
 
 const DEFAULT_PRICING = { input: 1.0, output: 5.0 }; // fallback = haiku
