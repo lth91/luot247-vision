@@ -17,6 +17,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
+const DEEPSEEK_MODEL = "deepseek-v4-flash";
 
 // Chốt với đội 03/07 (bản cuối): tiêu đề 12–18, TỔNG cả tin 120–140. Thông
 // báo lỗi tự tính khoảng nội dung theo tiêu đề để sửa đúng ô, khỏi cộng tổng.
@@ -95,10 +96,15 @@ async function classifyBatch(
   arr = tryParse(cleaned) ?? tryParse(cleaned.match(/\[[\s\S]*\]/)?.[0] ?? "") ?? [];
   if (!Array.isArray(arr)) arr = [];
   if (arr.length !== items.length) console.warn(`classifyBatch: LLM trả ${arr.length} mục != ${items.length} input`);
+  return mapVerdicts(arr, items.length);
+}
 
+// Bung mảng thô của LLM về Verdict[] theo index "i". Thiếu phần tử/field →
+// verdict rỗng (phía sau coi như reject an toàn — với Haiku; đường DeepSeek
+// yêu cầu ĐỦ mới nhận, thiếu là ném lỗi để Haiku chấm lại nguyên lô).
+function mapVerdicts(arr: any[], n: number): Verdict[] {
   // Map theo "i" + bung schema gọn về Verdict nội bộ (logic phía sau giữ nguyên).
-  // Thiếu phần tử / thiếu field bắt buộc → verdict rỗng (sẽ coi như reject an toàn).
-  const out: Verdict[] = items.map(() => ({}));
+  const out: Verdict[] = Array.from({ length: n }, () => ({} as Verdict));
   for (const el of arr) {
     const idx = typeof el?.i === "number" ? el.i : -1;
     if (idx < 0 || idx >= out.length) continue;
@@ -120,6 +126,77 @@ async function classifyBatch(
   return out;
 }
 
+// Chấm lô bằng DeepSeek V4-Flash (nghỉ hưu MacBook 03/08): cùng prompt lô,
+// KHÔNG dùng response_format json_object (đầu ra chuẩn là MẢNG, json_object
+// ép object). Yêu cầu NGHIÊM: đủ verdict hợp lệ cho từng tin — thiếu bất kỳ
+// mục nào là ném lỗi để caller cho Haiku chấm lại NGUYÊN LÔ (tuyệt đối không
+// reject oan tin nhân viên vì lỗi parse).
+async function classifyBatchDeepSeek(
+  apiKey: string,
+  supabase: ReturnType<typeof createClient>,
+  items: { title: string; content: string }[],
+): Promise<Verdict[]> {
+  const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: DEEPSEEK_MODEL,
+      temperature: 0.2,
+      max_tokens: 2000,
+      thinking: { type: "disabled" },
+      messages: [
+        { role: "system", content: BULK_CLASSIFY_SYSTEM },
+        { role: "user", content: buildBulkUserMsg(items) },
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(`DeepSeek ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const data = await res.json();
+  const u = data?.usage;
+  if (u) {
+    await logLlmUsage(supabase, {
+      functionName: "submit-news-bulk",
+      model: DEEPSEEK_MODEL,
+      usage: {
+        input_tokens: (u.prompt_cache_miss_tokens ?? u.prompt_tokens ?? 0),
+        output_tokens: u.completion_tokens ?? 0,
+        cache_read_input_tokens: u.prompt_cache_hit_tokens ?? 0,
+      },
+    });
+  }
+  const raw: string = (data?.choices?.[0]?.message?.content ?? "").trim();
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+  const tryParse = (s: string) => { try { return JSON.parse(s); } catch { return null; } };
+  let arr = tryParse(cleaned) ?? tryParse(cleaned.match(/\[[\s\S]*\]/)?.[0] ?? "");
+  if (arr && !Array.isArray(arr) && Array.isArray((arr as { items?: unknown[] }).items)) {
+    arr = (arr as { items: unknown[] }).items;   // chấp nhận cả khuôn {"items":[...]}
+  }
+  if (!Array.isArray(arr)) throw new Error("DeepSeek lô: không parse được JSON");
+  const out = mapVerdicts(arr as any[], items.length);
+  const thieu = out.filter((v) => typeof v.category !== "string").length;
+  if (thieu > 0) throw new Error(`DeepSeek lô: thiếu ${thieu}/${items.length} verdict hợp lệ`);
+  return out;
+}
+
+// Chọn người chấm lô theo công tắc, fail-open: DeepSeek lỗi/thiếu → Haiku
+// chấm lại nguyên lô.
+async function classifyBatchAny(
+  useDeepSeek: boolean,
+  deepseekKey: string,
+  anthropicKey: string,
+  supabase: ReturnType<typeof createClient>,
+  items: { title: string; content: string }[],
+): Promise<Verdict[]> {
+  if (useDeepSeek && deepseekKey) {
+    try {
+      return await classifyBatchDeepSeek(deepseekKey, supabase, items);
+    } catch (e) {
+      console.warn("deepseek lô lỗi — fallback Haiku:", (e as Error).message?.slice(0, 150));
+    }
+  }
+  return classifyBatch(anthropicKey, supabase, items);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return json({ ok: false, reason: "Method not allowed" }, 405);
@@ -127,6 +204,7 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+  const deepseekKey = Deno.env.get("DEEPSEEK_API_KEY") ?? "";
   const supabase = createClient(supabaseUrl, serviceKey);
 
   // 1) Verify JWT
@@ -258,19 +336,23 @@ Deno.serve(async (req) => {
     //     crawl-finalize áp kết quả (tin đạt tự đăng dần, ~5-30 phút).
     //   + bulk_local_full=true          → local chấm nền MỌI GIỜ (phương án A).
     // Lô quá 12' không ai chấm → crawl-finalize thuê Haiku chấm thay (fail-open).
+    let bulkDeepSeek = false;
     {
       let bulkLocal = false, bulkLocalFull = false;
       try {
         const { data: cfgs } = await supabase.from("hybrid_config")
-          .select("key, enabled").in("key", ["bulk_local", "bulk_local_full"]);
+          .select("key, enabled").in("key", ["bulk_local", "bulk_local_full", "bulk_deepseek"]);
         for (const c of (cfgs ?? []) as { key: string; enabled: boolean }[]) {
           if (c.key === "bulk_local") bulkLocal = c.enabled === true;
           if (c.key === "bulk_local_full") bulkLocalFull = c.enabled === true;
+          if (c.key === "bulk_deepseek") bulkDeepSeek = c.enabled === true;
         }
       } catch { /* chưa migrate → giữ Haiku */ }
       const vnHour = (new Date().getUTCHours() + 7) % 24;
       const isPeak = vnHour >= 7 && vnHour < 11;
-      if (bulkLocal && fresh.length > 0 && (bulkLocalFull || !isPeak)) {
+      // bulk_deepseek (03/08) thắng bulk_local: chấm NGAY bằng DeepSeek (UX
+      // tức thì trở lại), không xếp hàng đợi local nữa.
+      if (!bulkDeepSeek && bulkLocal && fresh.length > 0 && (bulkLocalFull || !isPeak)) {
         const jobs = [];
         for (let i = 0; i < fresh.length; i += LLM_BATCH) {
           const slice = fresh.slice(i, i + LLM_BATCH);
@@ -314,7 +396,7 @@ Deno.serve(async (req) => {
         if (start >= fresh.length) break;
         const slice = fresh.slice(start, start + LLM_BATCH);
         jobs.push(
-          classifyBatch(anthropicKey, supabase, slice)
+          classifyBatchAny(bulkDeepSeek, deepseekKey, anthropicKey, supabase, slice)
             .catch((e) => { console.error("classifyBatch error:", e); return slice.map(() => ({} as Verdict)); })
             .then((vs) => ({ start, slice, vs })),
         );
