@@ -477,6 +477,10 @@ async function verifyWithClaude(
     await logLlmUsage(supabase, { functionName: "crawl-news", model: ANTHROPIC_MODEL, usage: data.usage });
   }
   const raw = (data?.content?.[0]?.text ?? "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
+  return parseVerifyJson(raw);
+}
+
+function parseVerifyJson(raw: string): VerifyResult | null {
   try {
     const p = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] ?? raw) as Record<string, unknown>;
     const v = String(p.verdict ?? "");
@@ -489,6 +493,87 @@ async function verifyWithClaude(
   } catch {
     return null;
   }
+}
+
+// GIÁM KHẢO P1 bằng DeepSeek (nghỉ hưu MacBook 03/08): cùng VERIFY_SYSTEM_PROMPT,
+// chấm NGAY trong nhịp crawl (bỏ độ trễ 5-15' của hàng đợi local). Lỗi/parse
+// fail → caller rơi về Haiku.
+async function verifyWithDeepSeek(
+  origTitle: string,
+  origContent: string,
+  newsTitle: string,
+  newsContent: string,
+  suspect: SimilarHit | null,
+  pubDate: string | null,
+  apiKey: string,
+  supabase: SupabaseClient,
+): Promise<VerifyResult | null> {
+  const dupBlock = suspect && suspect.title
+    ? `\n\nTIN ĐÃ ĐĂNG NGHI TRÙNG (điểm tương đồng ${Math.round(suspect.sim * 100)}%${suspect.created_at ? `, đăng lúc ${suspect.created_at.slice(0, 16).replace("T", " ")}` : ""}):\n«${suspect.title}»`
+    : "";
+  const dateBlock = pubDate ? `\nNGÀY XUẤT BẢN (theo metadata bài gốc): ${pubDate}` : "";
+  const userMsg = `BÀI BÁO GỐC\nTiêu đề: ${origTitle}${dateBlock}\nNội dung:\n${origContent.slice(0, 4000)}\n\nBẢN TIN ĐÃ VIẾT\nTiêu đề: ${newsTitle}\nNội dung: ${newsContent}${dupBlock}`;
+
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), LLM_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch("https://api.deepseek.com/v1/chat/completions", {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: DEEPSEEK_MODEL,
+        temperature: 0,
+        max_tokens: 500,
+        response_format: { type: "json_object" },
+        thinking: { type: "disabled" },
+        messages: [
+          { role: "system", content: VERIFY_SYSTEM_PROMPT },
+          { role: "user", content: userMsg },
+        ],
+      }),
+    });
+  } catch { return null; } finally { clearTimeout(t); }
+  if (!res.ok) { console.warn(`deepseek giám khảo HTTP ${res.status}`); return null; }
+  const data = await res.json();
+  const u = data?.usage;
+  if (u) {
+    await logLlmUsage(supabase, {
+      functionName: "crawl-news",
+      model: DEEPSEEK_MODEL,
+      usage: {
+        input_tokens: (u.prompt_cache_miss_tokens ?? u.prompt_tokens ?? 0),
+        output_tokens: u.completion_tokens ?? 0,
+        cache_read_input_tokens: u.prompt_cache_hit_tokens ?? 0,
+      },
+    });
+  }
+  return parseVerifyJson((data?.choices?.[0]?.message?.content ?? "").trim());
+}
+
+// Chọn giám khảo theo công tắc, fail-open về Haiku.
+async function verifyArticle(
+  useDeepSeek: boolean,
+  deepseekKey: string,
+  origTitle: string,
+  origContent: string,
+  newsTitle: string,
+  newsContent: string,
+  suspect: SimilarHit | null,
+  pubDate: string | null,
+  anthropicKey: string,
+  supabase: SupabaseClient,
+): Promise<{ v: VerifyResult | null; model: string }> {
+  if (useDeepSeek && deepseekKey) {
+    const v = await verifyWithDeepSeek(origTitle, origContent, newsTitle, newsContent, suspect, pubDate, deepseekKey, supabase);
+    if (v) return { v, model: DEEPSEEK_MODEL };
+    console.warn("deepseek giám khảo lỗi/parse fail — fallback Haiku");
+  }
+  return {
+    v: await verifyWithClaude(origTitle, origContent, newsTitle, newsContent, suspect, pubDate, anthropicKey, supabase),
+    model: ANTHROPIC_MODEL,
+  };
 }
 
 // Gọi Haiku viết lại + phân loại (P3 thuần viết — kiểm trùng do giám khảo P1
@@ -938,14 +1023,18 @@ async function handle(req: Request): Promise<Response> {
   // chấm async (crawl-finalize áp phán quyết ở nhịp sau); TẮT/lỗi → Haiku như cũ.
   // PHƯƠNG ÁN ④ (03/08): công tắc viet_deepseek — cú viết đi DeepSeek V4-Flash,
   // lỗi rơi về Haiku (cần secret DEEPSEEK_API_KEY, thiếu key → Haiku như cũ).
+  // giam_khao_deepseek (03/08, nghỉ hưu MacBook): thắng crawl_giam_khao —
+  // bật thì giám khảo chấm ngay bằng DeepSeek, KHÔNG xếp hàng đợi local nữa.
   let hybridJudge = false;
   let vietDeepSeek = false;
+  let giamKhaoDeepSeek = false;
   try {
     const { data: cfgs } = await supabase.from("hybrid_config")
-      .select("key, enabled").in("key", ["crawl_giam_khao", "viet_deepseek"]);
+      .select("key, enabled").in("key", ["crawl_giam_khao", "viet_deepseek", "giam_khao_deepseek"]);
     for (const c of (cfgs ?? []) as { key: string; enabled: boolean }[]) {
       if (c.key === "crawl_giam_khao") hybridJudge = c.enabled === true;
       if (c.key === "viet_deepseek") vietDeepSeek = c.enabled === true;
+      if (c.key === "giam_khao_deepseek") giamKhaoDeepSeek = c.enabled === true;
     }
   } catch { /* bảng chưa tạo → giữ Haiku */ }
 
@@ -1129,7 +1218,8 @@ async function handle(req: Request): Promise<Response> {
           // ===== HYBRID BẬT: giao giám khảo cho worker local (async) =====
           // Xếp job kèm đủ nguyên liệu; crawl-finalize áp phán quyết ở nhịp
           // sau (tin chậm thêm ~5-15'). Insert lỗi → rơi xuống Haiku như cũ.
-          if (hybridJudge) {
+          // giam_khao_deepseek bật → bỏ qua hàng đợi local, chấm sync bên dưới.
+          if (hybridJudge && !giamKhaoDeepSeek) {
             const hCat = isValidCategory(r.category) ? r.category : src.default_category;
             const { error: qErr } = await supabase.from("llm_shadow_queue").insert({
               task: "giam_khao_live",
@@ -1169,11 +1259,15 @@ async function handle(req: Request): Promise<Response> {
           // phán trùng. Không phản hồi/hết trần LLM → cho vào hàng đợi kèm nhãn
           // "cần kiểm tra" (fail-open — người duyệt vẫn là chốt chặn cuối).
           let verify: VerifyResult | null = null;
+          let verifyModel = ANTHROPIC_MODEL;
           if (llmCalls < maxLlmCalls) {
             llmCalls++; stats.llmCalls++; stats.verifyCalls++;
-            verify = await verifyWithClaude(origTitle, content, r.title, r.content, suspect, publishedAt.slice(0, 10), anthropicKey, supabase);
+            const jv = await verifyArticle(giamKhaoDeepSeek, deepseekKey, origTitle, content, r.title, r.content, suspect, publishedAt.slice(0, 10), anthropicKey, supabase);
+            verify = jv.v;
+            verifyModel = jv.model;
             // Chế độ bóng (28/07): ghi input + phán quyết Haiku cho worker local.
-            if (verify) {
+            // Chỉ còn nghĩa khi Haiku chấm (so khớp với worker) — DeepSeek thì bỏ.
+            if (verify && verifyModel === ANTHROPIC_MODEL) {
               await logShadow(supabase, "giam_khao", {
                 orig_title: origTitle,
                 orig_content: content.slice(0, 4000),
