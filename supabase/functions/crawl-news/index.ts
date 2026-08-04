@@ -29,7 +29,7 @@ const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 const SOURCE_CONCURRENCY = 2; // 3 → 2: mỗi parse deno_dom giữ cả DOM trong RAM, 3 luồng song song từng làm vượt trần 256MB
 const SOURCES_PER_RUN = 15;
-const TIME_BUDGET_MS = 240000; // Nấc 2 (21/07): 120s→240s, đi kèm pg_net timeout 300s (migration 20260721010000); trần wall-clock nền tảng ~400s vẫn còn đệm
+const TIME_BUDGET_MS = 130000; // 04/08: 240s là ẢO — biên bản crawl_run_log chứng minh runtime giết function ~150s (sau khi gateway cắt response). 130s để lượt TỰ kết thúc sạch sẽ trước khi bị bắn: chốt sổ, cập nhật nguồn, done=true.
 const FETCH_TIMEOUT_MS = 30000;
 const LLM_TIMEOUT_MS = 60000; // trần mỗi cú gọi Anthropic — 1 cú treo không được nuốt cả run
 const MAX_CONTENT_CHARS = 6000; // 140 từ output không cần hơn 6k chars input
@@ -1038,6 +1038,26 @@ async function handle(req: Request): Promise<Response> {
     }
   } catch { /* bảng chưa tạo → giữ Haiku */ }
 
+  // Biên bản GHI DẦN (04/08): runtime GIẾT function ít lâu sau khi gateway cắt
+  // response ở ~150s (bằng chứng: 15h đầu chỉ lượt 141s ký được biên bản cuối
+  // lượt) — nên mở sổ NGAY ĐẦU LƯỢT rồi ký sau TỪNG NGUỒN xong; lượt bị giết
+  // giữa chừng vẫn còn sổ tới nguồn cuối đã xong (stats.done=false).
+  let runLogId: number | null = null;
+  try {
+    const { data: rl } = await supabase.from("crawl_run_log")
+      .insert({ run_ms: 0, stats: { done: false } }).select("id").single();
+    runLogId = (rl as { id: number } | null)?.id ?? null;
+  } catch { /* không có sổ vẫn phải crawl */ }
+  const chotSo = async (done: boolean) => {
+    if (runLogId === null) return;
+    try {
+      await supabase.from("crawl_run_log").update({
+        run_ms: Date.now() - startTime,
+        stats: { ...stats, errors: stats.errors.slice(0, 40), done },
+      }).eq("id", runLogId);
+    } catch { /* best-effort */ }
+  };
+
   const processSource = async (src: Source) => {
     stats.sources++;
     try {
@@ -1361,6 +1381,7 @@ async function handle(req: Request): Promise<Response> {
         is_active: newFails < 10,
       }).eq("id", src.id);
     }
+    await chotSo(false); // ký sổ sau từng nguồn — batch dài bị giết vẫn còn vết
   };
 
   // Biên bản GHI DẦN (04/08): runtime GIẾT function ít lâu sau khi gateway cắt
