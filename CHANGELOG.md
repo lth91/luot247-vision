@@ -1,3 +1,10 @@
+## [1.117.3](https://github.com/lth91/luot247-vision/compare/v1.117.2...v1.117.3) (2026-08-04)
+
+
+### Bug Fixes
+
+* **crawl:** HOTFIX — gỡ khối mở sổ biên bản bị nhân đôi khi merge (SyntaxError, crawl đứng từ 8h50) ([#194](https://github.com/lth91/luot247-vision/issues/194)) ([d725019](https://github.com/lth91/luot247-vision/commit/d72501909d4460d3575941327cd5dfa53d9f30f3))
+
 ## [1.117.2](https://github.com/lth91/luot247-vision/compare/v1.117.1...v1.117.2) (2026-08-04)
 
 
