@@ -1,3 +1,10 @@
+## [1.117.1](https://github.com/lth91/luot247-vision/compare/v1.117.0...v1.117.1) (2026-08-04)
+
+
+### Bug Fixes
+
+* **crawl:** biên bản crawl ghi dần sau mỗi batch nguồn (runtime giết function sau 150s) ([#192](https://github.com/lth91/luot247-vision/issues/192)) ([a75d0a9](https://github.com/lth91/luot247-vision/commit/a75d0a93b26dae5916b1e6e3bd37123a4a5231e7))
+
 # [1.117.0](https://github.com/lth91/luot247-vision/compare/v1.116.0...v1.117.0) (2026-08-03)
 
 
