@@ -1,3 +1,10 @@
+## [1.117.2](https://github.com/lth91/luot247-vision/compare/v1.117.1...v1.117.2) (2026-08-04)
+
+
+### Bug Fixes
+
+* **crawl:** hạ TIME_BUDGET 240s→130s + ký biên bản sau từng nguồn ([#193](https://github.com/lth91/luot247-vision/issues/193)) ([a20a4b3](https://github.com/lth91/luot247-vision/commit/a20a4b3daa5ac274c6aa95722094955fc1dd7ce1))
+
 ## [1.117.1](https://github.com/lth91/luot247-vision/compare/v1.117.0...v1.117.1) (2026-08-04)
 
 
