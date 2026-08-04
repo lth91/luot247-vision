@@ -1363,6 +1363,26 @@ async function handle(req: Request): Promise<Response> {
     }
   };
 
+  // Biên bản GHI DẦN (04/08): runtime GIẾT function ít lâu sau khi gateway cắt
+  // response ở ~150s (bằng chứng: 15h đầu chỉ lượt 141s ký được biên bản cuối
+  // lượt) — nên mở sổ NGAY ĐẦU LƯỢT rồi cập nhật sau mỗi batch nguồn; lượt bị
+  // giết giữa chừng vẫn còn sổ tới batch cuối đã xong (stats.done=false).
+  let runLogId: number | null = null;
+  try {
+    const { data: rl } = await supabase.from("crawl_run_log")
+      .insert({ run_ms: 0, stats: { done: false } }).select("id").single();
+    runLogId = (rl as { id: number } | null)?.id ?? null;
+  } catch { /* không có sổ vẫn phải crawl */ }
+  const chotSo = async (done: boolean) => {
+    if (runLogId === null) return;
+    try {
+      await supabase.from("crawl_run_log").update({
+        run_ms: Date.now() - startTime,
+        stats: { ...stats, errors: stats.errors.slice(0, 40), done },
+      }).eq("id", runLogId);
+    } catch { /* best-effort */ }
+  };
+
   const srcList = (sources as Source[]) ?? [];
   for (let i = 0; i < srcList.length; i += SOURCE_CONCURRENCY) {
     if (Date.now() - startTime > TIME_BUDGET_MS) {
@@ -1375,20 +1395,12 @@ async function handle(req: Request): Promise<Response> {
     }
     const batch = srcList.slice(i, i + SOURCE_CONCURRENCY);
     await Promise.all(batch.map(processSource));
+    await chotSo(false);
   }
 
   const runMs = Date.now() - startTime;
   console.log(JSON.stringify({ run_ms: runMs, ...stats, errors_count: stats.errors.length, first_errors: stats.errors.slice(0, 5) }));
-  // Biên bản tự ghi (03/08): gateway cắt HTTP response ở 150s nên không ai
-  // đọc được stats qua response nữa — chốt sổ vào bảng, soi bằng SQL.
-  try {
-    await supabase.from("crawl_run_log").insert({
-      run_ms: runMs,
-      stats: { ...stats, errors: stats.errors.slice(0, 40) },
-    });
-  } catch (e) {
-    console.warn("crawl_run_log insert fail:", (e as Error)?.message);
-  }
+  await chotSo(true);
   return json({ ok: true, run_ms: runMs, ...stats });
 }
 
