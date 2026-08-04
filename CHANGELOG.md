@@ -1,3 +1,10 @@
+# [1.117.0](https://github.com/lth91/luot247-vision/compare/v1.116.0...v1.117.0) (2026-08-03)
+
+
+### Features
+
+* **crawl:** biên bản crawl tự ghi vào bảng crawl_run_log ([#191](https://github.com/lth91/luot247-vision/issues/191)) ([39ffd5b](https://github.com/lth91/luot247-vision/commit/39ffd5b8068040b9ec72f8be38acea81a7493b07))
+
 # [1.116.0](https://github.com/lth91/luot247-vision/compare/v1.115.0...v1.116.0) (2026-08-03)
 
 
