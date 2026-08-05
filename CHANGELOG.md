@@ -1,3 +1,10 @@
+# [1.118.0](https://github.com/lth91/luot247-vision/compare/v1.117.3...v1.118.0) (2026-08-05)
+
+
+### Features
+
+* **submit:** tin gửi lẻ chấm bằng DeepSeek (công tắc le_deepseek, fallback Haiku) ([#195](https://github.com/lth91/luot247-vision/issues/195)) ([b0d7134](https://github.com/lth91/luot247-vision/commit/b0d7134d33a9cabb6df37c9808bd2ba47f7f6b33))
+
 ## [1.117.3](https://github.com/lth91/luot247-vision/compare/v1.117.2...v1.117.3) (2026-08-04)
 
 
