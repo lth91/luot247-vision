@@ -1,3 +1,10 @@
+## [1.118.1](https://github.com/lth91/luot247-vision/compare/v1.118.0...v1.118.1) (2026-08-05)
+
+
+### Bug Fixes
+
+* **health:** chuông nhịp tim worker chỉ kêu khi đường local là đường chính ([#196](https://github.com/lth91/luot247-vision/issues/196)) ([47061be](https://github.com/lth91/luot247-vision/commit/47061beccbc2c357110a2a91ab553fd3eeedba39))
+
 # [1.118.0](https://github.com/lth91/luot247-vision/compare/v1.117.3...v1.118.0) (2026-08-05)
 
 
