@@ -191,13 +191,19 @@ Deno.serve(async (req) => {
     sections.push(`💸 Chi phí crawl-news hôm nay đã *$${costToday.toFixed(2)}* (trần cảnh báo $${COST_ALERT_USD}) — kiểm tra vòng lặp/nguồn lạ.`);
   }
 
-  // 4) Hybrid: worker local mất nhịp tim / backlog dồn (chỉ khi công tắc BẬT).
-  // Mac vắng thì crawl-finalize đã tự fallback Haiku — chuông này để anh Long
-  // biết đang tốn tiền cloud thay vì tưởng local vẫn gánh.
+  // 4) Hybrid: worker local mất nhịp tim / backlog dồn — CHỈ khi lớp local
+  // đang thật sự là đường chính: crawl_giam_khao BẬT và giam_khao_deepseek TẮT
+  // (05/08: MacBook nghỉ hưu, giám khảo đi DeepSeek → chuông này phải im;
+  // nó chỉ sống lại nếu có ngày bật lại đường local làm plan B).
   try {
-    const { data: cfg } = await supabase.from("hybrid_config")
-      .select("enabled").eq("key", "crawl_giam_khao").maybeSingle();
-    if (cfg?.enabled === true) {
+    const { data: cfgs } = await supabase.from("hybrid_config")
+      .select("key, enabled").in("key", ["crawl_giam_khao", "giam_khao_deepseek"]);
+    let localOn = false, dsOn = false;
+    for (const c of (cfgs ?? []) as { key: string; enabled: boolean }[]) {
+      if (c.key === "crawl_giam_khao") localOn = c.enabled === true;
+      if (c.key === "giam_khao_deepseek") dsOn = c.enabled === true;
+    }
+    if (localOn && !dsOn) {
       const { data: hb } = await supabase.from("local_worker_status")
         .select("last_seen").order("last_seen", { ascending: false }).limit(1);
       const lastSeen = hb?.[0]?.last_seen ? new Date(hb[0].last_seen).getTime() : 0;
