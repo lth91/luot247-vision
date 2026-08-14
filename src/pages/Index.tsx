@@ -39,6 +39,10 @@ const Index = () => {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isScrollRestored, setIsScrollRestored] = useState(false);
   const [passedNewsIds, setPassedNewsIds] = useState<Set<string>>(new Set());
+  // Sự cố 14/08 (trang trắng ~2h với MỌI khách): query feed lỗi/timeout nhưng
+  // code chỉ console.error rồi render danh sách rỗng → nhìn y hệt "hết tin",
+  // không ai biết là lỗi. Giữ lỗi lại để BÁO ĐÚNG BỆNH + cho bấm thử lại.
+  const [loadError, setLoadError] = useState<string | null>(null);
   const newsItemsRef = useRef<Map<string, HTMLDivElement>>(new Map());
   
   // Use ReadingContext
@@ -197,7 +201,10 @@ const Index = () => {
   useEffect(() => {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
     if (!isMobile) return;
-    if (isLoading || filteredNews.length === 0) return;
+    // KHÔNG chốt theo filteredNews.length: danh sách rỗng (lỗi tải, hoặc lọc
+    // hết) từng khiến isScrollRestored kẹt false vĩnh viễn → overlay "Đang khôi
+    // phục vị trí đọc..." phủ kín màn hình mãi mãi (sự cố 14/08).
+    if (isLoading) return;
     if (isScrollRestored) return;
 
     window.scrollTo(0, 0);
@@ -678,13 +685,25 @@ const Index = () => {
     // Chỉ SELECT đúng các cột trang chủ dùng — select("*") kéo theo cả
     // ai_classification jsonb (~1KB/tin × 4000 tin = vài MB thừa trên mobile).
     const FEED_COLS = "id, title, description, url, category, created_at, updated_at, submitted_by, view_count";
-    const { data: dataRaw, error } = await supabase
+    // Thử lại 3 lượt (0.8s → 2s) trước khi chịu thua: sự cố 14/08 cho thấy
+    // đường đọc có lúc nghẽn nhất thời ở giờ cao điểm — một lần trượt là cả
+    // trang trắng, trong khi thử lại vài giây sau thường là qua.
+    const queryFeed = () => supabase
       .from("news")
       .select(FEED_COLS)
       .eq("is_approved", true)  // Only show approved news
       .gte("updated_at", sinceIso)
       .order("updated_at", { ascending: false })  // Sort by approval time
       .limit(4000);
+    let dataRaw: Awaited<ReturnType<typeof queryFeed>>["data"] = null;
+    let error: Awaited<ReturnType<typeof queryFeed>>["error"] = null;
+    for (let lan = 0; lan < 3; lan++) {
+      const res = await queryFeed();
+      dataRaw = res.data; error = res.error;
+      if (!error) break;
+      console.error(`fetchNews lượt ${lan + 1}/3 lỗi:`, res.error);
+      if (lan < 2) await new Promise((r) => setTimeout(r, lan === 0 ? 800 : 2000));
+    }
 
     // Deep-link /tin/:id trỏ tới tin cũ hơn cửa sổ 14 ngày → tải lẻ tin đó
     // và nối vào cuối danh sách để scroll/highlight vẫn hoạt động.
@@ -701,7 +720,11 @@ const Index = () => {
     if (error) {
       toast.error("Không thể tải tin tức");
       console.error(error);
+      // GIỮ tin đang hiển thị (nếu có) thay vì xoá trắng — khách vẫn đọc được
+      // tin cũ trong lúc trục trặc. Chỉ ghi cờ lỗi để render bảng báo lỗi.
+      setLoadError(error.message || "Lỗi kết nối máy chủ");
     } else {
+      setLoadError(null);
       setNews(data || []);
       
       // Check if there are new news items
@@ -830,9 +853,44 @@ const Index = () => {
               <p className="text-muted-foreground">Đang tải tin tức...</p>
             </div>
           </div>
+        ) : loadError && news.length === 0 ? (
+          /* Báo ĐÚNG BỆNH thay vì để khách tưởng hết tin (sự cố 14/08). */
+          <div className="text-center py-12 space-y-3">
+            <p className="font-medium">Không tải được tin tức</p>
+            <p className="text-sm text-muted-foreground">
+              Máy chủ đang bận hoặc mất kết nối. Tin tức vẫn còn nguyên, thử lại giúp nhé.
+            </p>
+            <button type="button" onClick={() => fetchNews()} className={chipCls(false)}>
+              ↻ Thử lại
+            </button>
+            <p className="text-[11px] text-muted-foreground/70">Chi tiết: {loadError}</p>
+          </div>
         ) : news.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Không có tin tức nào</p>
+          </div>
+        ) : visibleNews.length === 0 ? (
+          /* Có tin trong kho nhưng bộ lọc quét sạch — trước đây rơi vào đây là
+             vẽ ra cái khung rỗng không một chữ (kiểm rỗng dùng `news`, render
+             dùng `visibleNews`). Giờ nói rõ vì sao và cho lối thoát. */
+          <div className="text-center py-12 space-y-3">
+            <p className="text-muted-foreground">
+              {activeCategory
+                ? "Chưa có tin trong chuyên mục này."
+                : shouldHideReadNews
+                  ? "Bạn đã đọc hết tin trong danh sách."
+                  : "Không còn tin nào để hiển thị."}
+            </p>
+            {activeCategory && (
+              <button type="button" onClick={() => selectCategory("")} className={chipCls(false)}>
+                ← Xem tất cả
+              </button>
+            )}
+            {!activeCategory && shouldHideReadNews && (
+              <button type="button" onClick={() => setShouldHideReadNews(false)} className={chipCls(false)}>
+                Hiện lại tin đã đọc
+              </button>
+            )}
           </div>
         ) : (
           <>
@@ -846,14 +904,9 @@ const Index = () => {
                 <p className="text-muted-foreground">Đang khôi phục vị trí đọc...</p>
               </div>
             )}
-            {activeCategory && visibleNews.length === 0 ? (
-              <div className="text-center py-12 space-y-3">
-                <p className="text-muted-foreground">Chưa có tin trong chuyên mục này.</p>
-                <button type="button" onClick={() => selectCategory("")} className={chipCls(false)}>
-                  ← Xem tất cả
-                </button>
-              </div>
-            ) : (
+            {/* Nhánh "lọc hết sạch" đã được xử lý ở nhánh visibleNews.length===0
+                phía trên (gồm cả trường hợp lọc theo chuyên mục) — tới đây chắc
+                chắn có tin để vẽ. */}
             <div className={`border rounded-lg overflow-hidden bg-card ${isScrollRestored ? 'scroll-restored' : 'scroll-restoring'}`}>
             {visibleNews.map((item, index, arr) => (
               <div
@@ -889,7 +942,6 @@ const Index = () => {
               </div>
             ))}
             </div>
-            )}
           </>
         )}
       </main>
