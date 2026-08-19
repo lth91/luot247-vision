@@ -1,3 +1,10 @@
+## [1.118.3](https://github.com/lth91/luot247-vision/compare/v1.118.2...v1.118.3) (2026-08-19)
+
+
+### Bug Fixes
+
+* **crawl:** chặn bản tin mất dấu tiếng Việt ([#198](https://github.com/lth91/luot247-vision/issues/198)) ([74bb444](https://github.com/lth91/luot247-vision/commit/74bb44473ec64e2889b07bf72e067d18aa5ab863))
+
 ## [1.118.2](https://github.com/lth91/luot247-vision/compare/v1.118.1...v1.118.2) (2026-08-14)
 
 
