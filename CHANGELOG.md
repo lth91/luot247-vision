@@ -1,3 +1,17 @@
+## [1.118.2](https://github.com/lth91/luot247-vision/compare/v1.118.1...v1.118.2) (2026-08-14)
+
+
+### Bug Fixes
+
+* **feed:** trang trắng khi query feed lỗi — báo đúng bệnh + thử lại, gỡ overlay kẹt ([#197](https://github.com/lth91/luot247-vision/issues/197)) ([01096f6](https://github.com/lth91/luot247-vision/commit/01096f689f24566313d95143ff5f9580ef694172))
+
+## [1.118.1](https://github.com/lth91/luot247-vision/compare/v1.118.0...v1.118.1) (2026-08-05)
+
+
+### Bug Fixes
+
+* **health:** chuông nhịp tim worker chỉ kêu khi đường local là đường chính ([#196](https://github.com/lth91/luot247-vision/issues/196)) ([47061be](https://github.com/lth91/luot247-vision/commit/47061beccbc2c357110a2a91ab553fd3eeedba39))
+
 # [1.118.0](https://github.com/lth91/luot247-vision/compare/v1.117.3...v1.118.0) (2026-08-05)
 
 
