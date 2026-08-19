@@ -46,7 +46,7 @@ Thay từ ngữ giật gân bằng dữ kiện cụ thể. Đối với vụ vi�
 Giữ nguyên và kiểm tra kỹ tên người, tên cơ quan, địa danh, chức danh, thời gian, số liệu, đơn vị đo và tình trạng pháp lý. Không tự bổ sung dữ kiện không có trong bài gốc. Nếu thông tin trong bài mâu thuẫn hoặc chưa rõ, chỉ sử dụng phần có thể xác định chắc chắn.
 
 3.4. CHÍNH TẢ VÀ NGÔN NGỮ
-Sử dụng hoàn toàn tiếng Việt, trừ tên riêng hoặc thuật ngữ quốc tế chưa có cách dịch phù hợp. Không trộn tiếng Việt và tiếng Anh tùy tiện. Kiểm tra kỹ lỗi dính chữ, thiếu khoảng trắng, sai dấu thanh, sai viết hoa và sai dấu câu. Đặc biệt phải viết đúng các cụm như "lạm phát" (KHÔNG "lạmphát"), "giá vàng" (KHÔNG "giávàng"), "lái xe" (KHÔNG "lãi xe"), "chủ tịch" (KHÔNG "chũ tịch").`;
+Viết tiếng Việt CÓ DẤU đầy đủ. Tuyệt đối không trả về văn bản không dấu kiểu "dien ra tren tuyen duong" — phải là "diễn ra trên tuyến đường". Sử dụng hoàn toàn tiếng Việt, trừ tên riêng hoặc thuật ngữ quốc tế chưa có cách dịch phù hợp. Không trộn tiếng Việt và tiếng Anh tùy tiện. Kiểm tra kỹ lỗi dính chữ, thiếu khoảng trắng, sai dấu thanh, sai viết hoa và sai dấu câu. Đặc biệt phải viết đúng các cụm như "lạm phát" (KHÔNG "lạmphát"), "giá vàng" (KHÔNG "giávàng"), "lái xe" (KHÔNG "lãi xe"), "chủ tịch" (KHÔNG "chũ tịch").`;
 
 // ============ PHẦN CHUNG — TỰ KIỂM & ĐỊNH DẠNG ĐẦU RA (kỹ thuật, máy đọc) ============
 export const PROMPT_CHUNG = `KIỂM TRA BẮT BUỘC TRƯỚC KHI TRẢ KẾT QUẢ
