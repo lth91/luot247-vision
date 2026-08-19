@@ -398,6 +398,22 @@ function hasStuckWord(text: string): boolean {
   return false;
 }
 
+// Lưới bắt MẤT DẤU (19/08): thỉnh thoảng bản viết ra tiếng Việt KHÔNG DẤU
+// ("Ngay 18/8, Carnival Nghe An 2026 dien ra tren tuyen duong Truong Thi").
+// Đo tỉ lệ âm tiết mang dấu: văn tin tiếng Việt thật luôn 45-70%, dưới 12%
+// gần như chắc chắn là bản mất dấu. Yêu cầu >= 20 âm tiết để không báo nhầm
+// tiêu đề ngắn toàn tên riêng nước ngoài.
+function looksUnaccented(text: string): boolean {
+  let total = 0, accented = 0;
+  for (const tok of text.split(/\s+/)) {
+    const letters = tok.replace(/[^\p{L}]/gu, "");
+    if (letters.length < 2) continue;
+    total++;
+    if (VN_DIACRITICS_RE.test(letters)) accented++;
+  }
+  return total >= 20 && accented / total < 0.12;
+}
+
 async function logReject(supabase: SupabaseClient, row: Record<string, unknown>): Promise<void> {
   try { await supabase.from("crawl_reject_log").insert(row); } catch { /* ignore */ }
 }
@@ -1014,6 +1030,7 @@ async function handle(req: Request): Promise<Response> {
     skippedDup: 0, skippedOld: 0, skippedRejected: 0, rejectedNonNews: 0, needsEdit: 0,
     compressCalls: 0, verifyCalls: 0, preDupCalls: 0, preDupBlocked: 0,
     p1Rejected: 0, p1Dup: 0, p1NewDev: 0, p1NeedsCheck: 0, deferredJudge: 0, stuckWords: 0,
+    unaccented: 0,
     errors: [] as string[],
   };
   let llmCalls = 0;
@@ -1186,6 +1203,27 @@ async function handle(req: Request): Promise<Response> {
             continue;
           }
 
+          // MẤT DẤU: bản viết ra tiếng Việt không dấu → hỏng hẳn, không sửa
+          // tay nhanh được. Bài GỐC đã không dấu thì viết lại cũng vô ích →
+          // dán nhãn luôn. Bản viết hỏng thì viết lại 1 lần, ÉP Haiku (người
+          // vừa viết hỏng không được viết lại), vẫn hỏng → nhân viên sửa.
+          let mangledAccents = false;
+          if (looksUnaccented(`${r.title} ${r.content}`)) {
+            stats.unaccented++;
+            mangledAccents = true;
+            if (!looksUnaccented(content.slice(0, 3000)) && llmCalls < maxLlmCalls) {
+              llmCalls++; stats.llmCalls++;
+              const fbAcc = `\n\nLƯU Ý RETRY: bản trước viết tiếng Việt KHÔNG DẤU. Viết lại bằng tiếng Việt CÓ DẤU đầy đủ ("diễn ra" chứ không phải "dien ra", "đường" chứ không phải "duong").`;
+              const wAcc = await rewriteArticle(false, "", origTitle, content, publishedAt.slice(0, 10), anthropicKey, supabase, fbAcc);
+              const rAcc = wAcc.r;
+              if (rAcc && rAcc.is_news && rAcc.title && rAcc.content && !looksUnaccented(`${rAcc.title} ${rAcc.content}`)) {
+                r = rAcc;
+                vietModel = wAcc.model;
+                mangledAccents = false;
+              }
+            }
+          }
+
           // Vượt trần → cắt câu cuối (rẻ, không tốn LLM). Vẫn lệch → retry 1 lần
           // với feedback, cắt tiếp; cuối cùng mới đánh needs_edit.
           r.content = trimToFit(r.title, r.content);
@@ -1229,6 +1267,7 @@ async function handle(req: Request): Promise<Response> {
 
           // Dính chữ (PHÊDUYỆT...) → buộc nhân viên sửa trước khi duyệt.
           if (hasStuckWord(`${r.title} ${r.content}`)) { needsEdit = true; stats.stuckWords++; }
+          if (mangledAccents) needsEdit = true;
 
           // So trùng lần 2 với tiêu đề MỚI (bản viết lại có thể giống tin đã
           // đăng theo cách khác) — lấy nghi phạm giống nhất trong 2 lần so.
