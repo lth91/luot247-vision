@@ -1,3 +1,17 @@
+# [1.119.0](https://github.com/lth91/luot247-vision/compare/v1.118.3...v1.119.0) (2026-08-22)
+
+
+### Features
+
+* **cost:** chó canh DeepSeek im tiếng + báo cáo tách theo model ([#199](https://github.com/lth91/luot247-vision/issues/199)) ([d30de0f](https://github.com/lth91/luot247-vision/commit/d30de0fe4cdc4ab41ba7b255ee643467203c3b5c))
+
+## [1.118.3](https://github.com/lth91/luot247-vision/compare/v1.118.2...v1.118.3) (2026-08-19)
+
+
+### Bug Fixes
+
+* **crawl:** chặn bản tin mất dấu tiếng Việt ([#198](https://github.com/lth91/luot247-vision/issues/198)) ([74bb444](https://github.com/lth91/luot247-vision/commit/74bb44473ec64e2889b07bf72e067d18aa5ab863))
+
 ## [1.118.2](https://github.com/lth91/luot247-vision/compare/v1.118.1...v1.118.2) (2026-08-14)
 
 
