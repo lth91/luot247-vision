@@ -27,6 +27,58 @@ const DEEPSEEK_SWITCHES = ["viet_deepseek", "giam_khao_deepseek", "bulk_deepseek
 const DEEPSEEK_MODEL = "deepseek-v4-flash";
 const SILENT_MIN_CALLS = 10; // dưới mức này coi như giờ vắng, không kết luận
 
+// CANH SỐ DƯ (22/08): chó canh ở trên chỉ kêu SAU khi DeepSeek đã chết. Canh
+// thẳng số dư thì biết TRƯỚC. Endpoint chính thức:
+//   GET https://api.deepseek.com/user/balance  (Bearer key)
+//   → { is_available, balance_infos: [{ currency, total_balance, ... }] }
+// Tài khoản có thể để CNY; không có ví USD thì quy đổi tạm để ước lượng số ngày,
+// và nói rõ trong tin nhắn là con số quy đổi.
+const BALANCE_WARN_DAYS = 7;
+const CNY_PER_USD = 7.1;
+const BALANCE_TIMEOUT_MS = 10_000;
+
+interface Balance {
+  available: boolean;
+  usd: number | null;   // null = có ví nhưng không quy đổi được
+  raw: string;          // hiển thị nguyên văn, vd "12.34 USD"
+}
+
+// Trả null khi không đọc được (thiếu key, mạng lỗi, đổi khuôn JSON) — caller
+// phải NÓI RA chuyện không đọc được chứ không im lặng bỏ qua.
+async function fetchDeepSeekBalance(key: string): Promise<Balance | null> {
+  if (!key) return null;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), BALANCE_TIMEOUT_MS);
+  try {
+    const res = await fetch("https://api.deepseek.com/user/balance", {
+      signal: ctrl.signal,
+      headers: { "Authorization": `Bearer ${key}`, "Accept": "application/json" },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const infos = (data?.balance_infos ?? []) as { currency?: string; total_balance?: string }[];
+    if (!Array.isArray(infos) || infos.length === 0) {
+      return { available: data?.is_available === true, usd: null, raw: "không có ví nào" };
+    }
+    const usdWallet = infos.find((i) => String(i.currency).toUpperCase() === "USD");
+    const w = usdWallet ?? infos[0];
+    const amount = Number(w.total_balance);
+    const cur = String(w.currency ?? "?").toUpperCase();
+    const usd = Number.isFinite(amount)
+      ? (cur === "USD" ? amount : cur === "CNY" ? amount / CNY_PER_USD : null)
+      : null;
+    return {
+      available: data?.is_available === true,
+      usd,
+      raw: `${Number.isFinite(amount) ? amount.toFixed(2) : w.total_balance} ${cur}`,
+    };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 interface ModelRow {
   model: string;
   cost_usd: number;
@@ -151,7 +203,7 @@ async function handleDaily(
   sb: ReturnType<typeof createClient>,
   tgToken: string,
   tgChatId: string,
-): Promise<{ ok: boolean; total_usd: number; label: string }> {
+): Promise<{ ok: boolean; total_usd: number; label: string; deepseek_balance: string | null }> {
   const { start, end, label } = yesterdayWindowVn();
   const today = await aggregate(sb, start, end);
 
@@ -187,8 +239,32 @@ async function handleDaily(
     lines.push(...modelLines(today.byModel));
   }
 
+  // SỐ DƯ DEEPSEEK: mức đốt lấy từ chính 7 ngày vừa aggregate (không tốn query
+  // thêm). Còn dưới 7 ngày → giục nạp; không đọc được → nói thẳng là không đọc
+  // được, tuyệt đối không im lặng (bài học 22/08).
+  const bal = await fetchDeepSeekBalance(Deno.env.get("DEEPSEEK_API_KEY") ?? "");
+  const burnPerDay = (sevenAgg.byModel.find((m) => m.model === DEEPSEEK_MODEL)?.cost_usd ?? 0) / 7;
+  lines.push("");
+  if (!bal) {
+    lines.push("💳 _Không đọc được số dư DeepSeek_ (thiếu key, mạng lỗi hoặc API đổi khuôn) — kiểm tra tay giúp.");
+  } else if (!bal.available) {
+    lines.push(`🚨 *DeepSeek báo HẾT số dư* (${escapeMd(bal.raw)}) — mọi cú gọi đang rơi về Haiku giá gấp ~10. Nạp ngay.`);
+  } else if (bal.usd === null) {
+    lines.push(`💳 Số dư DeepSeek: *${escapeMd(bal.raw)}* (không quy đổi được sang USD nên không ước tính được số ngày).`);
+  } else {
+    const days = burnPerDay > 0 ? bal.usd / burnPerDay : null;
+    const quyDoi = bal.raw.endsWith("USD") ? "" : ` ≈ $${bal.usd.toFixed(2)} (tạm quy đổi ${CNY_PER_USD} CNY/USD)`;
+    if (days === null) {
+      lines.push(`💳 Số dư DeepSeek: *${escapeMd(bal.raw)}*${escapeMd(quyDoi)} — chưa có mức đốt 7 ngày để ước tính.`);
+    } else if (days < BALANCE_WARN_DAYS) {
+      lines.push(`💳 ⚠️ *Số dư DeepSeek sắp cạn: ${escapeMd(bal.raw)}${escapeMd(quyDoi)}* — đốt ${fmtUsd(burnPerDay)}/ngày, còn *~${days.toFixed(1)} ngày*. Nên nạp.`);
+    } else {
+      lines.push(`💳 Số dư DeepSeek: ${escapeMd(bal.raw)}${escapeMd(quyDoi)} — đốt ${fmtUsd(burnPerDay)}/ngày, còn ~${Math.round(days)} ngày.`);
+    }
+  }
+
   await sendTelegram(tgToken, tgChatId, lines.join("\n"));
-  return { ok: true, total_usd: today.totalCost, label };
+  return { ok: true, total_usd: today.totalCost, label, deepseek_balance: bal?.raw ?? null };
 }
 
 async function handle6hReport(
@@ -253,7 +329,16 @@ async function handleHourlyCheck(
       l.push(`Nhưng 1h qua: *0* cú \`${DEEPSEEK_MODEL}\` / ${agg.totalCalls} calls, chi ${fmtUsd(agg.totalCost)}.`);
       l.push("");
       l.push("Fail-open đã đưa toàn bộ tải về Haiku. Tin vẫn chạy, chỉ có tiền chảy.");
-      l.push("Kiểm tra theo thứ tự: *số dư DeepSeek* (402 hết tiền) → *DEEPSEEK\\_API\\_KEY* còn không (401/thiếu key) → log edge function lọc chữ `deepseek`.");
+      l.push("");
+      // Hỏi luôn số dư để tin nhắn tự kết luận, đỡ một vòng người đi tra.
+      const bal = await fetchDeepSeekBalance(Deno.env.get("DEEPSEEK_API_KEY") ?? "");
+      if (!bal) {
+        l.push("💳 *Không đọc được số dư* — nhiều khả năng thiếu/sai `DEEPSEEK_API_KEY`. Kiểm tra secret trước.");
+      } else if (!bal.available) {
+        l.push(`💳 *Nguyên nhân: HẾT SỐ DƯ* (${escapeMd(bal.raw)}). Nạp tiền là hệ thống tự quay lại DeepSeek ở nhịp sau, không cần deploy.`);
+      } else {
+        l.push(`💳 Số dư vẫn còn (${escapeMd(bal.raw)}) → không phải hết tiền. Xem log edge function lọc chữ \`deepseek\` để đọc mã lỗi (401 key bị thu hồi, timeout mạng).`);
+      }
       await sendTelegram(tgToken, tgChatId, l.join("\n"));
     }
   }
