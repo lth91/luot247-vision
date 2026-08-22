@@ -187,6 +187,7 @@ async function classifyBatchAny(
   supabase: ReturnType<typeof createClient>,
   items: { title: string; content: string }[],
 ): Promise<Verdict[]> {
+  if (useDeepSeek && !deepseekKey) console.warn("bulk_deepseek BẬT nhưng thiếu DEEPSEEK_API_KEY — chấm bằng Haiku giá gấp ~10");
   if (useDeepSeek && deepseekKey) {
     try {
       return await classifyBatchDeepSeek(deepseekKey, supabase, items);

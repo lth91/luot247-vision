@@ -18,6 +18,21 @@ const corsHeaders = {
 
 const HOURLY_THRESHOLD_USD = 1.0; // alert ngay nếu 1h chi > $1
 
+// CHÓ CANH DEEPSEEK (22/08): sự cố 22/08 — tài khoản DeepSeek hết số dư, mọi
+// cú gọi ném 402, fail-open đưa toàn bộ tải về Haiku. Tin vẫn chạy đều, không
+// một tiếng động nào, cost lặng lẽ về giá cũ (gấp ~10). Chỉ lộ nhờ một đợt
+// nhập 2.000 tin đẩy cost vượt ngưỡng giờ — ngày thường sẽ không ai biết.
+// Canh trực tiếp triệu chứng gốc: công tắc bật mà 1h không có dòng DeepSeek nào.
+const DEEPSEEK_SWITCHES = ["viet_deepseek", "giam_khao_deepseek", "bulk_deepseek", "le_deepseek"];
+const DEEPSEEK_MODEL = "deepseek-v4-flash";
+const SILENT_MIN_CALLS = 10; // dưới mức này coi như giờ vắng, không kết luận
+
+interface ModelRow {
+  model: string;
+  cost_usd: number;
+  call_count: number;
+}
+
 interface AggRow {
   function_name: string;
   cost_usd: number;
@@ -54,16 +69,16 @@ async function aggregate(
   sb: ReturnType<typeof createClient>,
   startIso: string,
   endIso: string,
-): Promise<{ rows: AggRow[]; totalCost: number; totalCalls: number; totalIn: number; totalOut: number }> {
+): Promise<{ rows: AggRow[]; byModel: ModelRow[]; totalCost: number; totalCalls: number; totalIn: number; totalOut: number }> {
   // Fetch PHÂN TRANG + JS aggregate. Bug 23/07: PostgREST cắt 1000 dòng/lần —
   // ngày crawl gọi ~1.300-1.500 cú nên báo cáo daily đếm THIẾU (vd 22/07 báo
   // $5.35 trong khi 17h đã $5.91). Phải .range() gom đủ trang.
   const PAGE = 1000;
-  const data: { function_name: string; cost_usd: number; input_tokens: number; output_tokens: number }[] = [];
+  const data: { function_name: string; model: string; cost_usd: number; input_tokens: number; output_tokens: number }[] = [];
   for (let from = 0; ; from += PAGE) {
     const { data: page, error } = await sb
       .from("llm_usage_log")
-      .select("function_name, cost_usd, input_tokens, output_tokens")
+      .select("function_name, model, cost_usd, input_tokens, output_tokens")
       .gte("created_at", startIso)
       .lt("created_at", endIso)
       .order("created_at", { ascending: true })
@@ -74,6 +89,7 @@ async function aggregate(
   }
 
   const map = new Map<string, AggRow>();
+  const mmap = new Map<string, ModelRow>();
   let totalCost = 0;
   let totalCalls = 0;
   let totalIn = 0;
@@ -93,6 +109,11 @@ async function aggregate(
     row.input_tokens += inT;
     row.output_tokens += outT;
     row.call_count += 1;
+    const md = String(r.model ?? "?");
+    const mrow = mmap.get(md) ?? { model: md, cost_usd: 0, call_count: 0 };
+    mrow.cost_usd += cost;
+    mrow.call_count += 1;
+    mmap.set(md, mrow);
     totalCost += cost;
     totalCalls += 1;
     totalIn += inT;
@@ -100,11 +121,30 @@ async function aggregate(
   }
 
   const rows = [...map.values()].sort((a, b) => b.cost_usd - a.cost_usd);
-  return { rows, totalCost, totalCalls, totalIn, totalOut };
+  const byModel = [...mmap.values()].sort((a, b) => b.cost_usd - a.cost_usd);
+  return { rows, byModel, totalCost, totalCalls, totalIn, totalOut };
 }
 
 function escapeMd(s: string): string {
   return s.replace(/([_*`\[\]])/g, "\\$1");
+}
+
+// Công tắc DeepSeek đang bật (đọc hybrid_config). Lỗi đọc → trả rỗng, chó canh
+// nằm im chứ không sủa oan.
+async function deepseekSwitchesOn(sb: ReturnType<typeof createClient>): Promise<string[]> {
+  try {
+    const { data, error } = await sb
+      .from("hybrid_config").select("key, enabled").in("key", DEEPSEEK_SWITCHES);
+    if (error) return [];
+    return ((data ?? []) as { key: string; enabled: boolean }[])
+      .filter((c) => c.enabled === true).map((c) => c.key);
+  } catch {
+    return [];
+  }
+}
+
+function modelLines(byModel: ModelRow[]): string[] {
+  return byModel.map((m) => `• \`${escapeMd(m.model)}\` — ${fmtUsd(m.cost_usd)} (${m.call_count} calls)`);
 }
 
 async function handleDaily(
@@ -142,6 +182,9 @@ async function handleDaily(
         `• \`${escapeMd(r.function_name)}\` — ${fmtUsd(r.cost_usd)} (${r.call_count} calls, ${fmtTokens(r.input_tokens)}↗ / ${fmtTokens(r.output_tokens)}↘)`,
       );
     }
+    lines.push("");
+    lines.push("*Theo model:*");
+    lines.push(...modelLines(today.byModel));
   }
 
   await sendTelegram(tgToken, tgChatId, lines.join("\n"));
@@ -176,6 +219,9 @@ async function handle6hReport(
         `• \`${escapeMd(r.function_name)}\` — ${fmtUsd(r.cost_usd)} (${r.call_count} calls, ${fmtTokens(r.input_tokens)}↗ / ${fmtTokens(r.output_tokens)}↘)`,
       );
     }
+    lines.push("");
+    lines.push("*Theo model:*");
+    lines.push(...modelLines(agg.byModel));
   }
 
   await sendTelegram(tgToken, tgChatId, lines.join("\n"));
@@ -186,13 +232,34 @@ async function handleHourlyCheck(
   sb: ReturnType<typeof createClient>,
   tgToken: string,
   tgChatId: string,
-): Promise<{ ok: boolean; total_usd: number; alerted: boolean }> {
+): Promise<{ ok: boolean; total_usd: number; alerted: boolean; deepseek_silent: boolean }> {
   const end = new Date();
   const start = new Date(end.getTime() - 3600 * 1000);
   const agg = await aggregate(sb, start.toISOString(), end.toISOString());
 
+  // CHÓ CANH: công tắc DeepSeek bật mà 1h qua không có cú DeepSeek nào trong
+  // khi máy vẫn chạy → đang đốt tiền giá Haiku trong im lặng. Báo riêng, không
+  // phụ thuộc ngưỡng cost (sự cố 22/08 nằm dưới ngưỡng suốt nhiều nhịp).
+  const dsCalls = agg.byModel.find((m) => m.model === DEEPSEEK_MODEL)?.call_count ?? 0;
+  let silentAlert = false;
+  if (dsCalls === 0 && agg.totalCalls >= SILENT_MIN_CALLS) {
+    const on = await deepseekSwitchesOn(sb);
+    if (on.length > 0) {
+      silentAlert = true;
+      const l: string[] = [];
+      l.push("⚠️ *DeepSeek im tiếng — đang chạy Haiku giá gấp ~10*");
+      l.push("");
+      l.push(`Công tắc đang BẬT: ${on.map((k) => `\`${escapeMd(k)}\``).join(", ")}`);
+      l.push(`Nhưng 1h qua: *0* cú \`${DEEPSEEK_MODEL}\` / ${agg.totalCalls} calls, chi ${fmtUsd(agg.totalCost)}.`);
+      l.push("");
+      l.push("Fail-open đã đưa toàn bộ tải về Haiku. Tin vẫn chạy, chỉ có tiền chảy.");
+      l.push("Kiểm tra theo thứ tự: *số dư DeepSeek* (402 hết tiền) → *DEEPSEEK\\_API\\_KEY* còn không (401/thiếu key) → log edge function lọc chữ `deepseek`.");
+      await sendTelegram(tgToken, tgChatId, l.join("\n"));
+    }
+  }
+
   if (agg.totalCost <= HOURLY_THRESHOLD_USD) {
-    return { ok: true, total_usd: agg.totalCost, alerted: false };
+    return { ok: true, total_usd: agg.totalCost, alerted: silentAlert, deepseek_silent: silentAlert };
   }
 
   const lines: string[] = [];
@@ -206,10 +273,14 @@ async function handleHourlyCheck(
     lines.push(`• \`${escapeMd(r.function_name)}\` — ${fmtUsd(r.cost_usd)} (${r.call_count} calls)`);
   }
   lines.push("");
+  // Model nào gánh — đọc là biết ngay đắt vì đang chạy Haiku hay vì tải lớn.
+  lines.push("*Theo model:*");
+  lines.push(...modelLines(agg.byModel));
+  lines.push("");
   lines.push(`_Window: ${start.toISOString()} → ${end.toISOString()}_`);
 
   await sendTelegram(tgToken, tgChatId, lines.join("\n"));
-  return { ok: true, total_usd: agg.totalCost, alerted: true };
+  return { ok: true, total_usd: agg.totalCost, alerted: true, deepseek_silent: silentAlert };
 }
 
 Deno.serve(async (req) => {
