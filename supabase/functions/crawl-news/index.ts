@@ -581,6 +581,7 @@ async function verifyArticle(
   anthropicKey: string,
   supabase: SupabaseClient,
 ): Promise<{ v: VerifyResult | null; model: string }> {
+  if (useDeepSeek && !deepseekKey) console.warn("giam_khao_deepseek BẬT nhưng thiếu DEEPSEEK_API_KEY — chấm bằng Haiku giá gấp ~10");
   if (useDeepSeek && deepseekKey) {
     const v = await verifyWithDeepSeek(origTitle, origContent, newsTitle, newsContent, suspect, pubDate, deepseekKey, supabase);
     if (v) return { v, model: DEEPSEEK_MODEL };
@@ -703,6 +704,7 @@ async function rewriteArticle(
   supabase: SupabaseClient,
   extraFeedback = "",
 ): Promise<{ r: LlmResult | null; model: string }> {
+  if (useDeepSeek && !deepseekKey) console.warn("viet_deepseek BẬT nhưng thiếu DEEPSEEK_API_KEY — viết bằng Haiku giá gấp ~10");
   if (useDeepSeek && deepseekKey) {
     try {
       const r = await rewriteWithDeepSeek(origTitle, content, dateHint, deepseekKey, supabase, extraFeedback);
