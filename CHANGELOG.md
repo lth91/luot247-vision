@@ -1,3 +1,10 @@
+# [1.120.0](https://github.com/lth91/luot247-vision/compare/v1.119.0...v1.120.0) (2026-08-22)
+
+
+### Features
+
+* **cost:** canh số dư DeepSeek — báo trước khi cạn ([#200](https://github.com/lth91/luot247-vision/issues/200)) ([cc719a9](https://github.com/lth91/luot247-vision/commit/cc719a9770140e7285e39139a95b170b306c7a3f))
+
 # [1.119.0](https://github.com/lth91/luot247-vision/compare/v1.118.3...v1.119.0) (2026-08-22)
 
 
