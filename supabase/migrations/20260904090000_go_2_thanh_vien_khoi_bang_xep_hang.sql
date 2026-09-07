@@ -7,7 +7,7 @@
 -- Tin đã gửi KHÔNG mất: news.submitted_by và submission_log vẫn nguyên (Lương
 -- Thị Thảo có 4.406 tin). Chỉ là không còn hiện thành một dòng trong bảng công.
 --
--- Đã chạy trực tiếp 04/09; file này để lại dấu trong git. Thành viên 30 → 28.
+-- Đã chạy trực tiếp 07/09; file này để lại dấu trong git. Thành viên 30 → 28.
 --
 -- KHÔI PHỤC (nếu gỡ nhầm) — dán nguyên khối này:
 --   INSERT INTO public.submission_whitelist (email, email_alias, full_name, created_at)
