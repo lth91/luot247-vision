@@ -111,19 +111,20 @@ serve(async (req) => {
     // Yêu cầu 21/07: RANDOM HƠN giữa các ngày (lognormal + "loại ngày").
     // Yêu cầu 23/09: NÂNG MỨC — dao động 3.400–4.630, trần cứng 4.700.
     // Mặt bằng ~4.050; ngày vắng rõ chạm sàn 3.400, ngày đông chạm ~4.630.
+    // Yêu cầu 01/10: +5% toàn dải — dao động 3.570–4.860, trần cứng 4.935.
     let variance = Math.exp(gaussian(dayRng, 0, 0.06)) // ±6% điển hình, đuôi tới ±15%
     const dayRoll = dayRng()
-    if (dayRoll < 0.10) variance *= 0.84 + dayRng() * 0.06        // ~10%: ngày VẮNG rõ (3.400-3.650)
-    else if (dayRoll < 0.22) variance *= 0.90 + dayRng() * 0.05   // ~12%: hơi vắng (3.650-3.850)
-    else if (dayRoll > 0.90) variance *= 1.08 + dayRng() * 0.06   // ~10%: ngày đông (4.350-4.630)
-    let dailyTarget = 4050 * variance
+    if (dayRoll < 0.10) variance *= 0.84 + dayRng() * 0.06        // ~10%: ngày VẮNG rõ (3.570-3.830)
+    else if (dayRoll < 0.22) variance *= 0.90 + dayRng() * 0.05   // ~12%: hơi vắng (3.830-4.040)
+    else if (dayRoll > 0.90) variance *= 1.08 + dayRng() * 0.06   // ~10%: ngày đông (4.570-4.860)
+    let dailyTarget = 4250 * variance
     // Cuối tuần nhỉnh hơn ngày thường một chút (giữ từ 03/07).
     const dowMult = (dow === 0 || dow === 6) ? (1.01 + dayRng() * 0.04) : (0.96 + dayRng() * 0.06)
     dailyTarget *= dowMult
-    // Trần dao động 4630-4700 theo seed ngày (tránh kẹp ra số chẵn lặp lại);
-    // không bao giờ vượt 4700.
-    const dayCap = 4630 + Math.round(dayRng() * 70)
-    dailyTarget = Math.round(Math.max(3400, Math.min(dayCap, dailyTarget)))
+    // Trần dao động 4860-4935 theo seed ngày (tránh kẹp ra số chẵn lặp lại);
+    // không bao giờ vượt 4935.
+    const dayCap = 4860 + Math.round(dayRng() * 75)
+    dailyTarget = Math.round(Math.max(3570, Math.min(dayCap, dailyTarget)))
 
     // Đường cong 24h: jitter mỗi giờ RỘNG hơn (±25%) + DỊCH ĐỈNH ±1 giờ theo
     // ngày (hôm đỉnh trưa sớm, hôm đỉnh muộn) → hình dáng mỗi ngày khác nhau
