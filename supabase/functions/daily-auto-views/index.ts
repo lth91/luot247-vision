@@ -108,24 +108,22 @@ serve(async (req) => {
     const dayRng = mulberry32(hashStr(vnDateStr))
     const dow = vietnamTime.getUTCDay() // 0=CN..6=T7 (theo giờ VN)
 
-    // Yêu cầu 21/07: RANDOM HƠN giữa các ngày — bản cũ kẹp dải hẹp 3.450-3.970
-    // nên tuần nào cũng đều tăm tắp. Bản mới: mặt bằng ~3.550, biên độ rộng
-    // kiểu lognormal + "loại ngày" (vắng rõ / hơi vắng / thường / đông) →
-    // tổng ngày dao động ~2.400-4.000, nhìn gồ ghề như traffic thật.
-    // Vẫn KHÔNG VƯỢT 4000 (yêu cầu 03/07 giữ nguyên) — muốn giữ trung bình
-    // ~3.800 như cũ thì phải nâng trần này, đổi 1 dòng dayCap.
-    let variance = Math.exp(gaussian(dayRng, 0, 0.10)) // ±10% điển hình, đuôi tới ±25%
+    // Yêu cầu 21/07: RANDOM HƠN giữa các ngày (lognormal + "loại ngày").
+    // Yêu cầu 23/09: NÂNG MỨC — dao động 3.400–4.630, trần cứng 4.700.
+    // Mặt bằng ~4.050; ngày vắng rõ chạm sàn 3.400, ngày đông chạm ~4.630.
+    let variance = Math.exp(gaussian(dayRng, 0, 0.06)) // ±6% điển hình, đuôi tới ±15%
     const dayRoll = dayRng()
-    if (dayRoll < 0.10) variance *= 0.66 + dayRng() * 0.12        // ~10%: ngày VẮNG rõ (2.400-2.900)
-    else if (dayRoll < 0.22) variance *= 0.82 + dayRng() * 0.10   // ~12%: hơi vắng (3.000-3.400)
-    else if (dayRoll > 0.90) variance *= 1.10 + dayRng() * 0.08   // ~10%: ngày đông (chạm trần)
-    let dailyTarget = 3550 * variance
+    if (dayRoll < 0.10) variance *= 0.84 + dayRng() * 0.06        // ~10%: ngày VẮNG rõ (3.400-3.650)
+    else if (dayRoll < 0.22) variance *= 0.90 + dayRng() * 0.05   // ~12%: hơi vắng (3.650-3.850)
+    else if (dayRoll > 0.90) variance *= 1.08 + dayRng() * 0.06   // ~10%: ngày đông (4.350-4.630)
+    let dailyTarget = 4050 * variance
     // Cuối tuần nhỉnh hơn ngày thường một chút (giữ từ 03/07).
-    const dowMult = (dow === 0 || dow === 6) ? (1.02 + dayRng() * 0.05) : (0.94 + dayRng() * 0.08)
+    const dowMult = (dow === 0 || dow === 6) ? (1.01 + dayRng() * 0.04) : (0.96 + dayRng() * 0.06)
     dailyTarget *= dowMult
-    // Trần dao động 3940-4000 theo seed ngày (tránh kẹp ra số chẵn 4000 lặp lại).
-    const dayCap = 3940 + Math.round(dayRng() * 60)
-    dailyTarget = Math.round(Math.max(2400, Math.min(dayCap, dailyTarget)))
+    // Trần dao động 4630-4700 theo seed ngày (tránh kẹp ra số chẵn lặp lại);
+    // không bao giờ vượt 4700.
+    const dayCap = 4630 + Math.round(dayRng() * 70)
+    dailyTarget = Math.round(Math.max(3400, Math.min(dayCap, dailyTarget)))
 
     // Đường cong 24h: jitter mỗi giờ RỘNG hơn (±25%) + DỊCH ĐỈNH ±1 giờ theo
     // ngày (hôm đỉnh trưa sớm, hôm đỉnh muộn) → hình dáng mỗi ngày khác nhau
