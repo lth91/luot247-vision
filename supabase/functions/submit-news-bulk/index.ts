@@ -18,6 +18,12 @@ const corsHeaders = {
 };
 const ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
 const DEEPSEEK_MODEL = "deepseek-v4-flash";
+// Sự cố 15/10: DeepSeek quá tải ("Service is too busy") — cú gọi treo tới khi
+// gateway cắt 150s → nhân viên thấy "Import thất bại"/quay mãi, mất cả lần
+// import. Mỗi cú gọi LLM giờ có hạn chờ; DeepSeek lỗi 1 lần là cả lần import
+// còn lại đi thẳng Haiku (khỏi chờ hết hạn lần nữa cho từng lô).
+const DEEPSEEK_TIMEOUT_MS = 20_000;
+const ANTHROPIC_TIMEOUT_MS = 35_000; // 110s ngân sách + 35s < 150s gateway
 
 // Chốt với đội 03/07 (bản cuối): tiêu đề 12–18, TỔNG cả tin 120–140. Thông
 // báo lỗi tự tính khoảng nội dung theo tiêu đề để sửa đúng ô, khỏi cộng tổng.
@@ -78,6 +84,7 @@ async function classifyBatch(
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+    signal: AbortSignal.timeout(ANTHROPIC_TIMEOUT_MS),
     body: JSON.stringify({
       model: ANTHROPIC_MODEL, max_tokens: 1500, temperature: 0.2,
       // Prompt caching: các lô trong cùng 1 lần import dùng chung system prompt → lô sau đọc cache.
@@ -139,6 +146,7 @@ async function classifyBatchDeepSeek(
   const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+    signal: AbortSignal.timeout(DEEPSEEK_TIMEOUT_MS),
     body: JSON.stringify({
       model: DEEPSEEK_MODEL,
       temperature: 0.2,
@@ -179,8 +187,11 @@ async function classifyBatchDeepSeek(
 }
 
 // Chọn người chấm lô theo công tắc, fail-open: DeepSeek lỗi/thiếu → Haiku
-// chấm lại nguyên lô.
+// chấm lại nguyên lô. breaker dùng chung cho mọi lô của MỘT lần import:
+// DeepSeek sập/treo (lỗi mạng, 5xx, quá hạn) thì các lô sau bỏ qua DeepSeek.
+// Lỗi parse/thiếu verdict KHÔNG ngắt — đó là lỗi lẻ của một lô.
 async function classifyBatchAny(
+  breaker: { deepseekDown: boolean },
   useDeepSeek: boolean,
   deepseekKey: string,
   anthropicKey: string,
@@ -188,11 +199,13 @@ async function classifyBatchAny(
   items: { title: string; content: string }[],
 ): Promise<Verdict[]> {
   if (useDeepSeek && !deepseekKey) console.warn("bulk_deepseek BẬT nhưng thiếu DEEPSEEK_API_KEY — chấm bằng Haiku giá gấp ~10");
-  if (useDeepSeek && deepseekKey) {
+  if (useDeepSeek && deepseekKey && !breaker.deepseekDown) {
     try {
       return await classifyBatchDeepSeek(deepseekKey, supabase, items);
     } catch (e) {
-      console.warn("deepseek lô lỗi — fallback Haiku:", (e as Error).message?.slice(0, 150));
+      const msg = (e as Error).message ?? String(e);
+      if (!msg.startsWith("DeepSeek lô:")) breaker.deepseekDown = true;
+      console.warn("deepseek lô lỗi — fallback Haiku:", msg.slice(0, 150));
     }
   }
   return classifyBatch(anthropicKey, supabase, items);
@@ -389,6 +402,7 @@ Deno.serve(async (req) => {
     //    khá nặng, tuần tự 8 lô dễ vỡ ngân sách). undefined = chưa kịp; {} = lỗi.
     const verdicts: (Verdict | undefined)[] = new Array(fresh.length);
     const CONCURRENT = 2;
+    const breaker = { deepseekDown: false };
     for (let b = 0; b < fresh.length; b += LLM_BATCH * CONCURRENT) {
       if (Date.now() - START > TIME_BUDGET_MS) break;
       const jobs: Promise<{ start: number; slice: typeof fresh; vs: Verdict[] }>[] = [];
@@ -397,7 +411,7 @@ Deno.serve(async (req) => {
         if (start >= fresh.length) break;
         const slice = fresh.slice(start, start + LLM_BATCH);
         jobs.push(
-          classifyBatchAny(bulkDeepSeek, deepseekKey, anthropicKey, supabase, slice)
+          classifyBatchAny(breaker, bulkDeepSeek, deepseekKey, anthropicKey, supabase, slice)
             .catch((e) => { console.error("classifyBatch error:", e); return slice.map(() => ({} as Verdict)); })
             .then((vs) => ({ start, slice, vs })),
         );
