@@ -1,3 +1,10 @@
+# [1.123.0](https://github.com/lth91/luot247-vision/compare/v1.122.1...v1.123.0) (2026-10-15)
+
+
+### Features
+
+* **views:** tăng view hàng ngày thêm 5% — dao động 3.750–5.100, trần 5.180 ([#209](https://github.com/lth91/luot247-vision/issues/209)) ([a66af8c](https://github.com/lth91/luot247-vision/commit/a66af8cf4b0d5dec8b4e5758d6c14df73ff8a05a))
+
 ## [1.122.1](https://github.com/lth91/luot247-vision/compare/v1.122.0...v1.122.1) (2026-10-15)
 
 
