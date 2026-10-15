@@ -1,3 +1,10 @@
+## [1.122.1](https://github.com/lth91/luot247-vision/compare/v1.122.0...v1.122.1) (2026-10-15)
+
+
+### Bug Fixes
+
+* **submit:** import sheet không treo khi DeepSeek quá tải — hạn chờ 20s + ngắt DeepSeek cả lần import sau lỗi đầu ([#208](https://github.com/lth91/luot247-vision/issues/208)) ([f7a3b45](https://github.com/lth91/luot247-vision/commit/f7a3b453f7eac9ea22f01879ae13a82dde4910be))
+
 # [1.122.0](https://github.com/lth91/luot247-vision/compare/v1.121.0...v1.122.0) (2026-10-01)
 
 
