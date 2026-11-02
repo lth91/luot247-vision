@@ -1,3 +1,10 @@
+## [1.123.1](https://github.com/lth91/luot247-vision/compare/v1.123.0...v1.123.1) (2026-11-02)
+
+
+### Bug Fixes
+
+* **views:** Cộng dồn không tụt mỗi mùng 1 — cộng số log bị xoá vào gốc + khôi phục 108.501 view tháng 9 ([#211](https://github.com/lth91/luot247-vision/issues/211)) ([a73f6b2](https://github.com/lth91/luot247-vision/commit/a73f6b2e1fca75c2bc265c224cae57d7e5d86edc))
+
 # [1.123.0](https://github.com/lth91/luot247-vision/compare/v1.122.1...v1.123.0) (2026-10-15)
 
 
