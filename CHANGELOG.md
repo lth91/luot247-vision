@@ -1,3 +1,10 @@
+## [1.123.2](https://github.com/lth91/luot247-vision/compare/v1.123.1...v1.123.2) (2026-11-04)
+
+
+### Bug Fixes
+
+* **views:** cron bơm view dùng key từ Vault — key cũ bị chặn 401 từ 03/11 ([#212](https://github.com/lth91/luot247-vision/issues/212)) ([046a199](https://github.com/lth91/luot247-vision/commit/046a1992ea77253a72d1e6fb8738f31fa2624de7))
+
 ## [1.123.1](https://github.com/lth91/luot247-vision/compare/v1.123.0...v1.123.1) (2026-11-02)
 
 
