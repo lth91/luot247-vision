@@ -332,9 +332,12 @@ Deno.serve(async (req) => {
       localUnique.push(row);
     }
     const fresh: { rowNum: number; title: string; content: string }[] = [];
-    for (let i = 0; i < localUnique.length; i += 10) {
+    // 05/11: 10 → 4 cú dò song song/lần import — nhiều nhân viên import cùng
+    // lúc từng làm DB nghẽn (truy vấn khác, kể cả bảng Thống kê, bị cắt 8s).
+    const DEDUP_CONCURRENCY = 4;
+    for (let i = 0; i < localUnique.length; i += DEDUP_CONCURRENCY) {
       if (Date.now() - START > TIME_BUDGET_MS) { summary.skipped += localUnique.length - i; break; }
-      const chunk = localUnique.slice(i, i + 10);
+      const chunk = localUnique.slice(i, i + DEDUP_CONCURRENCY);
       const dups = await Promise.all(chunk.map((r) =>
         supabase.rpc("find_similar_news_title", { _title: r.title, _threshold: 0.7 })
           .then(({ data }: { data: unknown }) => !!data)
