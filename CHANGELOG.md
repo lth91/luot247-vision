@@ -1,3 +1,10 @@
+## [1.123.3](https://github.com/lth91/luot247-vision/compare/v1.123.2...v1.123.3) (2026-11-05)
+
+
+### Performance Improvements
+
+* **dedup:** dò trùng tiêu đề chỉ trong 30 ngày + import dò 4 tin song song — chống nghẽn DB giờ cao điểm ([#213](https://github.com/lth91/luot247-vision/issues/213)) ([a463299](https://github.com/lth91/luot247-vision/commit/a46329947dd0807c4871d1b33ac769e624b4a9ca))
+
 ## [1.123.2](https://github.com/lth91/luot247-vision/compare/v1.123.1...v1.123.2) (2026-11-04)
 
 
