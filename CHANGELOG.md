@@ -1,3 +1,10 @@
+## [1.123.4](https://github.com/lth91/luot247-vision/compare/v1.123.3...v1.123.4) (2026-11-05)
+
+
+### Performance Improvements
+
+* **stats:** bảng Thống kê đọc kết quả tính sẵn 5 phút/lần thay vì đếm trực tiếp (chưa áp DB) ([#215](https://github.com/lth91/luot247-vision/issues/215)) ([da9ee31](https://github.com/lth91/luot247-vision/commit/da9ee31114d2b92a35c55d5d364c6bd882f9fa46))
+
 ## [1.123.3](https://github.com/lth91/luot247-vision/compare/v1.123.2...v1.123.3) (2026-11-05)
 
 
